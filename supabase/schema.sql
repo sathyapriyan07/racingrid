@@ -25,6 +25,7 @@ create table if not exists drivers (
 create table if not exists teams (
   id uuid primary key default uuid_generate_v4(),
   name text not null unique,
+  ergast_id text unique,
   nationality text,
   base text,
   logo_url text,

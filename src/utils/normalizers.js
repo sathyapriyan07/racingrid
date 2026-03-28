@@ -26,6 +26,7 @@ export function normalizeTeams(raw, source = 'ergast') {
     const list = raw?.MRData?.ConstructorTable?.Constructors || raw
     return list.map(t => ({
       name: t.name,
+      ergast_id: t.constructorId || null,
       nationality: t.nationality || null,
       base: null,
       logo_url: null,
@@ -33,6 +34,7 @@ export function normalizeTeams(raw, source = 'ergast') {
   }
   return (Array.isArray(raw) ? raw : [raw]).map(t => ({
     name: t.name,
+    ergast_id: t.ergast_id || null,
     nationality: t.nationality || null,
     base: t.base || null,
     logo_url: t.logo_url || t.logoUrl || null,
@@ -126,7 +128,7 @@ export function normalizeDriverStandings(raw, seasonId, driverMap = {}, teamMap 
   return standings.map(s => ({
     season_id: seasonId,
     driver_id: driverMap[s.Driver?.code] || driverMap[`${s.Driver?.givenName} ${s.Driver?.familyName}`] || null,
-    team_id: teamMap[s.Constructors?.[0]?.name] || null,
+    team_id: teamMap[s.Constructors?.[0]?.constructorId] || teamMap[s.Constructors?.[0]?.name] || null,
     points: parseFloat(s.points) || 0,
     position: parseInt(s.position) || null,
     wins: parseInt(s.wins) || 0,
@@ -138,7 +140,7 @@ export function normalizeConstructorStandings(raw, seasonId, teamMap = {}) {
   const standings = lists[0]?.ConstructorStandings || []
   return standings.map(s => ({
     season_id: seasonId,
-    team_id: teamMap[s.Constructor?.name] || null,
+    team_id: teamMap[s.Constructor?.constructorId] || teamMap[s.Constructor?.name] || null,
     points: parseFloat(s.points) || 0,
     position: parseInt(s.position) || null,
     wins: parseInt(s.wins) || 0,

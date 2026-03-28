@@ -182,9 +182,12 @@ export default function AdminSync() {
   }
 
   const getTeamMap = async () => {
-    const { data } = await supabase.from('teams').select('id, name')
+    const { data } = await supabase.from('teams').select('id, name, ergast_id')
     const map = {}
-    data?.forEach(t => { map[t.name] = t.id })
+    data?.forEach(t => {
+      map[t.name] = t.id
+      if (t.ergast_id) map[t.ergast_id] = t.id
+    })
     return map
   }
 
@@ -253,7 +256,7 @@ export default function AdminSync() {
         return (race.Results || []).map(r => ({
           race_id: raceId,
           driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
-          team_id: teamMap[r.Constructor?.name] || null,
+          team_id: teamMap[r.Constructor?.constructorId] || teamMap[r.Constructor?.name] || null,
           position: parseInt(r.position) || null,
           grid: parseInt(r.grid) || null,
           laps: parseInt(r.laps) || null,
@@ -300,7 +303,7 @@ export default function AdminSync() {
         return (race.QualifyingResults || []).map(r => ({
           race_id: raceId,
           driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
-          team_id: teamMap[r.Constructor?.name] || null,
+          team_id: teamMap[r.Constructor?.constructorId] || teamMap[r.Constructor?.name] || null,
           position: parseInt(r.position) || null,
           q1: r.Q1 || null,
           q2: r.Q2 || null,
