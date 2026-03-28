@@ -178,102 +178,90 @@ export default function RacePage() {
 
       {/* Results Tab */}
       {activeTab === 'results' && (
-        <Card>
+        <Card className="p-0 overflow-hidden">
           {results.length === 0 ? (
-            <p className="text-white/30 text-sm text-center py-4">No results imported.</p>
+            <p className="text-white/30 text-xs text-center py-4">No results imported.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white/30 text-xs border-b border-white/5">
-                    <th className="text-left pb-3 w-10">Pos</th>
-                    <th className="text-left pb-3">Driver</th>
-                    <th className="text-left pb-3 hidden sm:table-cell">Team</th>
-                    <th className="text-center pb-3 hidden md:table-cell">Grid</th>
-                    <th className="text-center pb-3 hidden md:table-cell">Laps</th>
-                    <th className="text-right pb-3">Time / Status</th>
-                    <th className="text-right pb-3">Pts</th>
+            <table className="w-full">
+              <thead>
+                <tr className="text-white/30 border-b border-white/5" style={{ fontSize: 10 }}>
+                  <th className="text-left py-2 pl-3 w-7">#</th>
+                  <th className="text-left py-2">Driver</th>
+                  <th className="text-left py-2 hidden sm:table-cell">Team</th>
+                  <th className="text-center py-2 hidden sm:table-cell">Grid</th>
+                  <th className="text-right py-2">Time</th>
+                  <th className="text-right py-2 pr-3">Pts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {results.map((r, i) => (
+                  <tr key={r.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                    <td className="py-1.5 pl-3">
+                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
+                    </td>
+                    <td className="py-1.5">
+                      <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                        <span className="hidden sm:inline">{r.drivers?.name || '—'}</span>
+                        <span className="sm:hidden font-semibold">{r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}</span>
+                      </Link>
+                    </td>
+                    <td className="py-1.5 hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      {r.teams?.name || '—'}
+                    </td>
+                    <td className="py-1.5 text-center hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
+                    <td className="py-1.5 text-right" style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                      {r.time || r.status || '—'}
+                    </td>
+                    <td className="py-1.5 text-right pr-3 font-semibold" style={{ fontSize: 11 }}>{r.points ?? 0}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {results.map((r, i) => (
-                    <tr key={r.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                      <td className="py-3">
-                        <span className={`font-bold ${POSITION_COLORS[i] || 'text-white/60'}`}>
-                          {r.position ?? '—'}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors font-medium">
-                          {r.drivers?.name || '—'}
-                        </Link>
-                        {r.drivers?.code && <span className="text-xs text-white/30 ml-2">{r.drivers.code}</span>}
-                      </td>
-                      <td className="py-3 hidden sm:table-cell">
-                        <Link to={`/team/${r.team_id}`} className="text-white/50 hover:text-white transition-colors text-xs">
-                          {r.teams?.name || '—'}
-                        </Link>
-                      </td>
-                      <td className="py-3 text-center text-white/40 text-xs hidden md:table-cell">{r.grid ?? '—'}</td>
-                      <td className="py-3 text-center text-white/40 text-xs hidden md:table-cell">{r.laps ?? '—'}</td>
-                      <td className="py-3 text-right text-xs text-white/50">{r.time || r.status || '—'}</td>
-                      <td className="py-3 text-right font-semibold text-xs">{r.points ?? 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
         </Card>
       )}
 
       {/* Qualifying Tab */}
       {activeTab === 'qualifying' && (
-        <Card>
+        <Card className="p-0 overflow-hidden">
           {qualifying.length === 0 ? (
-            <p className="text-white/30 text-sm text-center py-4">No qualifying data imported.</p>
+            <p className="text-white/30 text-xs text-center py-4">No qualifying data imported.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white/30 text-xs border-b border-white/5">
-                    <th className="text-left pb-3 w-10">Pos</th>
-                    <th className="text-left pb-3">Driver</th>
-                    <th className="text-left pb-3 hidden sm:table-cell">Team</th>
-                    <th className="text-right pb-3">Q1</th>
-                    <th className="text-right pb-3">Q2</th>
-                    <th className="text-right pb-3">Q3</th>
+            <table className="w-full">
+              <thead>
+                <tr className="text-white/30 border-b border-white/5" style={{ fontSize: 10 }}>
+                  <th className="text-left py-2 pl-3 w-7">#</th>
+                  <th className="text-left py-2">Driver</th>
+                  <th className="text-left py-2 hidden sm:table-cell">Team</th>
+                  <th className="text-right py-2">Q1</th>
+                  <th className="text-right py-2">Q2</th>
+                  <th className="text-right py-2 pr-3">Q3</th>
+                </tr>
+              </thead>
+              <tbody>
+                {qualifying.map((q, i) => (
+                  <tr key={q.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                    <td className="py-1.5 pl-3">
+                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{q.position ?? '—'}</span>
+                    </td>
+                    <td className="py-1.5">
+                      <Link to={`/driver/${q.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                        <span className="hidden sm:inline">{q.drivers?.name || '—'}</span>
+                        <span className="sm:hidden font-semibold">{q.drivers?.code || q.drivers?.name?.split(' ').pop() || '—'}</span>
+                      </Link>
+                    </td>
+                    <td className="py-1.5 hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      {q.teams?.name || '—'}
+                    </td>
+                    <td className="py-1.5 text-right font-mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.q1 || '—'}</td>
+                    <td className="py-1.5 text-right font-mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.q2 || '—'}</td>
+                    <td className="py-1.5 text-right font-mono pr-3" style={{ fontSize: 11 }}>
+                      {q.q3 ? <span className="font-semibold">{q.q3}</span> : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {qualifying.map((q, i) => (
-                    <tr key={q.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                      <td className="py-3">
-                        <span className={`font-bold ${POSITION_COLORS[i] || 'text-white/60'}`}>
-                          {q.position ?? '—'}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <Link to={`/driver/${q.driver_id}`} className="hover:text-f1red transition-colors font-medium">
-                          {q.drivers?.name || '—'}
-                        </Link>
-                        {q.drivers?.code && <span className="text-xs text-white/30 ml-2">{q.drivers.code}</span>}
-                      </td>
-                      <td className="py-3 hidden sm:table-cell">
-                        <Link to={`/team/${q.team_id}`} className="text-white/50 hover:text-white transition-colors text-xs">
-                          {q.teams?.name || '—'}
-                        </Link>
-                      </td>
-                      <td className="py-3 text-right text-xs font-mono text-white/60">{q.q1 || '—'}</td>
-                      <td className="py-3 text-right text-xs font-mono text-white/60">{q.q2 || '—'}</td>
-                      <td className="py-3 text-right text-xs font-mono">
-                        {q.q3 ? <span className="text-white font-semibold">{q.q3}</span> : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
         </Card>
       )}
