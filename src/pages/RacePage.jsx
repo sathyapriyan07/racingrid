@@ -203,13 +203,22 @@ export default function RacePage() {
                       <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
                     </td>
                     <td className="py-1.5">
-                      <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
-                        <span className="hidden sm:inline">{r.drivers?.name || '—'}</span>
-                        <span className="sm:hidden font-semibold">{r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}</span>
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        {r.teams?.logo_url
+                          ? <img src={r.teams.logo_url} alt={r.teams.name} className="w-4 h-4 object-contain shrink-0 sm:hidden" />
+                          : <div className="w-1 self-stretch rounded-full shrink-0 sm:hidden" style={{ backgroundColor: r.teams ? '#E10600' : 'transparent' }} />
+                        }
+                        <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                          <span className="hidden sm:inline">{r.drivers?.name || '—'}</span>
+                          <span className="sm:hidden font-semibold">{r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}</span>
+                        </Link>
+                      </div>
                     </td>
-                    <td className="py-1.5 hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {r.teams?.name || '—'}
+                    <td className="py-1.5 hidden sm:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        {r.teams?.logo_url && <img src={r.teams.logo_url} alt={r.teams.name} className="w-4 h-4 object-contain shrink-0" />}
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
+                      </div>
                     </td>
                     <td className="py-1.5 text-center hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
                     <td className="py-1.5 text-right" style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
@@ -248,13 +257,22 @@ export default function RacePage() {
                       <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{q.position ?? '—'}</span>
                     </td>
                     <td className="py-1.5">
-                      <Link to={`/driver/${q.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
-                        <span className="hidden sm:inline">{q.drivers?.name || '—'}</span>
-                        <span className="sm:hidden font-semibold">{q.drivers?.code || q.drivers?.name?.split(' ').pop() || '—'}</span>
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        {q.teams?.logo_url
+                          ? <img src={q.teams.logo_url} alt={q.teams.name} className="w-4 h-4 object-contain shrink-0 sm:hidden" />
+                          : <div className="w-1 self-stretch rounded-full shrink-0 sm:hidden" style={{ backgroundColor: q.teams ? '#E10600' : 'transparent' }} />
+                        }
+                        <Link to={`/driver/${q.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                          <span className="hidden sm:inline">{q.drivers?.name || '—'}</span>
+                          <span className="sm:hidden font-semibold">{q.drivers?.code || q.drivers?.name?.split(' ').pop() || '—'}</span>
+                        </Link>
+                      </div>
                     </td>
-                    <td className="py-1.5 hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {q.teams?.name || '—'}
+                    <td className="py-1.5 hidden sm:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        {q.teams?.logo_url && <img src={q.teams.logo_url} alt={q.teams.name} className="w-4 h-4 object-contain shrink-0" />}
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.teams?.name || '—'}</span>
+                      </div>
                     </td>
                     <td className="py-1.5 text-right font-mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.q1 || '—'}</td>
                     <td className="py-1.5 text-right font-mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.q2 || '—'}</td>
@@ -290,12 +308,23 @@ export default function RacePage() {
                     <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
                   </td>
                   <td className="py-1.5">
-                    <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
-                      <span className="hidden sm:inline">{r.drivers?.name || '—'}</span>
-                      <span className="sm:hidden font-semibold">{r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}</span>
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      {r.teams?.logo_url
+                        ? <img src={r.teams.logo_url} alt={r.teams.name} className="w-4 h-4 object-contain shrink-0 sm:hidden" />
+                        : <div className="w-1 self-stretch rounded-full shrink-0 sm:hidden" style={{ backgroundColor: r.teams ? '#E10600' : 'transparent' }} />
+                      }
+                      <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                        <span className="hidden sm:inline">{r.drivers?.name || '—'}</span>
+                        <span className="sm:hidden font-semibold">{r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}</span>
+                      </Link>
+                    </div>
                   </td>
-                  <td className="py-1.5 hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</td>
+                  <td className="py-1.5 hidden sm:table-cell">
+                    <div className="flex items-center gap-1.5">
+                      {r.teams?.logo_url && <img src={r.teams.logo_url} alt={r.teams.name} className="w-4 h-4 object-contain shrink-0" />}
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
+                    </div>
+                  </td>
                   <td className="py-1.5 text-center hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
                   <td className="py-1.5 text-right" style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
                     {r.time || r.status || '—'}
