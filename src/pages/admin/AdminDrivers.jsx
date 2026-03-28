@@ -68,39 +68,52 @@ export default function AdminDrivers() {
                 </thead>
                 <tbody>
                   {data.map(row => (
-                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
-                      <td className="py-2 pr-4">
-                        {row.image_url
-                          ? <img src={row.image_url} alt={row.name} className="w-8 h-8 rounded-full object-cover bg-white/10" />
-                          : <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20"><ImagePlus size={12} /></div>
-                        }
-                      </td>
-                      <td className="py-2 pr-4 font-medium text-white/80">{row.name}</td>
-                      <td className="py-2 pr-4 text-white/40">{row.code || '—'}</td>
-                      <td className="py-2 pr-4 text-white/40 hidden sm:table-cell">{row.nationality || '—'}</td>
-                      <td className="py-2 pr-4 text-white/40 hidden md:table-cell">{row.dob || '—'}</td>
-                      <td className="py-2 text-right">
-                        {editId === row.id ? (
-                          <div className="flex items-center gap-1 justify-end">
-                            <input
-                              value={editUrl}
-                              onChange={e => setEditUrl(e.target.value)}
-                              placeholder="https://..."
-                              className="input py-1 text-xs w-56"
-                              autoFocus
-                            />
-                            <button onClick={() => saveImage(row.id)} className="p-1.5 rounded hover:bg-green-500/20 text-green-400"><Check size={12} /></button>
-                            <button onClick={cancelEdit} className="p-1.5 rounded hover:bg-white/10 text-white/40"><X size={12} /></button>
-                          </div>
-                        ) : (
+                    <>
+                      <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+                        <td className="py-2 pr-4">
+                          {row.image_url
+                            ? <img src={row.image_url} alt={row.name} className="w-8 h-8 rounded-full object-cover bg-white/10" />
+                            : <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20"><ImagePlus size={12} /></div>
+                          }
+                        </td>
+                        <td className="py-2 pr-4 font-medium text-white/80">{row.name}</td>
+                        <td className="py-2 pr-4 text-white/40">{row.code || '—'}</td>
+                        <td className="py-2 pr-4 text-white/40 hidden sm:table-cell">{row.nationality || '—'}</td>
+                        <td className="py-2 pr-4 text-white/40 hidden md:table-cell">{row.dob || '—'}</td>
+                        <td className="py-2 text-right">
                           <button onClick={() => startEdit(row)}
                             className="flex items-center gap-1 ml-auto text-white/30 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
                             <ImagePlus size={11} />
                             {row.image_url ? 'Edit' : 'Add'}
                           </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {editId === row.id && (
+                        <tr key={`${row.id}-edit`} className="border-b border-white/5 bg-white/3">
+                          <td colSpan={6} className="px-3 py-3">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <input
+                                value={editUrl}
+                                onChange={e => setEditUrl(e.target.value)}
+                                placeholder="https://..."
+                                className="input py-2 text-xs flex-1"
+                                autoFocus
+                              />
+                              <div className="flex gap-2">
+                                <button onClick={() => saveImage(row.id)}
+                                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-green-500/20 text-green-400 text-xs font-semibold">
+                                  <Check size={13} /> Save
+                                </button>
+                                <button onClick={cancelEdit}
+                                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-white/40 text-xs">
+                                  <X size={13} /> Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
