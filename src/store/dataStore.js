@@ -140,6 +140,19 @@ export const useDataStore = create((set, get) => ({
     return data
   },
 
+  fetchHighlights: async (raceId) => {
+    const key = `highlights_${raceId}`
+    if (get().cache[key]) return get().cache[key]
+    const { data, error } = await supabase
+      .from('race_highlights')
+      .select('*')
+      .eq('race_id', raceId)
+      .order('created_at')
+    if (error) throw error
+    set(s => ({ cache: { ...s.cache, [key]: data } }))
+    return data
+  },
+
   fetchDriver: async (id, force = false) => {
     const key = `driver_${id}`
     if (!force && get().cache[key]) return get().cache[key]

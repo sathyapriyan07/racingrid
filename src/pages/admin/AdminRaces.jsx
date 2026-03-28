@@ -1,21 +1,106 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import AdminTable from './AdminTable'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Plus, Youtube, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+import toast from 'react-hot-toast'
 
-const COLUMNS = [
-  { key: 'name', label: 'Name' },
-  { key: 'date', label: 'Date' },
-  { key: 'round', label: 'Round' },
-]
+function getYoutubeId(url) {
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)
+  return m ? m[1] : null
+}
+
+function HighlightsEditor({ race }) {
+  const [highlights, setHighlights] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [newUrl, setNewUrl] = useState('')
+  const [newTitle, setNewTitle] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    supabase.from('race_highlights').select('*').eq('race_id', race.id).order('created_at')
+      .then(({ data }) => setHighlights(data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [race.id])
+
+  const addHighlight = async () => {
+    if (!newUrl.trim()) return
+    const vid = getYoutubeId(newUrl.trim())
+    if (!vid) return toast.error('Invalid YouTube URL')
+    setSaving(true)
+    const { data, error } = await supabase.from('race_highlights').insert({
+      race_id: race.id,
+      title: newTitle.trim() || null,
+      youtube_url: newUrl.trim(),
+    }).select().single()
+    if (error) { toast.error(error.message); setSaving(false); return }
+    setHighlights(h => [...h, data])
+    setNewUrl('')
+    setNewTitle('')
+    setSaving(false)
+    toast.success('Highlight added')
+  }
+
+  const removeHighlight = async (id) => {
+    const { error } = await supabase.from('race_highlights').delete().eq('id', id)
+    if (error) return toast.error(error.message)
+    setHighlights(h => h.filter(x => x.id !== id))
+    toast.success('Removed')
+  }
+
+  return (
+    <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-raised)' }}>
+      <td colSpan={5} className="px-4 py-3">
+        {loading ? <Spinner /> : (
+          <div className="space-y-2">
+            {/* Existing highlights */}
+            {highlights.map(h => {
+              const vid = getYoutubeId(h.youtube_url)
+              return (
+                <div key={h.id} className="flex items-center gap-2 text-xs">
+                  {vid && (
+                    <img src={`https://img.youtube.com/vi/${vid}/default.jpg`} alt=""
+                      className="w-12 h-8 object-cover rounded shrink-0" />
+                  )}
+                  <span className="flex-1 truncate" style={{ color: 'var(--text-secondary)' }}>
+                    {h.title || h.youtube_url}
+                  </span>
+                  <a href={h.youtube_url} target="_blank" rel="noopener noreferrer"
+                    className="text-f1red hover:opacity-70 shrink-0"><Youtube size={13} /></a>
+                  <button onClick={() => removeHighlight(h.id)}
+                    className="shrink-0 hover:text-f1red transition-colors" style={{ color: 'var(--text-muted)' }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              )
+            })}
+
+            {/* Add new */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t" style={{ borderColor: 'var(--border)' }}>
+              <input value={newTitle} onChange={e => setNewTitle(e.target.value)}
+                placeholder="Title (optional)" className="input py-1.5 text-xs sm:w-40" />
+              <input value={newUrl} onChange={e => setNewUrl(e.target.value)}
+                placeholder="YouTube URL" className="input py-1.5 text-xs flex-1"
+                onKeyDown={e => e.key === 'Enter' && addHighlight()} />
+              <button onClick={addHighlight} disabled={saving || !newUrl.trim()}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-f1red/20 text-f1red text-xs font-semibold shrink-0">
+                {saving ? '...' : <><Plus size={12} /> Add</>}
+              </button>
+            </div>
+          </div>
+        )}
+      </td>
+    </tr>
+  )
+}
 
 export default function AdminRaces() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [seasons, setSeasons] = useState([])
   const [seasonId, setSeasonId] = useState('')
+  const [expandedId, setExpandedId] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -53,13 +138,43 @@ export default function AdminRaces() {
           <option value="">All Seasons</option>
           {seasons.map(s => <option key={s.id} value={s.id}>{s.year}</option>)}
         </select>
+
         {loading ? <Spinner /> : (
-          <AdminTable
-            table="races"
-            data={data.map(r => ({ ...r, season: r.seasons?.year }))}
-            columns={[...COLUMNS, { key: 'season', label: 'Season', editable: false }]}
-            onRefresh={load}
-          />
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-white/30 border-b border-white/5">
+                  <th className="text-left pb-2 pr-4">Name</th>
+                  <th className="text-left pb-2 pr-4 hidden sm:table-cell">Date</th>
+                  <th className="text-left pb-2 pr-4 hidden sm:table-cell">Round</th>
+                  <th className="text-left pb-2 pr-4 hidden md:table-cell">Season</th>
+                  <th className="text-right pb-2">Highlights</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map(row => (
+                  <>
+                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+                      <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
+                      <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.date || '—'}</td>
+                      <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.round || '—'}</td>
+                      <td className="py-2 pr-4 hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>{row.seasons?.year || '—'}</td>
+                      <td className="py-2 text-right">
+                        <button onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
+                          className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-white/5 transition-colors text-xs"
+                          style={{ color: expandedId === row.id ? '#E10600' : 'var(--text-muted)' }}>
+                          <Youtube size={11} />
+                          Highlights
+                          {expandedId === row.id ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedId === row.id && <HighlightsEditor race={row} />}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

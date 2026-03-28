@@ -120,6 +120,20 @@ create table if not exists sprint_results (
   unique (race_id, driver_id)
 );
 
+create table if not exists race_highlights (
+  id uuid primary key default uuid_generate_v4(),
+  race_id uuid references races(id) on delete cascade,
+  title text,
+  youtube_url text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_highlights_race on race_highlights(race_id);
+
+alter table race_highlights enable row level security;
+create policy "public_read_highlights" on race_highlights for select using (true);
+create policy "admin_write_highlights" on race_highlights for all using (is_admin());
+
 create table if not exists laps (
   id uuid primary key default uuid_generate_v4(),
   race_id uuid references races(id) on delete cascade,

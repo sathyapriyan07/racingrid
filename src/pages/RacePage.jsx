@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
-import { Flag, Activity, AlertTriangle, Clock } from 'lucide-react'
+import { Flag, Activity, AlertTriangle, Clock, Youtube } from 'lucide-react'
 
 const LapChart = lazy(() => import('../components/charts/LapChart'))
 
@@ -34,12 +34,13 @@ function fmtLapTime(sec) {
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchQualifying, fetchSprintResults } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchQualifying, fetchSprintResults, fetchHighlights } = useDataStore()
 
   const [race, setRace] = useState(null)
   const [results, setResults] = useState([])
   const [qualifying, setQualifying] = useState([])
   const [sprintResults, setSprintResults] = useState([])
+  const [highlights, setHighlights] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('results')
 
@@ -54,12 +55,13 @@ export default function RacePage() {
 
   // Load race + results + qualifying from Supabase
   useEffect(() => {
-    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id), fetchSprintResults(id)])
-      .then(([r, res, q, sp]) => {
+    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
+      .then(([r, res, q, sp, hl]) => {
         setRace(r)
         setResults(res || [])
         setQualifying(q || [])
         setSprintResults(sp || [])
+        setHighlights(hl || [])
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -138,6 +140,7 @@ export default function RacePage() {
     { id: 'replay', label: 'Lap Replay', icon: Activity },
     { id: 'pits', label: 'Pit Stops', icon: Clock },
     { id: 'events', label: 'Events', icon: AlertTriangle },
+    ...(highlights.length ? [{ id: 'highlights', label: 'Highlights', icon: Youtube }] : []),
   ]
 
   return (
@@ -462,6 +465,34 @@ export default function RacePage() {
             </div>
           )}
         </Card>
+      )}
+      {/* Highlights Tab */}
+      {activeTab === 'highlights' && (
+        <div className="space-y-4">
+          {highlights.map(h => {
+            const vid = h.youtube_url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
+            if (!vid) return null
+            return (
+              <Card key={h.id} className="p-0 overflow-hidden">
+                {h.title && (
+                  <div className="px-4 pt-3 pb-2 text-sm font-semibold flex items-center gap-2">
+                    <Youtube size={14} className="text-f1red" />
+                    {h.title}
+                  </div>
+                )}
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${vid}`}
+                    title={h.title || 'Race Highlight'}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                </div>
+              </Card>
+            )
+          })}
+        </div>
       )}
     </div>
   )
