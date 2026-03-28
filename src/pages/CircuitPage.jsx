@@ -112,20 +112,12 @@ export default function CircuitPage() {
                     {/* Mobile: winner below race name */}
                     <div className="flex items-center gap-3 mt-1 sm:hidden">
                       {race.winner && (
-                        <Link to={`/driver/${race.winner.id}`} className="flex items-center gap-1.5 hover:text-f1red transition-colors">
-                          {race.winner.image_url
-                            ? <img src={race.winner.image_url} alt={race.winner.name} className="w-5 h-5 object-cover object-top shrink-0" />
-                            : null
-                          }
+                        <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors">
                           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🏆 {race.winner.name}</span>
                         </Link>
                       )}
                       {race.sprintWinner && (
-                        <Link to={`/driver/${race.sprintWinner.id}`} className="flex items-center gap-1.5 hover:text-f1red transition-colors">
-                          {race.sprintWinner.image_url
-                            ? <img src={race.sprintWinner.image_url} alt={race.sprintWinner.name} className="w-5 h-5 object-cover object-top shrink-0" />
-                            : null
-                          }
+                        <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors">
                           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⚡ {race.sprintWinner.name}</span>
                         </Link>
                       )}
@@ -133,12 +125,8 @@ export default function CircuitPage() {
                   </td>
                   <td className="py-2.5 hidden sm:table-cell">
                     {race.winner ? (
-                      <Link to={`/driver/${race.winner.id}`} className="flex items-center gap-2 hover:text-f1red transition-colors">
-                        {race.winner.image_url
-                          ? <img src={race.winner.image_url} alt={race.winner.name} className="w-6 h-6 object-cover object-top shrink-0" />
-                          : <div className="w-6 h-6 shrink-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{race.winner.code}</div>
-                        }
-                        <span style={{ fontSize: 12 }}>{race.winner.name}</span>
+                      <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                        {race.winner.name}
                       </Link>
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
@@ -146,12 +134,8 @@ export default function CircuitPage() {
                   </td>
                   <td className="py-2.5 hidden md:table-cell">
                     {race.sprintWinner ? (
-                      <Link to={`/driver/${race.sprintWinner.id}`} className="flex items-center gap-2 hover:text-f1red transition-colors">
-                        {race.sprintWinner.image_url
-                          ? <img src={race.sprintWinner.image_url} alt={race.sprintWinner.name} className="w-6 h-6 object-cover object-top shrink-0" />
-                          : <div className="w-6 h-6 shrink-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{race.sprintWinner.code}</div>
-                        }
-                        <span style={{ fontSize: 12 }}>{race.sprintWinner.name}</span>
+                      <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                        {race.sprintWinner.name}
                       </Link>
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>

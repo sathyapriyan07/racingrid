@@ -6,6 +6,77 @@ import { Spinner, Card } from '../components/ui'
 import { Trophy } from 'lucide-react'
 
 const POS_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
+const PODIUM_BG = [
+  'bg-yellow-400/10 border-yellow-400/30',
+  'bg-white/5 border-white/15',
+  'bg-amber-600/10 border-amber-600/30',
+]
+const PODIUM_LABEL = ['🥇', '🥈', '🥉']
+
+function DriverPodium({ rows }) {
+  if (rows.length < 1) return null
+  // Order: 2nd left, 1st center, 3rd right
+  const order = [rows[1], rows[0], rows[2]].filter(Boolean)
+  const heights = rows[1] ? ['h-20', 'h-28', 'h-16'] : ['h-28']
+
+  return (
+    <div className="sm:hidden flex items-end justify-center gap-2 mb-4">
+      {order.map((row, idx) => {
+        const realIdx = rows.indexOf(row)
+        const isFirst = realIdx === 0
+        return (
+          <Link key={row.id} to={`/driver/${row.driver_id}`}
+            className={`flex-1 flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-colors hover:opacity-80 ${PODIUM_BG[realIdx]} ${heights[idx]}`}>
+            <span className="text-lg">{PODIUM_LABEL[realIdx]}</span>
+            {row.drivers?.image_url
+              ? <img src={row.drivers.image_url} alt={row.drivers.name}
+                  className={`object-cover object-top shrink-0 ${isFirst ? 'w-14 h-14' : 'w-10 h-10'}`} />
+              : <div className={`shrink-0 flex items-center justify-center font-black ${isFirst ? 'w-14 h-14 text-base' : 'w-10 h-10 text-xs'}`}
+                  style={{ color: 'var(--text-muted)' }}>{row.drivers?.code}</div>
+            }
+            <div className="text-center">
+              <div className={`font-bold leading-tight ${isFirst ? 'text-xs' : 'text-xs'}`}>
+                {row.drivers?.name?.split(' ').pop()}
+              </div>
+              <div className="font-black text-sm text-f1red">{parseFloat(row.points).toFixed(0)}</div>
+            </div>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
+function TeamPodium({ rows }) {
+  if (rows.length < 1) return null
+  const order = [rows[1], rows[0], rows[2]].filter(Boolean)
+  const heights = rows[1] ? ['h-20', 'h-28', 'h-16'] : ['h-28']
+
+  return (
+    <div className="sm:hidden flex items-end justify-center gap-2 mb-4">
+      {order.map((row, idx) => {
+        const realIdx = rows.indexOf(row)
+        const isFirst = realIdx === 0
+        return (
+          <Link key={row.id} to={`/team/${row.team_id}`}
+            className={`flex-1 flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-colors hover:opacity-80 ${PODIUM_BG[realIdx]} ${heights[idx]}`}>
+            <span className="text-lg">{PODIUM_LABEL[realIdx]}</span>
+            {row.teams?.logo_url
+              ? <img src={row.teams.logo_url} alt={row.teams.name}
+                  className={`object-contain shrink-0 ${isFirst ? 'w-14 h-10' : 'w-10 h-7'}`} />
+              : <div className={`shrink-0 flex items-center justify-center font-black text-xs ${isFirst ? 'w-14 h-10' : 'w-10 h-7'}`}
+                  style={{ color: 'var(--text-muted)' }}>{row.teams?.name?.slice(0, 3).toUpperCase()}</div>
+            }
+            <div className="text-center">
+              <div className="font-bold text-xs leading-tight">{row.teams?.name?.split(' ')[0]}</div>
+              <div className="font-black text-sm text-f1red">{parseFloat(row.points).toFixed(0)}</div>
+            </div>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function Standings() {
   const { fetchSeasons, seasons } = useDataStore()
@@ -63,13 +134,15 @@ export default function Standings() {
         </div>
       </div>
 
-      <div className="flex gap-1 bg-dark-800 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: 'var(--bg-raised)' }}>
         <button onClick={() => setTab('drivers')}
-          className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${tab === 'drivers' ? 'bg-f1red text-white' : 'text-white/50 hover:text-white'}`}>
+          className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${tab === 'drivers' ? 'bg-f1red text-white' : 'hover:text-white'}`}
+          style={{ color: tab === 'drivers' ? undefined : 'var(--text-secondary)' }}>
           Drivers
         </button>
         <button onClick={() => setTab('constructors')}
-          className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${tab === 'constructors' ? 'bg-f1red text-white' : 'text-white/50 hover:text-white'}`}>
+          className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${tab === 'constructors' ? 'bg-f1red text-white' : 'hover:text-white'}`}
+          style={{ color: tab === 'constructors' ? undefined : 'var(--text-secondary)' }}>
           Constructors
         </button>
       </div>
@@ -78,86 +151,92 @@ export default function Standings() {
         <Card>
           {tab === 'drivers' ? (
             driverRows.length === 0 ? (
-              <p className="text-white/30 text-sm text-center py-4">No standings imported for this season. Use Sync Tools.</p>
+              <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No standings imported for this season. Use Sync Tools.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white/30 text-xs border-b border-white/5">
-                    <th className="text-left pb-3 w-10">Pos</th>
-                    <th className="text-left pb-3">Driver</th>
-                    <th className="text-left pb-3 hidden sm:table-cell">Team</th>
-                    <th className="text-center pb-3">Wins</th>
-                    <th className="text-right pb-3">Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {driverRows.map((row, i) => (
-                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                      <td className="py-2">
-                        <span className={`font-bold text-sm ${POS_COLORS[i] || 'text-white/50'}`}>
-                          {i === 0 ? '🏆' : row.position}
-                        </span>
-                      </td>
-                      <td className="py-2">
-                        <Link to={`/driver/${row.driver_id}`} className="flex items-center gap-3 hover:text-f1red transition-colors">
-                          {row.drivers?.image_url
-                            ? <img src={row.drivers.image_url} alt={row.drivers.name} className="w-9 h-9 object-cover object-top shrink-0" />
-                            : <div className="w-9 h-9 shrink-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code?.slice(0,3)}</div>
-                          }
-                          <div>
-                            <div className="font-semibold text-sm leading-tight">{row.drivers?.name}</div>
-                            <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code}</div>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="py-2.5 hidden sm:table-cell">
-                        <Link to={`/team/${row.team_id}`} className="text-xs hover:text-white transition-colors" style={{ color: 'var(--text-muted)' }}>
-                          {row.teams?.name || '—'}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.wins}</td>
-                      <td className="py-2.5 text-right font-bold">{parseFloat(row.points).toFixed(0)}</td>
+              <>
+                <DriverPodium rows={driverRows.slice(0, 3)} />
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                      <th className="text-left pb-3 w-10">Pos</th>
+                      <th className="text-left pb-3">Driver</th>
+                      <th className="text-left pb-3 hidden sm:table-cell">Team</th>
+                      <th className="text-center pb-3">Wins</th>
+                      <th className="text-right pb-3">Points</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {driverRows.map((row, i) => (
+                      <tr key={row.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                        <td className="py-2">
+                          <span className={`font-bold text-sm ${POS_COLORS[i] || ''}`} style={{ color: POS_COLORS[i] ? undefined : 'var(--text-secondary)' }}>
+                            {i === 0 ? '🏆' : row.position}
+                          </span>
+                        </td>
+                        <td className="py-2">
+                          <Link to={`/driver/${row.driver_id}`} className="flex items-center gap-3 hover:text-f1red transition-colors">
+                            {row.drivers?.image_url
+                              ? <img src={row.drivers.image_url} alt={row.drivers.name} className="w-9 h-9 object-cover object-top shrink-0" />
+                              : <div className="w-9 h-9 shrink-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code?.slice(0, 3)}</div>
+                            }
+                            <div>
+                              <div className="font-semibold text-sm leading-tight">{row.drivers?.name}</div>
+                              <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code}</div>
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="py-2 hidden sm:table-cell">
+                          <Link to={`/team/${row.team_id}`} className="text-xs hover:text-white transition-colors" style={{ color: 'var(--text-muted)' }}>
+                            {row.teams?.name || '—'}
+                          </Link>
+                        </td>
+                        <td className="py-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.wins}</td>
+                        <td className="py-2 text-right font-bold">{parseFloat(row.points).toFixed(0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )
           ) : (
             teamRows.length === 0 ? (
-              <p className="text-white/30 text-sm text-center py-4">No standings imported for this season. Use Sync Tools.</p>
+              <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No standings imported for this season. Use Sync Tools.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-white/30 text-xs border-b border-white/5">
-                    <th className="text-left pb-3 w-10">Pos</th>
-                    <th className="text-left pb-3">Constructor</th>
-                    <th className="text-center pb-3">Wins</th>
-                    <th className="text-right pb-3">Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamRows.map((row, i) => (
-                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                      <td className="py-2.5">
-                        <span className={`font-bold text-sm ${POS_COLORS[i] || 'text-white/50'}`}>
-                          {i === 0 ? '🏆' : row.position}
-                        </span>
-                      </td>
-                      <td className="py-2.5">
-                        <Link to={`/team/${row.team_id}`} className="flex items-center gap-2 hover:text-f1red transition-colors">
-                          {row.teams?.logo_url
-                            ? <img src={row.teams.logo_url} alt={row.teams.name} className="w-6 h-6 object-contain shrink-0" />
-                            : <div className="w-6 h-6 rounded bg-white/10 shrink-0" />
-                          }
-                          <span className="font-medium text-sm">{row.teams?.name}</span>
-                        </Link>
-                      </td>
-                      <td className="py-2.5 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.wins}</td>
-                      <td className="py-2.5 text-right font-bold">{parseFloat(row.points).toFixed(0)}</td>
+              <>
+                <TeamPodium rows={teamRows.slice(0, 3)} />
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                      <th className="text-left pb-3 w-10">Pos</th>
+                      <th className="text-left pb-3">Constructor</th>
+                      <th className="text-center pb-3">Wins</th>
+                      <th className="text-right pb-3">Points</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {teamRows.map((row, i) => (
+                      <tr key={row.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                        <td className="py-2.5">
+                          <span className={`font-bold text-sm ${POS_COLORS[i] || ''}`} style={{ color: POS_COLORS[i] ? undefined : 'var(--text-secondary)' }}>
+                            {i === 0 ? '🏆' : row.position}
+                          </span>
+                        </td>
+                        <td className="py-2.5">
+                          <Link to={`/team/${row.team_id}`} className="flex items-center gap-2 hover:text-f1red transition-colors">
+                            {row.teams?.logo_url
+                              ? <img src={row.teams.logo_url} alt={row.teams.name} className="w-6 h-6 object-contain shrink-0" />
+                              : <div className="w-6 h-6 rounded bg-white/10 shrink-0" />
+                            }
+                            <span className="font-medium text-sm">{row.teams?.name}</span>
+                          </Link>
+                        </td>
+                        <td className="py-2.5 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.wins}</td>
+                        <td className="py-2.5 text-right font-bold">{parseFloat(row.points).toFixed(0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
             )
           )}
         </Card>
