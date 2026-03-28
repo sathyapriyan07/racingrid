@@ -61,6 +61,7 @@ export default function RacePage() {
         setQualifying(q || [])
         setSprintResults(sp || [])
       })
+      .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
 

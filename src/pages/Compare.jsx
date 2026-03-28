@@ -22,15 +22,20 @@ export default function Compare() {
   const [statsB, setStatsB] = useState([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => { fetchDrivers() }, [])
+  useEffect(() => { fetchDrivers().catch(console.error) }, [])
 
   const compare = async () => {
     if (!driverA || !driverB) return
     setLoading(true)
-    const [a, b] = await Promise.all([getDriverStats(driverA), getDriverStats(driverB)])
-    setStatsA(a)
-    setStatsB(b)
-    setLoading(false)
+    try {
+      const [a, b] = await Promise.all([getDriverStats(driverA), getDriverStats(driverB)])
+      setStatsA(a)
+      setStatsB(b)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const driverAInfo = drivers.find(d => d.id === driverA)

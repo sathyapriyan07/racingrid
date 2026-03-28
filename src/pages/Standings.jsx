@@ -17,7 +17,7 @@ export default function Standings() {
   const [tab, setTab] = useState('drivers')
 
   useEffect(() => {
-    fetchSeasons().then(() => setLoading(false))
+    fetchSeasons().catch(console.error).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function Standings() {
     ]).then(([d, t]) => {
       setDriverRows(d.data || [])
       setTeamRows(t.data || [])
-    }).finally(() => setStandingsLoading(false))
+    }).catch(console.error).finally(() => setStandingsLoading(false))
   }, [selectedSeason])
 
   if (loading) return <Spinner />

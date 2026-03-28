@@ -59,12 +59,16 @@ export default function AdminImport() {
   const { invalidateCache } = useDataStore()
 
   const loadSelects = async () => {
-    const [{ data: r }, { data: s }] = await Promise.all([
-      supabase.from('races').select('id, name').order('date', { ascending: false }),
-      supabase.from('seasons').select('id, year').order('year', { ascending: false }),
-    ])
-    setRaces(r || [])
-    setSeasonsLocal(s || [])
+    try {
+      const [{ data: r }, { data: s }] = await Promise.all([
+        supabase.from('races').select('id, name').order('date', { ascending: false }),
+        supabase.from('seasons').select('id, year').order('year', { ascending: false }),
+      ])
+      setRaces(r || [])
+      setSeasonsLocal(s || [])
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps

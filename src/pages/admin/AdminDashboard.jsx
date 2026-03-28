@@ -11,7 +11,7 @@ export default function AdminDashboard() {
     const tables = ['drivers', 'teams', 'circuits', 'seasons', 'races', 'results', 'laps', 'pit_stops']
     Promise.all(
       tables.map(t => supabase.from(t).select('id', { count: 'exact', head: true }).then(r => [t, r.count]))
-    ).then(results => setCounts(Object.fromEntries(results)))
+    ).then(results => setCounts(Object.fromEntries(results))).catch(console.error)
   }, [])
 
   return (

@@ -20,7 +20,7 @@ export default function SearchPage() {
       supabase.from('races').select('id, name, date, seasons(year)').ilike('name', term).limit(5),
     ]).then(([d, t, r]) => {
       setResults({ drivers: d.data || [], teams: t.data || [], races: r.data || [] })
-    }).finally(() => setLoading(false))
+    }).catch(console.error).finally(() => setLoading(false))
   }, [q])
 
   const total = results.drivers.length + results.teams.length + results.races.length
