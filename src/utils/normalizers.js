@@ -106,6 +106,45 @@ export function normalizeResults(raw, raceId, driverMap = {}, teamMap = {}, sour
   }))
 }
 
+export function normalizeQualifying(raw, raceId, driverMap = {}, teamMap = {}) {
+  const races = raw?.MRData?.RaceTable?.Races || []
+  const list = races[0]?.QualifyingResults || []
+  return list.map(r => ({
+    race_id: raceId,
+    driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
+    team_id: teamMap[r.Constructor?.name] || null,
+    position: parseInt(r.position) || null,
+    q1: r.Q1 || null,
+    q2: r.Q2 || null,
+    q3: r.Q3 || null,
+  }))
+}
+
+export function normalizeDriverStandings(raw, seasonId, driverMap = {}, teamMap = {}) {
+  const lists = raw?.MRData?.StandingsTable?.StandingsLists || []
+  const standings = lists[0]?.DriverStandings || []
+  return standings.map(s => ({
+    season_id: seasonId,
+    driver_id: driverMap[s.Driver?.code] || driverMap[`${s.Driver?.givenName} ${s.Driver?.familyName}`] || null,
+    team_id: teamMap[s.Constructors?.[0]?.name] || null,
+    points: parseFloat(s.points) || 0,
+    position: parseInt(s.position) || null,
+    wins: parseInt(s.wins) || 0,
+  }))
+}
+
+export function normalizeConstructorStandings(raw, seasonId, teamMap = {}) {
+  const lists = raw?.MRData?.StandingsTable?.StandingsLists || []
+  const standings = lists[0]?.ConstructorStandings || []
+  return standings.map(s => ({
+    season_id: seasonId,
+    team_id: teamMap[s.Constructor?.name] || null,
+    points: parseFloat(s.points) || 0,
+    position: parseInt(s.position) || null,
+    wins: parseInt(s.wins) || 0,
+  }))
+}
+
 export function normalizeLaps(raw, raceId, driverMap = {}) {
   return (Array.isArray(raw) ? raw : []).map(l => ({
     race_id: raceId,

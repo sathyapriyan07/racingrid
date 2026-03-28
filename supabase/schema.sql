@@ -14,7 +14,7 @@ create table if not exists user_roles (
 
 create table if not exists drivers (
   id uuid primary key default uuid_generate_v4(),
-  name text not null,
+  name text not null unique,
   code char(3),
   nationality text,
   dob date,
@@ -24,7 +24,7 @@ create table if not exists drivers (
 
 create table if not exists teams (
   id uuid primary key default uuid_generate_v4(),
-  name text not null,
+  name text not null unique,
   nationality text,
   base text,
   logo_url text,
@@ -33,7 +33,7 @@ create table if not exists teams (
 
 create table if not exists circuits (
   id uuid primary key default uuid_generate_v4(),
-  name text not null,
+  name text not null unique,
   location text,
   country text,
   layout_image text,
@@ -52,7 +52,8 @@ create table if not exists races (
   name text not null,
   date date,
   round integer,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  unique (season_id, round)
 );
 
 create table if not exists results (
@@ -65,7 +66,41 @@ create table if not exists results (
   laps integer,
   time text,
   points numeric(5,2) default 0,
-  status text default 'Finished'
+  status text default 'Finished',
+  unique (race_id, driver_id)
+);
+
+create table if not exists qualifying_results (
+  id uuid primary key default uuid_generate_v4(),
+  race_id uuid references races(id) on delete cascade,
+  driver_id uuid references drivers(id) on delete cascade,
+  team_id uuid references teams(id) on delete set null,
+  position integer,
+  q1 text,
+  q2 text,
+  q3 text,
+  unique (race_id, driver_id)
+);
+
+create table if not exists driver_standings (
+  id uuid primary key default uuid_generate_v4(),
+  season_id uuid references seasons(id) on delete cascade,
+  driver_id uuid references drivers(id) on delete cascade,
+  team_id uuid references teams(id) on delete set null,
+  points numeric(6,2) default 0,
+  position integer,
+  wins integer default 0,
+  unique (season_id, driver_id)
+);
+
+create table if not exists constructor_standings (
+  id uuid primary key default uuid_generate_v4(),
+  season_id uuid references seasons(id) on delete cascade,
+  team_id uuid references teams(id) on delete cascade,
+  points numeric(6,2) default 0,
+  position integer,
+  wins integer default 0,
+  unique (season_id, team_id)
 );
 
 create table if not exists laps (
@@ -134,6 +169,14 @@ create policy "public_read_laps" on laps for select using (true);
 create policy "public_read_pit_stops" on pit_stops for select using (true);
 create policy "public_read_race_events" on race_events for select using (true);
 
+alter table qualifying_results enable row level security;
+alter table driver_standings enable row level security;
+alter table constructor_standings enable row level security;
+
+create policy "public_read_qualifying" on qualifying_results for select using (true);
+create policy "public_read_driver_standings" on driver_standings for select using (true);
+create policy "public_read_constructor_standings" on constructor_standings for select using (true);
+
 -- Admin write
 create policy "admin_write_drivers" on drivers for all using (is_admin());
 create policy "admin_write_teams" on teams for all using (is_admin());
@@ -141,6 +184,9 @@ create policy "admin_write_circuits" on circuits for all using (is_admin());
 create policy "admin_write_seasons" on seasons for all using (is_admin());
 create policy "admin_write_races" on races for all using (is_admin());
 create policy "admin_write_results" on results for all using (is_admin());
+create policy "admin_write_qualifying" on qualifying_results for all using (is_admin());
+create policy "admin_write_driver_standings" on driver_standings for all using (is_admin());
+create policy "admin_write_constructor_standings" on constructor_standings for all using (is_admin());
 create policy "admin_write_laps" on laps for all using (is_admin());
 create policy "admin_write_pit_stops" on pit_stops for all using (is_admin());
 create policy "admin_write_race_events" on race_events for all using (is_admin());

@@ -4,12 +4,10 @@ import toast from 'react-hot-toast'
 import { RefreshCw, ExternalLink, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { Card } from '../../components/ui'
 import {
-  normalizeDrivers, normalizeTeams, normalizeCircuits
+  normalizeDrivers, normalizeTeams, normalizeCircuits,
+  normalizeRaces, normalizeResults, normalizeQualifying,
+  normalizeDriverStandings, normalizeConstructorStandings,
 } from '../../utils/normalizers'
-
-// These fetch via Supabase Edge Function proxy (not direct frontend calls)
-// The edge function URL pattern: /functions/v1/sync-ergast
-// Falls back to direct fetch for development if edge function not deployed
 
 async function callEdgeFunction(name, payload) {
   const { data, error } = await supabase.functions.invoke(name, { body: payload })
@@ -17,14 +15,28 @@ async function callEdgeFunction(name, payload) {
   return data
 }
 
-function SyncStatus({ result }) {
-  if (result.status === 'fetching') {
-    return (
-      <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
-        <Loader size={11} className="animate-spin" /> Fetching from API...
-      </div>
-    )
+async function ergastFetch(endpoint, devPath) {
+  const isDev = import.meta.env.DEV
+  if (!isDev) {
+    const res = await fetch(endpoint)
+    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
+    return res.json()
   }
+  try {
+    return await callEdgeFunction('sync-ergast', { endpoint })
+  } catch {
+    const res = await fetch(devPath)
+    if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`)
+    return res.json()
+  }
+}
+
+function SyncStatus({ result }) {
+  if (result.status === 'fetching') return (
+    <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
+      <Loader size={11} className="animate-spin" /> Fetching from API...
+    </div>
+  )
   if (result.status === 'saving') {
     const pct = result.total ? Math.round((result.saved / result.total) * 100) : 0
     return (
@@ -39,57 +51,57 @@ function SyncStatus({ result }) {
       </div>
     )
   }
-  if (result.status === 'done') {
-    return (
-      <div className="mt-2 flex flex-wrap gap-3 text-xs">
-        <span className="flex items-center gap-1 text-green-400">
-          <CheckCircle size={11} /> {result.saved} inserted
-        </span>
-        {result.skipped > 0 && (
-          <span className="text-white/40">{result.skipped} already existed</span>
-        )}
-        <span className="text-white/30">Total: {result.total}</span>
-      </div>
-    )
-  }
-  if (result.status === 'error') {
-    return (
-      <div className="flex items-center gap-1 mt-2 text-xs text-f1red">
-        <XCircle size={11} /> {result.error}
-      </div>
-    )
-  }
+  if (result.status === 'done') return (
+    <div className="mt-2 flex flex-wrap gap-3 text-xs">
+      <span className="flex items-center gap-1 text-green-400">
+        <CheckCircle size={11} /> {result.saved} upserted
+      </span>
+      <span className="text-white/30">Total: {result.total}</span>
+    </div>
+  )
+  if (result.status === 'error') return (
+    <div className="flex items-center gap-1 mt-2 text-xs text-f1red">
+      <XCircle size={11} /> {result.error}
+    </div>
+  )
   return null
 }
 
-// Dev: proxied via Vite (/api/ergast → https://api.jolpi.ca/ergast/f1)
-// Prod: routed through Supabase Edge Function
-const SYNC_ACTIONS = [
+const GLOBAL_SYNC_ACTIONS = [
   {
     id: 'ergast-drivers',
-    label: 'Sync Drivers from Ergast',
-    description: 'Fetch all F1 drivers (879 total via api.jolpi.ca)',
-    edgeEndpoint: 'https://api.jolpi.ca/ergast/f1/drivers/?limit=1000&format=json',
-    devPath: '/api/ergast/drivers/?limit=1000&format=json',
+    label: 'Sync Drivers',
+    description: 'All F1 drivers via api.jolpi.ca',
+    baseEndpoint: 'https://api.jolpi.ca/ergast/f1/drivers/',
+    devBasePath: '/api/ergast/drivers/',
     table: 'drivers',
+    conflictCol: 'name',
+    pageSize: 200,
+    getTotal: (data) => parseInt(data?.MRData?.total || 0),
     normalize: (data) => normalizeDrivers(data, 'ergast'),
   },
   {
     id: 'ergast-constructors',
-    label: 'Sync Teams from Ergast',
-    description: 'Fetch all F1 constructors (214 total via api.jolpi.ca)',
-    edgeEndpoint: 'https://api.jolpi.ca/ergast/f1/constructors/?limit=300&format=json',
-    devPath: '/api/ergast/constructors/?limit=300&format=json',
+    label: 'Sync Teams',
+    description: 'All F1 constructors via api.jolpi.ca',
+    baseEndpoint: 'https://api.jolpi.ca/ergast/f1/constructors/',
+    devBasePath: '/api/ergast/constructors/',
     table: 'teams',
+    conflictCol: 'name',
+    pageSize: 200,
+    getTotal: (data) => parseInt(data?.MRData?.total || 0),
     normalize: (data) => normalizeTeams(data, 'ergast'),
   },
   {
     id: 'ergast-circuits',
-    label: 'Sync Circuits from Ergast',
-    description: 'Fetch all F1 circuits (78 total via api.jolpi.ca)',
-    edgeEndpoint: 'https://api.jolpi.ca/ergast/f1/circuits/?limit=100&format=json',
-    devPath: '/api/ergast/circuits/?limit=100&format=json',
+    label: 'Sync Circuits',
+    description: 'All F1 circuits via api.jolpi.ca',
+    baseEndpoint: 'https://api.jolpi.ca/ergast/f1/circuits/',
+    devBasePath: '/api/ergast/circuits/',
     table: 'circuits',
+    conflictCol: 'name',
+    pageSize: 100,
+    getTotal: (data) => parseInt(data?.MRData?.total || 0),
     normalize: (data) => normalizeCircuits(data, 'ergast'),
   },
 ]
@@ -99,76 +111,262 @@ export default function AdminSync() {
   const [results, setResults] = useState({})
   const [year, setYear] = useState(new Date().getFullYear())
   const [seasonResult, setSeasonResult] = useState(null)
+  const [syncYear, setSyncYear] = useState(new Date().getFullYear())
 
-  const runSync = async (action) => {
-    setRunning(r => ({ ...r, [action.id]: true }))
-    setResults(r => ({ ...r, [action.id]: { status: 'fetching' } }))
+  // ── helpers ──────────────────────────────────────────────
+
+  const setResult = (id, val) => setResults(r => ({ ...r, [id]: val }))
+  const setRun = (id, val) => setRunning(r => ({ ...r, [id]: val }))
+
+  const upsertChunked = async (id, table, rows, conflictCol) => {
+    const CHUNK = 200
+    let saved = 0
+    setResult(id, { status: 'saving', total: rows.length, saved: 0 })
+    for (let i = 0; i < rows.length; i += CHUNK) {
+      const { error } = await supabase.from(table)
+        .upsert(rows.slice(i, i + CHUNK), { onConflict: conflictCol, ignoreDuplicates: false })
+      if (error) throw error
+      saved += Math.min(CHUNK, rows.length - i)
+      setResult(id, { status: 'saving', total: rows.length, saved })
+    }
+    setResult(id, { status: 'done', total: rows.length, saved })
+    return saved
+  }
+
+  // ── global sync (drivers / teams / circuits) ─────────────
+
+  const fetchPage = async (action, offset) => {
+    const url = `${action.baseEndpoint}?limit=${action.pageSize}&offset=${offset}&format=json`
+    const devUrl = `${action.devBasePath}?limit=${action.pageSize}&offset=${offset}&format=json`
+    return ergastFetch(url, devUrl)
+  }
+
+  const runGlobalSync = async (action) => {
+    setRun(action.id, true)
+    setResult(action.id, { status: 'fetching' })
     try {
-      // Step 1: fetch data
-      // In dev: use Vite proxy (/api/ergast) to avoid CORS on HTTP
-      // In prod: fetch jolpi.ca directly — it supports CORS over HTTPS
-      let rawData
-      const isDev = import.meta.env.DEV
-      if (!isDev) {
-        // Production: direct HTTPS fetch (jolpi.ca has CORS headers)
-        const res = await fetch(action.edgeEndpoint)
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`)
-        rawData = await res.json()
-      } else {
-        // Development: try Edge Function first, fall back to Vite proxy
-        try {
-          rawData = await callEdgeFunction('sync-ergast', { endpoint: action.edgeEndpoint })
-        } catch {
-          const res = await fetch(action.devPath)
-          if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status} ${res.statusText}`)
-          rawData = await res.json()
-        }
+      const firstPage = await fetchPage(action, 0)
+      const total = action.getTotal(firstPage)
+      let all = action.normalize(firstPage)
+      const pages = Math.ceil(total / action.pageSize)
+      for (let p = 1; p < pages; p++) {
+        all = all.concat(action.normalize(await fetchPage(action, p * action.pageSize)))
       }
-
-      // Step 2: normalize
-      const normalized = action.normalize(rawData)
-      if (!normalized.length) throw new Error('No data returned after normalization')
-      const clean = normalized.map(r => { const x = { ...r }; delete x.id; return x })
-
-      setResults(r => ({ ...r, [action.id]: { status: 'saving', total: clean.length, saved: 0 } }))
-
-      // Step 3: insert in chunks, track progress
-      const CHUNK = 200
-      let saved = 0
-      let skipped = 0
-      for (let i = 0; i < clean.length; i += CHUNK) {
-        const chunk = clean.slice(i, i + CHUNK)
-        const { error } = await supabase.from(action.table).insert(chunk)
-        if (error) {
-          if (error.code === '23505') {
-            // All duplicates — insert one by one to count new vs skipped
-            for (const row of chunk) {
-              const { error: e2 } = await supabase.from(action.table).insert(row)
-              if (e2 && e2.code === '23505') skipped++
-              else if (!e2) saved++
-              else throw e2
-            }
-          } else {
-            throw error
-          }
-        } else {
-          saved += chunk.length
-        }
-        setResults(r => ({ ...r, [action.id]: { status: 'saving', total: clean.length, saved: saved + skipped, skipped } }))
-      }
-
-      setResults(r => ({ ...r, [action.id]: { status: 'done', total: clean.length, saved, skipped } }))
-      toast.success(`${action.table}: ${saved} inserted, ${skipped} already existed`)
+      if (!all.length) throw new Error('No data returned')
+      const clean = all.map(r => { const x = { ...r }; delete x.id; return x })
+      const saved = await upsertChunked(action.id, action.table, clean, action.conflictCol)
+      toast.success(`${action.table}: ${saved} upserted`)
     } catch (err) {
-      setResults(r => ({ ...r, [action.id]: { status: 'error', error: err.message } }))
+      setResult(action.id, { status: 'error', error: err.message })
       toast.error(err.message)
     } finally {
-      setRunning(r => ({ ...r, [action.id]: false }))
+      setRun(action.id, false)
+    }
+  }
+
+  // ── season sync helpers ───────────────────────────────────
+
+  const getSeasonId = async (yr) => {
+    const { data, error } = await supabase.from('seasons').select('id').eq('year', yr).single()
+    if (error) throw new Error(`Season ${yr} not found — add it first`)
+    return data.id
+  }
+
+  const getDriverMap = async () => {
+    const { data } = await supabase.from('drivers').select('id, name, code')
+    const map = {}
+    data?.forEach(d => {
+      if (d.code) map[d.code] = d.id
+      map[d.name] = d.id
+    })
+    return map
+  }
+
+  const getTeamMap = async () => {
+    const { data } = await supabase.from('teams').select('id, name')
+    const map = {}
+    data?.forEach(t => { map[t.name] = t.id })
+    return map
+  }
+
+  const getCircuitMap = async () => {
+    const { data } = await supabase.from('circuits').select('id, name')
+    const map = {}
+    data?.forEach(c => { map[c.name] = c.id })
+    return map
+  }
+
+  const getRaceMap = async (seasonId) => {
+    const { data } = await supabase.from('races').select('id, round').eq('season_id', seasonId)
+    const map = {}
+    data?.forEach(r => { map[r.round] = r.id })
+    return map
+  }
+
+  // ── season-scoped syncs ───────────────────────────────────
+
+  const syncRaces = async (yr) => {
+    const id = `races-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      const seasonId = await getSeasonId(yr)
+      const circuitMap = await getCircuitMap()
+      const url = `https://api.jolpi.ca/ergast/f1/${yr}/races/?limit=30&format=json`
+      const raw = await ergastFetch(url, `/api/ergast/${yr}/races/?limit=30&format=json`)
+      const rows = normalizeRaces(raw, seasonId, circuitMap, 'ergast')
+      if (!rows.length) throw new Error('No races found')
+      const saved = await upsertChunked(id, 'races', rows, 'season_id,round')
+      toast.success(`Races ${yr}: ${saved} upserted`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
+    }
+  }
+
+  const syncRaceResults = async (yr) => {
+    const id = `results-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      const seasonId = await getSeasonId(yr)
+      const [driverMap, teamMap, raceMap] = await Promise.all([getDriverMap(), getTeamMap(), getRaceMap(seasonId)])
+      // fetch all results for the season (paginated)
+      const firstPage = await ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/results/?limit=100&format=json`,
+        `/api/ergast/${yr}/results/?limit=100&format=json`
+      )
+      const total = parseInt(firstPage?.MRData?.total || 0)
+      const pages = Math.ceil(total / 100)
+      let allRaces = firstPage?.MRData?.RaceTable?.Races || []
+      for (let p = 1; p < pages; p++) {
+        const page = await ergastFetch(
+          `https://api.jolpi.ca/ergast/f1/${yr}/results/?limit=100&offset=${p * 100}&format=json`,
+          `/api/ergast/${yr}/results/?limit=100&offset=${p * 100}&format=json`
+        )
+        allRaces = allRaces.concat(page?.MRData?.RaceTable?.Races || [])
+      }
+      const rows = allRaces.flatMap(race => {
+        const raceId = raceMap[parseInt(race.round)]
+        if (!raceId) return []
+        return (race.Results || []).map(r => ({
+          race_id: raceId,
+          driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
+          team_id: teamMap[r.Constructor?.name] || null,
+          position: parseInt(r.position) || null,
+          grid: parseInt(r.grid) || null,
+          laps: parseInt(r.laps) || null,
+          time: r.Time?.time || null,
+          points: parseFloat(r.points) || 0,
+          status: r.status || 'Finished',
+        }))
+      })
+      if (!rows.length) throw new Error('No results found')
+      const saved = await upsertChunked(id, 'results', rows, 'race_id,driver_id')
+      toast.success(`Results ${yr}: ${saved} upserted`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
+    }
+  }
+
+  const syncQualifying = async (yr) => {
+    const id = `qualifying-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      const seasonId = await getSeasonId(yr)
+      const [driverMap, teamMap, raceMap] = await Promise.all([getDriverMap(), getTeamMap(), getRaceMap(seasonId)])
+      const firstPage = await ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/qualifying/?limit=100&format=json`,
+        `/api/ergast/${yr}/qualifying/?limit=100&format=json`
+      )
+      const total = parseInt(firstPage?.MRData?.total || 0)
+      const pages = Math.ceil(total / 100)
+      let allRaces = firstPage?.MRData?.RaceTable?.Races || []
+      for (let p = 1; p < pages; p++) {
+        const page = await ergastFetch(
+          `https://api.jolpi.ca/ergast/f1/${yr}/qualifying/?limit=100&offset=${p * 100}&format=json`,
+          `/api/ergast/${yr}/qualifying/?limit=100&offset=${p * 100}&format=json`
+        )
+        allRaces = allRaces.concat(page?.MRData?.RaceTable?.Races || [])
+      }
+      const rows = allRaces.flatMap(race => {
+        const raceId = raceMap[parseInt(race.round)]
+        if (!raceId) return []
+        return (race.QualifyingResults || []).map(r => ({
+          race_id: raceId,
+          driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
+          team_id: teamMap[r.Constructor?.name] || null,
+          position: parseInt(r.position) || null,
+          q1: r.Q1 || null,
+          q2: r.Q2 || null,
+          q3: r.Q3 || null,
+        }))
+      })
+      if (!rows.length) throw new Error('No qualifying data found')
+      const saved = await upsertChunked(id, 'qualifying_results', rows, 'race_id,driver_id')
+      toast.success(`Qualifying ${yr}: ${saved} upserted`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
+    }
+  }
+
+  const syncDriverStandings = async (yr) => {
+    const id = `driver-standings-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      const seasonId = await getSeasonId(yr)
+      const [driverMap, teamMap] = await Promise.all([getDriverMap(), getTeamMap()])
+      const raw = await ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/driverStandings/?format=json`,
+        `/api/ergast/${yr}/driverStandings/?format=json`
+      )
+      const rows = normalizeDriverStandings(raw, seasonId, driverMap, teamMap)
+      if (!rows.length) throw new Error('No standings found')
+      const saved = await upsertChunked(id, 'driver_standings', rows, 'season_id,driver_id')
+      toast.success(`Driver standings ${yr}: ${saved} upserted`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
+    }
+  }
+
+  const syncConstructorStandings = async (yr) => {
+    const id = `constructor-standings-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      const seasonId = await getSeasonId(yr)
+      const teamMap = await getTeamMap()
+      const raw = await ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/constructorStandings/?format=json`,
+        `/api/ergast/${yr}/constructorStandings/?format=json`
+      )
+      const rows = normalizeConstructorStandings(raw, seasonId, teamMap)
+      if (!rows.length) throw new Error('No standings found')
+      const saved = await upsertChunked(id, 'constructor_standings', rows, 'season_id,team_id')
+      toast.success(`Constructor standings ${yr}: ${saved} upserted`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
     }
   }
 
   const syncSeason = async () => {
-    setRunning(r => ({ ...r, season: true }))
+    setRun('season', true)
     setSeasonResult(null)
     try {
       const yr = parseInt(year)
@@ -182,28 +380,26 @@ export default function AdminSync() {
       setSeasonResult({ ok: false, msg: err.message })
       toast.error(err.message)
     } finally {
-      setRunning(r => ({ ...r, season: false }))
+      setRun('season', false)
     }
   }
+
+  const SEASON_ACTIONS = [
+    { key: 'races', label: 'Races', description: 'Race schedule + circuit links', fn: syncRaces },
+    { key: 'results', label: 'Race Results', description: 'Final positions, points, status', fn: syncRaceResults },
+    { key: 'qualifying', label: 'Qualifying Results', description: 'Q1/Q2/Q3 times per driver', fn: syncQualifying },
+    { key: 'driver-standings', label: 'Driver Standings', description: 'Championship standings', fn: syncDriverStandings },
+    { key: 'constructor-standings', label: 'Constructor Standings', description: 'Team championship standings', fn: syncConstructorStandings },
+  ]
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black">Sync Tools</h1>
         <p className="text-white/40 text-sm mt-1">
-          Fetch data from external APIs via server-side actions. Deploy the Edge Function for production use.
+          Fetch data from Ergast API. All syncs are idempotent — re-running will upsert, not duplicate.
         </p>
       </div>
-
-      <Card>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-bold text-yellow-400 uppercase tracking-wider">⚠ Edge Function Required</span>
-        </div>
-        <p className="text-xs text-white/40">
-          For production, deploy <code className="text-white/60">supabase/functions/sync-ergast/index.ts</code>.
-          In development, sync buttons will attempt a direct fetch as fallback.
-        </p>
-      </Card>
 
       {/* Add Season */}
       <Card>
@@ -215,10 +411,7 @@ export default function AdminSync() {
               className="input w-28" min="1950" max="2030" />
           </div>
           <button onClick={syncSeason} disabled={running.season} className="btn-primary flex items-center gap-2">
-            {running.season
-              ? <><Loader size={12} className="animate-spin" /> Adding...</>
-              : 'Add Season'
-            }
+            {running.season ? <><Loader size={12} className="animate-spin" /> Adding...</> : 'Add Season'}
           </button>
         </div>
         {seasonResult && (
@@ -229,27 +422,24 @@ export default function AdminSync() {
         )}
       </Card>
 
-      {/* Ergast Sync */}
+      {/* Global sync — drivers / teams / circuits */}
       <div>
         <h2 className="text-sm font-bold mb-3 text-white/70 flex items-center gap-2">
-          Ergast API
-          <a href="http://ergast.com/mrd/" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white">
+          Global Data
+          <a href="https://api.jolpi.ca" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white">
             <ExternalLink size={12} />
           </a>
         </h2>
         <div className="space-y-3">
-          {SYNC_ACTIONS.map(action => (
+          {GLOBAL_SYNC_ACTIONS.map(action => (
             <div key={action.id} className="glass p-4 flex items-center justify-between gap-4">
               <div>
                 <div className="font-medium text-sm">{action.label}</div>
                 <div className="text-xs text-white/40 mt-0.5">{action.description}</div>
                 {results[action.id] && <SyncStatus result={results[action.id]} />}
               </div>
-              <button
-                onClick={() => runSync(action)}
-                disabled={running[action.id]}
-                className="btn-ghost flex items-center gap-2 shrink-0"
-              >
+              <button onClick={() => runGlobalSync(action)} disabled={running[action.id]}
+                className="btn-ghost flex items-center gap-2 shrink-0">
                 <RefreshCw size={12} className={running[action.id] ? 'animate-spin' : ''} />
                 {running[action.id] ? 'Syncing...' : 'Sync'}
               </button>
@@ -258,17 +448,39 @@ export default function AdminSync() {
         </div>
       </div>
 
-      {/* Edge Function instructions */}
+      {/* Season-scoped sync */}
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <h2 className="text-sm font-bold text-white/70">Season Data</h2>
+          <input type="number" value={syncYear} onChange={e => setSyncYear(parseInt(e.target.value))}
+            className="input w-24 text-sm" min="1950" max="2030" />
+          <span className="text-xs text-white/30">Sync races, results & standings for this year</span>
+        </div>
+        <div className="space-y-3">
+          {SEASON_ACTIONS.map(({ key, label, description, fn }) => {
+            const id = `${key}-${syncYear}`
+            return (
+              <div key={key} className="glass p-4 flex items-center justify-between gap-4">
+                <div>
+                  <div className="font-medium text-sm">{label}</div>
+                  <div className="text-xs text-white/40 mt-0.5">{description}</div>
+                  {results[id] && <SyncStatus result={results[id]} />}
+                </div>
+                <button onClick={() => fn(syncYear)} disabled={running[id]}
+                  className="btn-ghost flex items-center gap-2 shrink-0">
+                  <RefreshCw size={12} className={running[id] ? 'animate-spin' : ''} />
+                  {running[id] ? 'Syncing...' : 'Sync'}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       <Card>
         <h2 className="text-sm font-bold mb-3">Deploy Edge Function</h2>
-        <pre className="text-xs text-white/50 bg-dark-900 rounded-lg p-3 overflow-x-auto">{`# Install Supabase CLI
-npm install -g supabase
-
-# Login and link project
-supabase login
+        <pre className="text-xs text-white/50 bg-dark-900 rounded-lg p-3 overflow-x-auto">{`supabase login
 supabase link --project-ref YOUR_PROJECT_REF
-
-# Deploy the sync function
 supabase functions deploy sync-ergast`}</pre>
       </Card>
     </div>
