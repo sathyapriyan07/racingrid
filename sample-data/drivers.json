@@ -1,0 +1,12 @@
+[
+  {"name": "Max Verstappen", "code": "VER", "nationality": "Dutch", "dob": "1997-09-30"},
+  {"name": "Lewis Hamilton", "code": "HAM", "nationality": "British", "dob": "1985-01-07"},
+  {"name": "Charles Leclerc", "code": "LEC", "nationality": "Monegasque", "dob": "1997-10-16"},
+  {"name": "Lando Norris", "code": "NOR", "nationality": "British", "dob": "1999-11-13"},
+  {"name": "Carlos Sainz", "code": "SAI", "nationality": "Spanish", "dob": "1994-09-01"},
+  {"name": "George Russell", "code": "RUS", "nationality": "British", "dob": "1998-02-15"},
+  {"name": "Fernando Alonso", "code": "ALO", "nationality": "Spanish", "dob": "1981-07-29"},
+  {"name": "Oscar Piastri", "code": "PIA", "nationality": "Australian", "dob": "2001-04-06"},
+  {"name": "Lance Stroll", "code": "STR", "nationality": "Canadian", "dob": "1998-10-29"},
+  {"name": "Nico Hulkenberg", "code": "HUL", "nationality": "German", "dob": "1987-08-19"}
+]

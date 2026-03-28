@@ -1,0 +1,12 @@
+[
+  {"name": "Red Bull Racing", "nationality": "Austrian", "base": "Milton Keynes, UK"},
+  {"name": "Mercedes", "nationality": "German", "base": "Brackley, UK"},
+  {"name": "Ferrari", "nationality": "Italian", "base": "Maranello, Italy"},
+  {"name": "McLaren", "nationality": "British", "base": "Woking, UK"},
+  {"name": "Aston Martin", "nationality": "British", "base": "Silverstone, UK"},
+  {"name": "Alpine", "nationality": "French", "base": "Enstone, UK"},
+  {"name": "Williams", "nationality": "British", "base": "Grove, UK"},
+  {"name": "Haas", "nationality": "American", "base": "Kannapolis, USA"},
+  {"name": "Kick Sauber", "nationality": "Swiss", "base": "Hinwil, Switzerland"},
+  {"name": "RB", "nationality": "Italian", "base": "Faenza, Italy"}
+]

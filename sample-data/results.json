@@ -1,0 +1,12 @@
+[
+  {"position": 1, "grid": 1, "laps": 57, "time": "1:31:44.742", "points": 25, "status": "Finished", "driver": "VER", "team": "Red Bull Racing"},
+  {"position": 2, "grid": 3, "laps": 57, "time": "+22.457", "points": 18, "status": "Finished", "driver": "LEC", "team": "Ferrari"},
+  {"position": 3, "grid": 2, "laps": 57, "time": "+25.143", "points": 15, "status": "Finished", "driver": "SAI", "team": "Ferrari"},
+  {"position": 4, "grid": 5, "laps": 57, "time": "+37.358", "points": 12, "status": "Finished", "driver": "NOR", "team": "McLaren"},
+  {"position": 5, "grid": 4, "laps": 57, "time": "+49.920", "points": 10, "status": "Finished", "driver": "HAM", "team": "Mercedes"},
+  {"position": 6, "grid": 6, "laps": 57, "time": "+1:02.145", "points": 8, "status": "Finished", "driver": "RUS", "team": "Mercedes"},
+  {"position": 7, "grid": 8, "laps": 57, "time": "+1:15.234", "points": 6, "status": "Finished", "driver": "ALO", "team": "Aston Martin"},
+  {"position": 8, "grid": 7, "laps": 57, "time": "+1:28.901", "points": 4, "status": "Finished", "driver": "PIA", "team": "McLaren"},
+  {"position": 9, "grid": 10, "laps": 57, "time": "+1:35.678", "points": 2, "status": "Finished", "driver": "STR", "team": "Aston Martin"},
+  {"position": 10, "grid": 9, "laps": 57, "time": "+1:42.123", "points": 1, "status": "Finished", "driver": "HUL", "team": "Haas"}
+]
