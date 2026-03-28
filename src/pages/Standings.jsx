@@ -101,8 +101,8 @@ export default function Standings() {
                       <td className="py-2">
                         <Link to={`/driver/${row.driver_id}`} className="flex items-center gap-3 hover:text-f1red transition-colors">
                           {row.drivers?.image_url
-                            ? <img src={row.drivers.image_url} alt={row.drivers.name} className="w-9 h-9 rounded-full object-cover object-top shrink-0 border border-white/10" />
-                            : <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: 'var(--bg-raised)', color: 'var(--text-muted)' }}>{row.drivers?.code?.slice(0,3)}</div>
+                            ? <img src={row.drivers.image_url} alt={row.drivers.name} className="w-9 h-9 object-cover object-top shrink-0" />
+                            : <div className="w-9 h-9 shrink-0 flex items-center justify-center text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code?.slice(0,3)}</div>
                           }
                           <div>
                             <div className="font-semibold text-sm leading-tight">{row.drivers?.name}</div>
