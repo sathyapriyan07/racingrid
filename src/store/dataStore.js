@@ -211,47 +211,77 @@ export const useDataStore = create((set, get) => ({
   fetchAllChampionships: async () => {
     const key = 'all_championships'
     if (get().cache[key]) return get().cache[key]
-    // Get all seasons
-    const { data: seasons } = await supabase.from('seasons').select('id, year').order('year')
-    if (!seasons?.length) return { driverChamps: {}, teamChamps: {} }
-    // For each season get the top driver and team by points
-    const { data: raceResults } = await supabase
-      .from('results')
-      .select('driver_id, team_id, points, position, races!inner(season_id, seasons(year))')
-    if (!raceResults) return { driverChamps: {}, teamChamps: {} }
 
-    const bySeasonDriver = {}
-    const bySeasonTeam = {}
-    for (const r of raceResults) {
-      const year = r.races?.seasons?.year
-      if (!year) continue
-      const pts = parseFloat(r.points) || 0
-      if (r.driver_id) {
-        if (!bySeasonDriver[year]) bySeasonDriver[year] = {}
-        bySeasonDriver[year][r.driver_id] = (bySeasonDriver[year][r.driver_id] || 0) + pts
-      }
-      if (r.team_id) {
-        if (!bySeasonTeam[year]) bySeasonTeam[year] = {}
-        bySeasonTeam[year][r.team_id] = (bySeasonTeam[year][r.team_id] || 0) + pts
+    // Use imported standings tables — Ergast totals already include sprint points
+    const [{ data: dStandings }, { data: cStandings }] = await Promise.all([
+      supabase.from('driver_standings').select('driver_id, points, season_id, seasons!inner(year)'),
+      supabase.from('constructor_standings').select('team_id, points, season_id, seasons!inner(year)'),
+    ])
+
+    const driverChamps = {}
+    const teamChamps = {}
+
+    if (dStandings?.length) {
+      // Group by season, pick highest points
+      const byYear = {}
+      dStandings.forEach(r => {
+        const year = r.seasons?.year
+        if (!year) return
+        if (!byYear[year] || parseFloat(r.points) > parseFloat(byYear[year].points))
+          byYear[year] = r
+      })
+      Object.entries(byYear).forEach(([year, r]) => {
+        if (!r.driver_id) return
+        if (!driverChamps[r.driver_id]) driverChamps[r.driver_id] = []
+        driverChamps[r.driver_id].push(parseInt(year))
+      })
+    } else {
+      // Fallback: compute from results if standings not imported
+      const { data: raceResults } = await supabase
+        .from('results')
+        .select('driver_id, team_id, points, races!inner(season_id, seasons(year))')
+      if (raceResults) {
+        const bySeasonDriver = {}
+        const bySeasonTeam = {}
+        raceResults.forEach(r => {
+          const year = r.races?.seasons?.year
+          if (!year) return
+          const pts = parseFloat(r.points) || 0
+          if (r.driver_id) {
+            if (!bySeasonDriver[year]) bySeasonDriver[year] = {}
+            bySeasonDriver[year][r.driver_id] = (bySeasonDriver[year][r.driver_id] || 0) + pts
+          }
+          if (r.team_id) {
+            if (!bySeasonTeam[year]) bySeasonTeam[year] = {}
+            bySeasonTeam[year][r.team_id] = (bySeasonTeam[year][r.team_id] || 0) + pts
+          }
+        })
+        Object.entries(bySeasonDriver).forEach(([year, map]) => {
+          const [id] = Object.entries(map).sort((a, b) => b[1] - a[1])[0] || []
+          if (id) { if (!driverChamps[id]) driverChamps[id] = []; driverChamps[id].push(parseInt(year)) }
+        })
+        Object.entries(bySeasonTeam).forEach(([year, map]) => {
+          const [id] = Object.entries(map).sort((a, b) => b[1] - a[1])[0] || []
+          if (id) { if (!teamChamps[id]) teamChamps[id] = []; teamChamps[id].push(parseInt(year)) }
+        })
       }
     }
 
-    const driverChamps = {} // driver_id → [years]
-    const teamChamps = {}   // team_id → [years]
-    for (const [year, map] of Object.entries(bySeasonDriver)) {
-      const winner = Object.entries(map).sort((a, b) => b[1] - a[1])[0]
-      if (winner) {
-        if (!driverChamps[winner[0]]) driverChamps[winner[0]] = []
-        driverChamps[winner[0]].push(parseInt(year))
-      }
+    if (cStandings?.length) {
+      const byYear = {}
+      cStandings.forEach(r => {
+        const year = r.seasons?.year
+        if (!year) return
+        if (!byYear[year] || parseFloat(r.points) > parseFloat(byYear[year].points))
+          byYear[year] = r
+      })
+      Object.entries(byYear).forEach(([year, r]) => {
+        if (!r.team_id) return
+        if (!teamChamps[r.team_id]) teamChamps[r.team_id] = []
+        teamChamps[r.team_id].push(parseInt(year))
+      })
     }
-    for (const [year, map] of Object.entries(bySeasonTeam)) {
-      const winner = Object.entries(map).sort((a, b) => b[1] - a[1])[0]
-      if (winner) {
-        if (!teamChamps[winner[0]]) teamChamps[winner[0]] = []
-        teamChamps[winner[0]].push(parseInt(year))
-      }
-    }
+
     const result = { driverChamps, teamChamps }
     set(s => ({ cache: { ...s.cache, [key]: result } }))
     return result
