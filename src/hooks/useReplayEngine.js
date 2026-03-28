@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 const TEAM_COLORS = {
   'Red Bull Racing': '#3671C6', 'Red Bull': '#3671C6',
@@ -18,33 +18,22 @@ function getTeamColor(teamName) {
   return '#FFFFFF'
 }
 
-// Normalize raw OpenF1 meter coords to 0-1 range
-function normalizePoints(points) {
-  if (!points.length) return []
-  const xs = points.map(p => p.x)
-  const ys = points.map(p => p.y)
-  const minX = Math.min(...xs), maxX = Math.max(...xs)
-  const minY = Math.min(...ys), maxY = Math.max(...ys)
-  const rangeX = maxX - minX || 1
-  const rangeY = maxY - minY || 1
-  return points.map(p => ({
-    ...p,
-    nx: (p.x - minX) / rangeX,
-    ny: (p.y - minY) / rangeY,
-  }))
-}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 async function openf1Get(path) {
-  const base = import.meta.env.DEV ? '/api/openf1' : '/api/openf1'
+  const base = '/api/openf1'
   const res = await fetch(`${base}${path}`)
   if (!res.ok) throw new Error(`OpenF1 ${res.status}: ${path}`)
   return res.json()
 }
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
+// Normalize raw meter coords to 0-1 using provided bounds
+function normalizePt(x, y, minX, minY, rangeX, rangeY) {
+  return { nx: (x - minX) / rangeX, ny: (y - minY) / rangeY }
+}
 
 export function useReplayEngine(sessionKey) {
-  const [status, setStatus] = useState('idle') // idle | loading | ready | error
+  const [status, setStatus] = useState('idle')
   const [error, setError] = useState(null)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeedState] = useState(1)
@@ -52,28 +41,156 @@ export function useReplayEngine(sessionKey) {
   const [totalTime, setTotalTime] = useState(0)
   const [currentLap, setCurrentLap] = useState(1)
   const [totalLaps, setTotalLaps] = useState(0)
-  const [drivers, setDrivers] = useState([]) // current frame DriverMarker[]
-  const [leaderboard, setLeaderboard] = useState([]) // sorted by position
-  const [trackPoints, setTrackPoints] = useState([]) // normalized TrackPoint[]
+  const [drivers, setDrivers] = useState([])
+  const [leaderboard, setLeaderboard] = useState([])
+  const [trackPoints, setTrackPoints] = useState([])
+  const [loadingLap, setLoadingLap] = useState(false)
 
-  // Raw data refs
-  const allLocations = useRef({}) // driver_number → [{date, nx, ny, x, y}]
-  const driverInfoRef = useRef({}) // driver_number → {name_acronym, team_name, color}
-  const timelineRef = useRef([]) // sorted unique timestamps (ms from start)
+  const driverInfoRef = useRef({})
+  const lapFramesRef = useRef({})      // lap → [{ts, positions: {num: {nx,ny}}}]
+  const loadedLapsRef = useRef(new Set())
+  const boundsRef = useRef(null)       // {minX, minY, rangeX, rangeY}
   const startTimeRef = useRef(0)
+  const lapTimestampsRef = useRef([])  // [{lap, ts_ms}]
   const speedRef = useRef(1)
   const playingRef = useRef(false)
   const rafRef = useRef(null)
   const lastRafTimeRef = useRef(null)
   const currentTimeRef = useRef(0)
-  const lapTimestampsRef = useRef([]) // [{lap, timestamp_ms}]
+  const totalTimeRef = useRef(0)
+  const totalLapsRef = useRef(0)
 
-  const setSpeed = useCallback((s) => {
-    speedRef.current = s
-    setSpeedState(s)
+  const setSpeed = useCallback((s) => { speedRef.current = s; setSpeedState(s) }, [])
+
+  // Build leaderboard from current drivers
+  const buildLeaderboard = useCallback((markers) => {
+    setLeaderboard([...markers].sort((a, b) => (a.position ?? 99) - (b.position ?? 99)))
   }, [])
 
-  // Load all data
+  // Render a specific time
+  const renderTime = useCallback((timeSec) => {
+    const absTs = startTimeRef.current + timeSec * 1000
+    const lapTs = lapTimestampsRef.current
+
+    // Find current lap
+    let lap = 1
+    for (let i = lapTs.length - 1; i >= 0; i--) {
+      if (absTs >= lapTs[i].ts_ms) { lap = lapTs[i].lap; break }
+    }
+    setCurrentLap(lap)
+
+    // Get frames for this lap
+    const frames = lapFramesRef.current[lap]
+    if (!frames?.length) return
+
+    // Find closest frame by timestamp
+    let lo = 0, hi = frames.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (frames[mid].ts < absTs) lo = mid + 1
+      else hi = mid
+    }
+    const frame = frames[Math.min(lo, frames.length - 1)]
+
+    const dMap = driverInfoRef.current
+    const markers = Object.entries(frame.positions).map(([numStr, pos], i) => {
+      const num = parseInt(numStr)
+      const info = dMap[num] || {}
+      return {
+        abbr: info.name_acronym || `#${num}`,
+        x: pos.nx,
+        y: pos.ny,
+        color: info.color || '#fff',
+        position: pos.pos ?? (i + 1),
+      }
+    })
+    setDrivers(markers)
+    buildLeaderboard(markers)
+  }, [buildLeaderboard])
+
+  // Load location data for a specific lap
+  const loadLap = useCallback(async (lap) => {
+    if (loadedLapsRef.current.has(lap) || !boundsRef.current) return
+    loadedLapsRef.current.add(lap) // mark immediately to prevent double-fetch
+    setLoadingLap(true)
+
+    try {
+      const { minX, minY, rangeX, rangeY } = boundsRef.current
+      const driverNums = Object.keys(driverInfoRef.current).map(Number)
+      const lapTs = lapTimestampsRef.current.find(l => l.lap === lap)
+      if (!lapTs) return
+
+      // Fetch all drivers for this lap in parallel (single lap = small data)
+      const results = await Promise.all(
+        driverNums.map(num =>
+          openf1Get(`/location?session_key=${sessionKey}&driver_number=${num}&lap_number=${lap}`)
+            .catch(() => [])
+        )
+      )
+
+      // Build timeline: merge all driver positions by timestamp
+      const tsMap = {} // ts_ms → {num: {nx, ny}}
+      driverNums.forEach((num, idx) => {
+        const pts = results[idx].filter(p => p.x !== 0 || p.y !== 0)
+        pts.forEach(p => {
+          const ts = new Date(p.date).getTime()
+          if (!tsMap[ts]) tsMap[ts] = {}
+          const { nx, ny } = normalizePt(p.x, p.y, minX, minY, rangeX, rangeY)
+          tsMap[ts][num] = { nx, ny }
+        })
+      })
+
+      // Sort frames by timestamp, fill missing drivers from previous frame
+      const sortedTs = Object.keys(tsMap).map(Number).sort((a, b) => a - b)
+      const frames = []
+      const lastPos = {}
+      for (const ts of sortedTs) {
+        const positions = { ...lastPos }
+        Object.entries(tsMap[ts]).forEach(([num, pos]) => {
+          positions[num] = pos
+          lastPos[num] = pos
+        })
+        frames.push({ ts, positions })
+      }
+
+      lapFramesRef.current[lap] = frames
+    } catch (err) {
+      console.error('loadLap error:', err)
+      loadedLapsRef.current.delete(lap) // allow retry
+    } finally {
+      setLoadingLap(false)
+    }
+  }, [sessionKey])
+
+  // Preload next lap in background
+  const preloadNextLap = useCallback((lap) => {
+    const next = lap + 1
+    if (next <= totalLapsRef.current && !loadedLapsRef.current.has(next)) {
+      loadLap(next)
+    }
+  }, [loadLap])
+
+  // RAF playback loop
+  const tick = useCallback(() => {
+    if (!playingRef.current) return
+    const now = performance.now()
+    if (lastRafTimeRef.current !== null) {
+      const elapsed = (now - lastRafTimeRef.current) / 1000 * speedRef.current
+      const next = Math.min(currentTimeRef.current + elapsed, totalTimeRef.current)
+      currentTimeRef.current = next
+      setCurrentTime(next)
+      renderTime(next)
+      if (next >= totalTimeRef.current) {
+        playingRef.current = false
+        setPlaying(false)
+        return
+      }
+    }
+    lastRafTimeRef.current = now
+    rafRef.current = requestAnimationFrame(tick)
+  }, [renderTime])
+
+  // Initial load: drivers + laps + track outline only
   useEffect(() => {
     if (!sessionKey) return
     setStatus('loading')
@@ -81,7 +198,7 @@ export function useReplayEngine(sessionKey) {
 
     const load = async () => {
       try {
-        // 1. Fetch driver info
+        // 1. Drivers
         const driverData = await openf1Get(`/drivers?session_key=${sessionKey}`)
         const dMap = {}
         driverData.forEach(d => {
@@ -93,14 +210,14 @@ export function useReplayEngine(sessionKey) {
         })
         driverInfoRef.current = dMap
 
-        await delay(300)
+        await delay(400)
 
-        // 2. Fetch laps to get lap timestamps
+        // 2. Laps for timeline
         const lapsData = await openf1Get(`/laps?session_key=${sessionKey}`)
         const maxLap = lapsData.length ? Math.max(...lapsData.map(l => l.lap_number)) : 0
         setTotalLaps(maxLap)
+        totalLapsRef.current = maxLap
 
-        // Build lap start timestamps from first driver's laps
         const firstDriverNum = driverData[0]?.driver_number
         const firstDriverLaps = lapsData
           .filter(l => l.driver_number === firstDriverNum && l.date_start)
@@ -108,70 +225,49 @@ export function useReplayEngine(sessionKey) {
 
         const lapTs = firstDriverLaps.map(l => ({
           lap: l.lap_number,
-          timestamp_ms: new Date(l.date_start).getTime(),
+          ts_ms: new Date(l.date_start).getTime(),
         }))
         lapTimestampsRef.current = lapTs
 
-        await delay(300)
-
-        // 3. Fetch location data sequentially to avoid 429 rate limiting
-        const driverNums = driverData.map(d => d.driver_number)
-        const locResults = {}
-
-        for (let i = 0; i < driverNums.length; i++) {
-          const num = driverNums[i]
-          try {
-            const raw = await openf1Get(`/location?session_key=${sessionKey}&driver_number=${num}`)
-            // Sample every 5th point to reduce memory and processing
-            locResults[num] = raw.filter((_, idx) => idx % 5 === 0).filter(p => p.x !== 0 || p.y !== 0)
-          } catch {
-            locResults[num] = []
-          }
-          // 600ms between each driver to stay well under rate limit
-          if (i < driverNums.length - 1) await delay(600)
+        if (lapTs.length > 0) {
+          startTimeRef.current = lapTs[0].ts_ms
+          const lastLap = firstDriverLaps[firstDriverLaps.length - 1]
+          const total = ((lastLap ? new Date(lastLap.date_start).getTime() : lapTs[lapTs.length - 1].ts_ms)
+            - lapTs[0].ts_ms) / 1000 + (lastLap?.lap_duration || 90)
+          setTotalTime(total)
+          totalTimeRef.current = total
         }
 
-        // 4. Build track outline from driver 1's full lap (most complete path)
-        const trackDriverNum = driverNums[0]
-        const trackRaw = locResults[trackDriverNum] || []
-        const trackNorm = normalizePoints(trackRaw)
-        setTrackPoints(trackNorm.map(p => ({ x: p.nx, y: p.ny })))
+        await delay(400)
 
-        // 5. Normalize all driver locations
-        // Use global min/max from track driver for consistent coordinate space
-        const allRaw = trackRaw
-        const xs = allRaw.map(p => p.x)
-        const ys = allRaw.map(p => p.y)
-        const minX = Math.min(...xs), maxX = Math.max(...xs)
-        const minY = Math.min(...ys), maxY = Math.max(...ys)
-        const rangeX = maxX - minX || 1
-        const rangeY = maxY - minY || 1
+        // 3. Track outline: fetch lap 1 for driver 1 only
+        const trackRaw = await openf1Get(
+          `/location?session_key=${sessionKey}&driver_number=${firstDriverNum}&lap_number=1`
+        )
+        const nonzero = trackRaw.filter(p => p.x !== 0 || p.y !== 0)
 
-        const normalizedLocs = {}
-        driverNums.forEach(num => {
-          normalizedLocs[num] = (locResults[num] || []).map(p => ({
-            ts: new Date(p.date).getTime(),
-            nx: (p.x - minX) / rangeX,
-            ny: (p.y - minY) / rangeY,
-          }))
-        })
-        allLocations.current = normalizedLocs
-
-        // 6. Compute timeline
-        if (lapTs.length > 0) {
-          startTimeRef.current = lapTs[0].timestamp_ms
-          const lastLap = lapTs[lapTs.length - 1]
-          const lastLapDuration = firstDriverLaps.find(l => l.lap_number === lastLap.lap)?.lap_duration || 90
-          const endTs = lastLap.timestamp_ms + lastLapDuration * 1000
-          const total = (endTs - startTimeRef.current) / 1000
-          setTotalTime(total)
+        if (nonzero.length > 0) {
+          const xs = nonzero.map(p => p.x)
+          const ys = nonzero.map(p => p.y)
+          const minX = Math.min(...xs), maxX = Math.max(...xs)
+          const minY = Math.min(...ys), maxY = Math.max(...ys)
+          const rangeX = maxX - minX || 1
+          const rangeY = maxY - minY || 1
+          boundsRef.current = { minX, minY, rangeX, rangeY }
+          // Sample every 3rd point for track outline
+          setTrackPoints(
+            nonzero.filter((_, i) => i % 3 === 0).map(p => ({
+              x: (p.x - minX) / rangeX,
+              y: (p.y - minY) / rangeY,
+            }))
+          )
         }
 
         setStatus('ready')
-        setCurrentTime(0)
-        currentTimeRef.current = 0
-        // Show initial frame
-        updateFrame(0)
+
+        // 4. Load lap 1 data immediately
+        await loadLap(1)
+        renderTime(0)
       } catch (err) {
         setError(err.message)
         setStatus('error')
@@ -179,90 +275,25 @@ export function useReplayEngine(sessionKey) {
     }
 
     load()
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
-  }, [sessionKey])
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [sessionKey, loadLap, renderTime])
 
-  // Get driver positions at a given time (seconds from start)
-  const updateFrame = useCallback((timeSec) => {
-    const absTs = startTimeRef.current + timeSec * 1000
-    const dMap = driverInfoRef.current
-    const locs = allLocations.current
-
-    const markers = []
-    const board = []
-
-    Object.entries(locs).forEach(([numStr, points]) => {
-      const num = parseInt(numStr)
-      const info = dMap[num]
-      if (!points.length || !info) return
-
-      // Binary search for closest timestamp
-      let lo = 0, hi = points.length - 1
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1
-        if (points[mid].ts < absTs) lo = mid + 1
-        else hi = mid
-      }
-      const pt = points[Math.min(lo, points.length - 1)]
-
-      markers.push({
-        abbr: info.name_acronym || `#${num}`,
-        x: pt.nx,
-        y: pt.ny,
-        color: info.color,
-        position: null,
-      })
-      board.push({
-        num,
-        abbr: info.name_acronym || `#${num}`,
-        color: info.color,
-        team: info.team_name,
-      })
-    })
-
-    // Determine current lap
-    const lapTs = lapTimestampsRef.current
-    let lap = 1
-    for (let i = lapTs.length - 1; i >= 0; i--) {
-      if (absTs >= lapTs[i].timestamp_ms) { lap = lapTs[i].lap; break }
-    }
-    setCurrentLap(lap)
-    setDrivers(markers)
-    setLeaderboard(board)
-  }, [])
-
-  // RAF playback loop
-  const tick = useCallback(() => {
-    if (!playingRef.current) return
-    const now = performance.now()
-    if (lastRafTimeRef.current !== null) {
-      const elapsed = (now - lastRafTimeRef.current) / 1000 * speedRef.current
-      const next = Math.min(currentTimeRef.current + elapsed, totalTime)
-      currentTimeRef.current = next
-      setCurrentTime(next)
-      updateFrame(next)
-      if (next >= totalTime) {
-        playingRef.current = false
-        setPlaying(false)
-        return
-      }
-    }
-    lastRafTimeRef.current = now
-    rafRef.current = requestAnimationFrame(tick)
-  }, [totalTime, updateFrame])
+  // When lap changes, ensure it's loaded and preload next
+  useEffect(() => {
+    if (status !== 'ready') return
+    loadLap(currentLap)
+    preloadNextLap(currentLap)
+  }, [currentLap, status, loadLap, preloadNextLap])
 
   const play = useCallback(() => {
-    if (currentTimeRef.current >= totalTime) {
-      currentTimeRef.current = 0
-      setCurrentTime(0)
+    if (currentTimeRef.current >= totalTimeRef.current) {
+      currentTimeRef.current = 0; setCurrentTime(0)
     }
     playingRef.current = true
     lastRafTimeRef.current = null
     setPlaying(true)
     rafRef.current = requestAnimationFrame(tick)
-  }, [tick, totalTime])
+  }, [tick])
 
   const pause = useCallback(() => {
     playingRef.current = false
@@ -271,27 +302,23 @@ export function useReplayEngine(sessionKey) {
   }, [])
 
   const seek = useCallback((timeSec) => {
-    const t = Math.max(0, Math.min(timeSec, totalTime))
+    const t = Math.max(0, Math.min(timeSec, totalTimeRef.current))
     currentTimeRef.current = t
     setCurrentTime(t)
-    updateFrame(t)
-  }, [totalTime, updateFrame])
+    renderTime(t)
+  }, [renderTime])
 
   const seekToLap = useCallback((lap) => {
-    const lapTs = lapTimestampsRef.current
-    const entry = lapTs.find(l => l.lap === lap)
+    const entry = lapTimestampsRef.current.find(l => l.lap === lap)
     if (!entry) return
-    const t = (entry.timestamp_ms - startTimeRef.current) / 1000
+    const t = (entry.ts_ms - startTimeRef.current) / 1000
     seek(t)
   }, [seek])
 
-  const reset = useCallback(() => {
-    pause()
-    seek(0)
-  }, [pause, seek])
+  const reset = useCallback(() => { pause(); seek(0) }, [pause, seek])
 
   return {
-    status, error,
+    status, error, loadingLap,
     playing, speed, setSpeed,
     currentTime, totalTime,
     currentLap, totalLaps,
