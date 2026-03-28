@@ -26,7 +26,7 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-1 ml-4">
-          {['Drivers', 'Teams', 'Circuits', 'Races'].map(item => (
+          {['Drivers', 'Teams', 'Circuits', 'Races', 'Standings'].map(item => (
             <Link key={item} to={`/${item.toLowerCase()}`}
               className="px-3 py-1.5 text-sm text-white/60 hover:text-white rounded-lg hover:bg-white/5 transition-colors">
               {item}
@@ -69,7 +69,7 @@ export default function Navbar() {
 
       {menuOpen && (
         <div className="md:hidden bg-dark-800 border-t border-white/5 px-4 py-3 flex flex-col gap-2">
-          {['drivers', 'teams', 'circuits', 'races', 'compare'].map(item => (
+          {['drivers', 'teams', 'circuits', 'races', 'standings', 'compare'].map(item => (
             <Link key={item} to={`/${item}`} onClick={() => setMenuOpen(false)}
               className="capitalize text-sm text-white/70 hover:text-white py-1">
               {item}

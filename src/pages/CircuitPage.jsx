@@ -30,17 +30,27 @@ export default function CircuitPage() {
 
   return (
     <div className="space-y-6">
-      <div className="glass p-6">
-        <h1 className="text-3xl font-black">{circuit.name}</h1>
-        <div className="flex gap-4 mt-2 text-sm text-white/50">
-          {circuit.location && <span>📍 {circuit.location}</span>}
-          {circuit.country && <span>🌍 {circuit.country}</span>}
+      <div className="glass p-6 flex gap-6 items-center flex-wrap">
+        <div className="flex-1">
+          <h1 className="text-3xl font-black">{circuit.name}</h1>
+          <div className="flex gap-4 mt-2 text-sm text-white/50">
+            {circuit.location && <span>📍 {circuit.location}</span>}
+            {circuit.country && <span>🌍 {circuit.country}</span>}
+          </div>
         </div>
+        {circuit.layout_image && (
+          <div className="w-48 h-32 shrink-0">
+            <img src={circuit.layout_image} alt={circuit.name}
+              className="w-full h-full object-contain opacity-80" />
+          </div>
+        )}
       </div>
 
       {circuit.layout_image && (
         <Card>
-          <img src={circuit.layout_image} alt={circuit.name} className="max-h-64 mx-auto object-contain opacity-80" />
+          <h2 className="text-sm font-bold mb-3 text-white/70">Circuit Layout</h2>
+          <img src={circuit.layout_image} alt={circuit.name}
+            className="max-h-72 mx-auto object-contain" />
         </Card>
       )}
 

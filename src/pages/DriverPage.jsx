@@ -6,14 +6,19 @@ import PerformanceChart from '../components/charts/PerformanceChart'
 
 export default function DriverPage() {
   const { id } = useParams()
-  const { fetchDriver, fetchDriverStats } = useDataStore()
+  const { fetchDriver, fetchDriverStats, fetchAllChampionships } = useDataStore()
   const [driver, setDriver] = useState(null)
   const [results, setResults] = useState([])
+  const [champYears, setChampYears] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([fetchDriver(id), fetchDriverStats(id)])
-      .then(([d, r]) => { setDriver(d); setResults(r || []) })
+    Promise.all([fetchDriver(id), fetchDriverStats(id), fetchAllChampionships()])
+      .then(([d, r, champs]) => {
+        setDriver(d)
+        setResults(r || [])
+        setChampYears(champs.driverChamps[id] || [])
+      })
       .finally(() => setLoading(false))
   }, [id])
 
@@ -41,16 +46,21 @@ export default function DriverPage() {
   return (
     <div className="space-y-6">
       <div className="glass p-6 flex gap-6 items-start flex-wrap">
-        <div className="w-24 h-24 rounded-2xl bg-dark-600 overflow-hidden shrink-0">
+        <div className="w-32 h-32 rounded-2xl bg-dark-600 overflow-hidden shrink-0 border border-white/10">
           {driver.image_url
-            ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white/20">{driver.code}</div>
+            ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover object-top" />
+            : <div className="w-full h-full flex items-center justify-center text-3xl font-black text-white/20">{driver.code || '?'}</div>
           }
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-black">{driver.name}</h1>
             {driver.code && <Badge color="red">{driver.code}</Badge>}
+            {champYears.sort().map(y => (
+              <span key={y} className="flex items-center gap-1 text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
+                🏆 {y}
+              </span>
+            ))}
           </div>
           <div className="flex gap-4 mt-2 text-sm text-white/50 flex-wrap">
             {driver.nationality && <span>🌍 {driver.nationality}</span>}

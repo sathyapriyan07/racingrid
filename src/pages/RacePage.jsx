@@ -14,9 +14,14 @@ const FLAG_COLOR = {
 }
 
 async function openf1Fetch(path) {
-  const res = await fetch(`https://api.openf1.org/v1${path}`)
+  const base = import.meta.env.DEV ? '/api/openf1' : '/api/openf1'
+  const res = await fetch(`${base}${path}`)
   if (!res.ok) throw new Error(`OpenF1 ${res.status}`)
   return res.json()
+}
+
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms))
 }
 
 // Convert lap_duration (seconds float) to mm:ss.mmm
@@ -64,12 +69,18 @@ export default function RacePage() {
     setOf1Loading(true)
     setOf1Error(null)
 
-    Promise.all([
-      openf1Fetch(`/drivers?session_key=${sk}`),
-      openf1Fetch(`/laps?session_key=${sk}`),
-      openf1Fetch(`/pit?session_key=${sk}`),
-      openf1Fetch(`/race_control?session_key=${sk}`),
-    ]).then(([drivers, lapsData, pitsData, rcData]) => {
+    const fetchAll = async () => {
+      const drivers = await openf1Fetch(`/drivers?session_key=${sk}`)
+      await delay(400)
+      const lapsData = await openf1Fetch(`/laps?session_key=${sk}`)
+      await delay(400)
+      const pitsData = await openf1Fetch(`/pit?session_key=${sk}`)
+      await delay(400)
+      const rcData = await openf1Fetch(`/race_control?session_key=${sk}`)
+      return [drivers, lapsData, pitsData, rcData]
+    }
+
+    fetchAll().then(([drivers, lapsData, pitsData, rcData]) => {
       // Build driver map: number → info
       const dMap = {}
       drivers.forEach(d => { dMap[d.driver_number] = d })

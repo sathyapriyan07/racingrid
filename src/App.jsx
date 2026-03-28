@@ -14,7 +14,7 @@ import CircuitPage from './pages/CircuitPage'
 import Races from './pages/Races'
 import RacePage from './pages/RacePage'
 import Compare from './pages/Compare'
-import SearchPage from './pages/Search'
+import Standings from './pages/Standings'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -54,6 +54,7 @@ export default function App() {
         <Route path="/races" element={<PublicRoute><Races /></PublicRoute>} />
         <Route path="/race/:id" element={<PublicRoute><RacePage /></PublicRoute>} />
         <Route path="/compare" element={<PublicRoute><Compare /></PublicRoute>} />
+        <Route path="/standings" element={<PublicRoute><Standings /></PublicRoute>} />
         <Route path="/search" element={<PublicRoute><SearchPage /></PublicRoute>} />
 
         {/* Admin routes */}

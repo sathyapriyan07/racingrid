@@ -2,20 +2,22 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
-import { Spinner, StatCard, Card, PageHeader } from '../components/ui'
+import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 
 export default function TeamPage() {
   const { id } = useParams()
-  const { fetchTeam } = useDataStore()
+  const { fetchTeam, fetchAllChampionships } = useDataStore()
   const [team, setTeam] = useState(null)
   const [results, setResults] = useState([])
+  const [champYears, setChampYears] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const load = async () => {
-      const [t] = await Promise.all([fetchTeam(id)])
+      const [t, champs] = await Promise.all([fetchTeam(id), fetchAllChampionships()])
       setTeam(t)
+      setChampYears(champs.teamChamps[id] || [])
       const { data } = await supabase
         .from('results')
         .select('*, drivers(name, code), races(name, date, seasons(year))')
@@ -59,6 +61,15 @@ export default function TeamPage() {
             {team.nationality && <span>🌍 {team.nationality}</span>}
             {team.base && <span>📍 {team.base}</span>}
           </div>
+          {champYears.length > 0 && (
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {champYears.sort().map(y => (
+                <span key={y} className="flex items-center gap-1 text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
+                  🏆 {y}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

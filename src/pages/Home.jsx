@@ -5,8 +5,9 @@ import { Spinner, Card, Badge } from '../components/ui'
 import { Calendar, Trophy, Zap } from 'lucide-react'
 
 export default function Home() {
-  const { fetchRaces, fetchDrivers, fetchSeasons, drivers, seasons } = useDataStore()
+  const { fetchRaces, fetchDrivers, fetchSeasons, fetchStandings, drivers, seasons } = useDataStore()
   const [races, setRaces] = useState([])
+  const [standings, setStandings] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -14,7 +15,13 @@ export default function Home() {
       fetchRaces().then(setRaces),
       fetchDrivers(),
       fetchSeasons(),
-    ]).finally(() => setLoading(false))
+    ]).then(async () => {
+      const allSeasons = useDataStore.getState().seasons
+      if (allSeasons.length) {
+        const s = await fetchStandings(allSeasons[0].id)
+        setStandings(s)
+      }
+    }).finally(() => setLoading(false))
   }, [])
 
   const latestRaces = races.slice(0, 6)
@@ -106,6 +113,60 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Standings Preview */}
+      {standings && (standings.drivers.length > 0 || standings.teams.length > 0) && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Trophy size={16} className="text-yellow-400" /> {seasons[0]?.year} Standings
+            </h2>
+            <Link to="/standings" className="text-xs text-white/40 hover:text-white transition-colors">Full standings →</Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Driver top 5 */}
+            <Card>
+              <h3 className="text-xs font-bold text-white/50 mb-3 uppercase tracking-wider">Drivers</h3>
+              <div className="space-y-2">
+                {standings.drivers.slice(0, 5).map((row, i) => (
+                  <Link key={row.driver?.id} to={`/driver/${row.driver?.id}`}
+                    className="flex items-center gap-3 hover:text-f1red transition-colors group">
+                    <span className={`w-5 text-xs font-bold shrink-0 ${
+                      i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-white/30'
+                    }`}>{i + 1}</span>
+                    {row.driver?.image_url
+                      ? <img src={row.driver.image_url} alt={row.driver.name} className="w-6 h-6 rounded-full object-cover object-top shrink-0" />
+                      : <div className="w-6 h-6 rounded-full bg-white/10 shrink-0" />
+                    }
+                    <span className="text-sm flex-1 group-hover:text-f1red">{row.driver?.name}</span>
+                    <span className="text-xs font-bold text-white/70">{row.points.toFixed(0)}</span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+            {/* Constructor top 5 */}
+            <Card>
+              <h3 className="text-xs font-bold text-white/50 mb-3 uppercase tracking-wider">Constructors</h3>
+              <div className="space-y-2">
+                {standings.teams.slice(0, 5).map((row, i) => (
+                  <Link key={row.team?.id} to={`/team/${row.team?.id}`}
+                    className="flex items-center gap-3 hover:text-f1red transition-colors group">
+                    <span className={`w-5 text-xs font-bold shrink-0 ${
+                      i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-white/30'
+                    }`}>{i + 1}</span>
+                    {row.team?.logo_url
+                      ? <img src={row.team.logo_url} alt={row.team.name} className="w-6 h-6 object-contain shrink-0" />
+                      : <div className="w-6 h-6 rounded bg-white/10 shrink-0" />
+                    }
+                    <span className="text-sm flex-1 group-hover:text-f1red">{row.team?.name}</span>
+                    <span className="text-xs font-bold text-white/70">{row.points.toFixed(0)}</span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </section>
+      )}
 
       {/* Seasons */}
       {seasons.length > 0 && (
