@@ -93,19 +93,21 @@ export default function Standings() {
                 <tbody>
                   {driverRows.map((row, i) => (
                     <tr key={row.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                      <td className="py-2.5">
+                      <td className="py-2">
                         <span className={`font-bold text-sm ${POS_COLORS[i] || 'text-white/50'}`}>
                           {i === 0 ? '🏆' : row.position}
                         </span>
                       </td>
-                      <td className="py-2.5">
-                        <Link to={`/driver/${row.driver_id}`} className="flex items-center gap-2 hover:text-f1red transition-colors">
+                      <td className="py-2">
+                        <Link to={`/driver/${row.driver_id}`} className="flex items-center gap-3 hover:text-f1red transition-colors">
                           {row.drivers?.image_url
-                            ? <img src={row.drivers.image_url} alt={row.drivers.name} className="w-6 h-6 rounded-full object-cover object-top shrink-0" />
-                            : <div className="w-6 h-6 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code?.slice(0,2)}</div>
+                            ? <img src={row.drivers.image_url} alt={row.drivers.name} className="w-9 h-9 rounded-full object-cover object-top shrink-0 border border-white/10" />
+                            : <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: 'var(--bg-raised)', color: 'var(--text-muted)' }}>{row.drivers?.code?.slice(0,3)}</div>
                           }
-                          <span className="font-medium text-sm">{row.drivers?.name}</span>
-                          <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code}</span>
+                          <div>
+                            <div className="font-semibold text-sm leading-tight">{row.drivers?.name}</div>
+                            <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{row.drivers?.code}</div>
+                          </div>
                         </Link>
                       </td>
                       <td className="py-2.5 hidden sm:table-cell">
