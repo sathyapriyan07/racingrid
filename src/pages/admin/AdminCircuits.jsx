@@ -3,15 +3,15 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, Check, X, ImagePlus } from 'lucide-react'
+import { Plus, ImagePlus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ImageEditRow from './ImageEditRow'
 
 export default function AdminCircuits() {
   const { invalidateCache } = useDataStore()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
-  const [editUrl, setEditUrl] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -22,11 +22,8 @@ export default function AdminCircuits() {
 
   useEffect(() => { load() }, [])
 
-  const startEdit = (row) => { setEditId(row.id); setEditUrl(row.layout_image || '') }
-  const cancelEdit = () => { setEditId(null); setEditUrl('') }
-
-  const saveImage = async (id) => {
-    const { error } = await supabase.from('circuits').update({ layout_image: editUrl || null }).eq('id', id)
+  const saveImage = async (id, url) => {
+    const { error } = await supabase.from('circuits').update({ layout_image: url || null }).eq('id', id)
     if (error) return toast.error(error.message)
     toast.success('Image updated')
     setEditId(null)
@@ -53,7 +50,7 @@ export default function AdminCircuits() {
                   <th className="text-left pb-2 pr-4">Name</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Location</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Country</th>
-                  <th className="text-right pb-2">Image URL</th>
+                  <th className="text-right pb-2">Image</th>
                 </tr>
               </thead>
               <tbody>
@@ -66,41 +63,26 @@ export default function AdminCircuits() {
                           : <div className="w-12 h-8 rounded bg-white/5 flex items-center justify-center text-white/20"><ImagePlus size={12} /></div>
                         }
                       </td>
-                      <td className="py-2 pr-4 font-medium text-white/80">{row.name}</td>
-                      <td className="py-2 pr-4 text-white/40 hidden sm:table-cell">{row.location || '—'}</td>
-                      <td className="py-2 pr-4 text-white/40 hidden sm:table-cell">{row.country || '—'}</td>
+                      <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
+                      <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.location || '—'}</td>
+                      <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.country || '—'}</td>
                       <td className="py-2 text-right">
-                        <button onClick={() => startEdit(row)}
-                          className="flex items-center gap-1 ml-auto text-white/30 hover:text-white transition-colors px-2 py-1 rounded hover:bg-white/5">
+                        <button onClick={() => setEditId(editId === row.id ? null : row.id)}
+                          className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-white/5 transition-colors"
+                          style={{ color: 'var(--text-muted)' }}>
                           <ImagePlus size={11} />
                           {row.layout_image ? 'Edit' : 'Add'}
                         </button>
                       </td>
                     </tr>
                     {editId === row.id && (
-                      <tr key={`${row.id}-edit`} className="border-b border-white/5 bg-white/3">
-                        <td colSpan={5} className="px-3 py-3">
-                          <div className="flex flex-col sm:flex-row gap-2">
-                            <input
-                              value={editUrl}
-                              onChange={e => setEditUrl(e.target.value)}
-                              placeholder="https://..."
-                              className="input py-2 text-xs flex-1"
-                              autoFocus
-                            />
-                            <div className="flex gap-2">
-                              <button onClick={() => saveImage(row.id)}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-green-500/20 text-green-400 text-xs font-semibold">
-                                <Check size={13} /> Save
-                              </button>
-                              <button onClick={cancelEdit}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-white/40 text-xs">
-                                <X size={13} /> Cancel
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                      <ImageEditRow
+                        colSpan={5}
+                        folder="circuits"
+                        currentUrl={row.layout_image}
+                        onSave={(url) => saveImage(row.id, url)}
+                        onCancel={() => setEditId(null)}
+                      />
                     )}
                   </>
                 ))}
