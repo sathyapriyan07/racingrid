@@ -36,7 +36,7 @@ export default function RaceReplay({ sessionKey }) {
       <div className="flex flex-col items-center justify-center gap-3 py-16" style={{ color: 'var(--text-muted)' }}>
         <Spinner />
         <p className="text-sm">Loading telemetry data from OpenF1...</p>
-        <p className="text-xs opacity-60">This may take 30–60 seconds for the first load</p>
+        <p className="text-xs opacity-60">Fetching {`~20`} drivers sequentially — takes ~2 minutes on first load</p>
       </div>
     )
   }

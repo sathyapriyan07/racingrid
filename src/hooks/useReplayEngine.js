@@ -114,21 +114,21 @@ export function useReplayEngine(sessionKey) {
 
         await delay(300)
 
-        // 3. Fetch location data for all drivers (sample: every 3rd point to reduce memory)
+        // 3. Fetch location data sequentially to avoid 429 rate limiting
         const driverNums = driverData.map(d => d.driver_number)
         const locResults = {}
 
-        // Fetch in batches of 5 to avoid rate limiting
-        for (let i = 0; i < driverNums.length; i += 5) {
-          const batch = driverNums.slice(i, i + 5)
-          const batchResults = await Promise.all(
-            batch.map(num => openf1Get(`/location?session_key=${sessionKey}&driver_number=${num}`))
-          )
-          batch.forEach((num, idx) => {
-            const raw = batchResults[idx].filter(p => p.x !== 0 || p.y !== 0)
-            locResults[num] = raw
-          })
-          if (i + 5 < driverNums.length) await delay(400)
+        for (let i = 0; i < driverNums.length; i++) {
+          const num = driverNums[i]
+          try {
+            const raw = await openf1Get(`/location?session_key=${sessionKey}&driver_number=${num}`)
+            // Sample every 5th point to reduce memory and processing
+            locResults[num] = raw.filter((_, idx) => idx % 5 === 0).filter(p => p.x !== 0 || p.y !== 0)
+          } catch {
+            locResults[num] = []
+          }
+          // 600ms between each driver to stay well under rate limit
+          if (i < driverNums.length - 1) await delay(600)
         }
 
         // 4. Build track outline from driver 1's full lap (most complete path)
