@@ -1,11 +1,9 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, Activity, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
-import RaceReplay from '../components/replay/RaceReplay'
-
-const LapChart = lazy(() => import('../components/charts/LapChart'))
+import RaceReplaySimple from '../components/replay/RaceReplaySimple'
 
 const POSITION_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
 
@@ -15,23 +13,12 @@ const FLAG_COLOR = {
 }
 
 async function openf1Fetch(path) {
-  const base = import.meta.env.DEV ? '/api/openf1' : '/api/openf1'
-  const res = await fetch(`${base}${path}`)
+  const res = await fetch(`/api/openf1${path}`)
   if (!res.ok) throw new Error(`OpenF1 ${res.status}`)
   return res.json()
 }
 
-function delay(ms) {
-  return new Promise(r => setTimeout(r, ms))
-}
-
-// Convert lap_duration (seconds float) to mm:ss.mmm
-function fmtLapTime(sec) {
-  if (!sec) return '—'
-  const m = Math.floor(sec / 60)
-  const s = (sec % 60).toFixed(3).padStart(6, '0')
-  return `${m}:${s}`
-}
+function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 export default function RacePage() {
   const { id } = useParams()
@@ -45,16 +32,13 @@ export default function RacePage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('results')
 
-  // OpenF1 state
-  const [of1Drivers, setOf1Drivers] = useState({}) // driver_number → {name_acronym, full_name, team_colour}
-  const [laps, setLaps] = useState([])             // all laps from OpenF1
+  // OpenF1 — only for pit stops + events (not replay)
+  const [of1Drivers, setOf1Drivers] = useState({})
   const [pitStops, setPitStops] = useState([])
   const [events, setEvents] = useState([])
   const [of1Loading, setOf1Loading] = useState(false)
   const [of1Error, setOf1Error] = useState(null)
-  const [currentLap, setCurrentLap] = useState(1)
 
-  // Load race + results + qualifying from Supabase
   useEffect(() => {
     Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
       .then(([r, res, q, sp, hl]) => {
@@ -68,71 +52,40 @@ export default function RacePage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  // Load OpenF1 data when race is ready and has a session key
+  // Load OpenF1 pit stops + events only when those tabs are opened
   useEffect(() => {
     if (!race?.openf1_session_key) return
+    if (activeTab !== 'pits' && activeTab !== 'events') return
+    if (of1Loading || pitStops.length || events.length) return
+
     const sk = race.openf1_session_key
     setOf1Loading(true)
     setOf1Error(null)
 
-    const fetchAll = async () => {
-      const drivers = await openf1Fetch(`/drivers?session_key=${sk}`)
-      await delay(400)
-      const lapsData = await openf1Fetch(`/laps?session_key=${sk}`)
-      await delay(400)
+    const load = async () => {
+      const driversData = await openf1Fetch(`/drivers?session_key=${sk}`)
+      await delay(300)
       const pitsData = await openf1Fetch(`/pit?session_key=${sk}`)
-      await delay(400)
+      await delay(300)
       const rcData = await openf1Fetch(`/race_control?session_key=${sk}`)
-      return [drivers, lapsData, pitsData, rcData]
-    }
-
-    fetchAll().then(([drivers, lapsData, pitsData, rcData]) => {
-      // Build driver map: number → info
       const dMap = {}
-      drivers.forEach(d => { dMap[d.driver_number] = d })
+      driversData.forEach(d => { dMap[d.driver_number] = d })
       setOf1Drivers(dMap)
-      setLaps(lapsData)
       setPitStops(pitsData)
-      // Filter meaningful events: flags + safety car + session status
-      const meaningful = rcData.filter(e =>
+      setEvents(rcData.filter(e =>
         (e.category === 'Flag' && e.flag && !['GREEN', 'CLEAR'].includes(e.flag) && e.scope === 'Track') ||
         e.category === 'SafetyCar' ||
         (e.category === 'SessionStatus' && ['Started', 'Finished', 'Aborted'].includes(e.message))
-      )
-      setEvents(meaningful)
-      const maxL = lapsData.length ? Math.max(...lapsData.map(l => l.lap_number)) : 1
-      setCurrentLap(maxL)
-    }).catch(err => setOf1Error(err.message))
-      .finally(() => setOf1Loading(false))
-  }, [race?.openf1_session_key])
+      ))
+    }
+    load().catch(err => setOf1Error(err.message)).finally(() => setOf1Loading(false))
+  }, [race?.openf1_session_key, activeTab])
 
-  const maxLap = useMemo(() =>
-    laps.length ? Math.max(...laps.map(l => l.lap_number)) : 0, [laps])
-
-  // Derive positions at currentLap from cumulative lap times
-  const replayPositions = useMemo(() => {
-    if (!laps.length) return []
-    // Sum lap durations up to currentLap per driver
-    const totals = {}
-    laps.filter(l => l.lap_number <= currentLap && l.lap_duration).forEach(l => {
-      totals[l.driver_number] = (totals[l.driver_number] || 0) + l.lap_duration
-    })
-    return Object.entries(totals)
-      .sort((a, b) => a[1] - b[1])
-      .map(([num, total], i) => ({
-        driver_number: parseInt(num),
-        position: i + 1,
-        total,
-      }))
-  }, [laps, currentLap])
-
-  const pitsAtLap = useMemo(() =>
-    pitStops.filter(p => p.lap_number <= currentLap), [pitStops, currentLap])
+  const totalLaps = results[0]?.laps || 0
+  const hasOf1 = !!race?.openf1_session_key
 
   if (loading) return <Spinner />
   if (!race) return <div className="text-white/40 text-center py-16">Race not found.</div>
-
-  const hasOf1 = !!race.openf1_session_key
 
   const tabs = [
     { id: 'results', label: 'Results', icon: Flag },
@@ -150,9 +103,7 @@ export default function RacePage() {
       <div className="glass p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <div className="text-xs text-white/40 mb-1">
-              {race.seasons?.year} · Round {race.round}
-            </div>
+            <div className="text-xs text-white/40 mb-1">{race.seasons?.year} · Round {race.round}</div>
             <h1 className="text-3xl font-black">{race.name}</h1>
             <div className="flex gap-4 mt-2 text-sm text-white/50 flex-wrap">
               {race.circuits && (
@@ -166,7 +117,7 @@ export default function RacePage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <StatCard label="Laps" value={maxLap || results[0]?.laps || '—'} />
+            <StatCard label="Laps" value={totalLaps || '—'} />
             <StatCard label="Drivers" value={results.length || '—'} />
           </div>
         </div>
@@ -184,7 +135,7 @@ export default function RacePage() {
         ))}
       </div>
 
-      {/* Results Tab */}
+      {/* Results */}
       {activeTab === 'results' && (
         <Card className="p-0 overflow-hidden">
           {results.length === 0 ? (
@@ -238,7 +189,7 @@ export default function RacePage() {
         </Card>
       )}
 
-      {/* Qualifying Tab */}
+      {/* Qualifying */}
       {activeTab === 'qualifying' && (
         <Card className="p-0 overflow-hidden">
           {qualifying.length === 0 ? (
@@ -292,7 +243,7 @@ export default function RacePage() {
         </Card>
       )}
 
-      {/* Sprint Tab */}
+      {/* Sprint */}
       {activeTab === 'sprint' && (
         <Card className="p-0 overflow-hidden">
           <table className="w-full">
@@ -342,18 +293,10 @@ export default function RacePage() {
         </Card>
       )}
 
-      {/* Replay Tab */}
-      {activeTab === 'replay' && (
-        <div className="space-y-4">
-          {!hasOf1 ? (
-            <Card><p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p></Card>
-          ) : (
-            <RaceReplay sessionKey={race.openf1_session_key} />
-          )}
-        </div>
-      )}
+      {/* Lap Replay — internal, Supabase-driven */}
+      {activeTab === 'replay' && <RaceReplaySimple raceId={id} />}
 
-      {/* Pit Stops Tab */}
+      {/* Pit Stops — OpenF1 */}
       {activeTab === 'pits' && (
         <Card>
           <h2 className="text-sm font-bold mb-4 text-white/70">Pit Stop Timeline</h2>
@@ -361,6 +304,8 @@ export default function RacePage() {
             <p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
           ) : of1Loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading...</div>
+          ) : of1Error ? (
+            <p className="text-f1red text-sm text-center py-4">{of1Error}</p>
           ) : pitStops.length === 0 ? (
             <p className="text-white/30 text-sm text-center py-4">No pit stop data.</p>
           ) : (
@@ -374,14 +319,10 @@ export default function RacePage() {
                       <span className="text-xs text-white/40 w-14 text-right shrink-0">Lap {pit.lap_number}</span>
                       <div className="w-2 h-2 rounded-full bg-f1red shrink-0 relative z-10" />
                       <div className="glass px-3 py-2 flex-1 flex items-center gap-3">
-                        {d?.team_colour && (
-                          <div className="w-1 h-4 rounded-full" style={{ backgroundColor: `#${d.team_colour}` }} />
-                        )}
+                        {d?.team_colour && <div className="w-1 h-4 rounded-full" style={{ backgroundColor: `#${d.team_colour}` }} />}
                         <span className="text-sm font-medium">{d?.name_acronym || `#${pit.driver_number}`}</span>
                         <span className="text-xs text-white/30 flex-1">{d?.full_name}</span>
-                        {pit.pit_duration && (
-                          <span className="text-xs font-mono text-white/60">{pit.pit_duration.toFixed(1)}s</span>
-                        )}
+                        {pit.pit_duration && <span className="text-xs font-mono text-white/60">{pit.pit_duration.toFixed(1)}s</span>}
                       </div>
                     </div>
                   )
@@ -392,7 +333,7 @@ export default function RacePage() {
         </Card>
       )}
 
-      {/* Events Tab */}
+      {/* Events — OpenF1 */}
       {activeTab === 'events' && (
         <Card>
           <h2 className="text-sm font-bold mb-4 text-white/70">Race Control</h2>
@@ -400,16 +341,17 @@ export default function RacePage() {
             <p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
           ) : of1Loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading...</div>
+          ) : of1Error ? (
+            <p className="text-f1red text-sm text-center py-4">{of1Error}</p>
           ) : events.length === 0 ? (
             <p className="text-white/30 text-sm text-center py-4">No events recorded.</p>
           ) : (
             <div className="space-y-2">
               {events.map((ev, i) => {
                 const color = FLAG_COLOR[ev.flag] || (ev.category === 'SafetyCar' ? 'yellow' : 'gray')
-                const label = ev.flag || ev.category
                 return (
                   <div key={i} className="flex items-start gap-3 py-2 border-b border-white/5">
-                    <Badge color={color}>{label}</Badge>
+                    <Badge color={color}>{ev.flag || ev.category}</Badge>
                     <span className="text-sm flex-1 text-white/70">{ev.message}</span>
                     {ev.lap_number && <span className="text-xs text-white/30 shrink-0">Lap {ev.lap_number}</span>}
                   </div>
@@ -419,7 +361,8 @@ export default function RacePage() {
           )}
         </Card>
       )}
-      {/* Highlights Tab */}
+
+      {/* Highlights */}
       {activeTab === 'highlights' && (
         <div className="space-y-4">
           {highlights.map(h => {
@@ -429,18 +372,13 @@ export default function RacePage() {
               <Card key={h.id} className="p-0 overflow-hidden">
                 {h.title && (
                   <div className="px-4 pt-3 pb-2 text-sm font-semibold flex items-center gap-2">
-                    <PlayCircle size={14} className="text-f1red" />
-                    {h.title}
+                    <PlayCircle size={14} className="text-f1red" />{h.title}
                   </div>
                 )}
                 <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                  <iframe
-                    src={`https://www.youtube.com/embed/${vid}`}
-                    title={h.title || 'Race Highlight'}
+                  <iframe src={`https://www.youtube.com/embed/${vid}`} title={h.title || 'Highlight'}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="absolute inset-0 w-full h-full"
-                  />
+                    allowFullScreen className="absolute inset-0 w-full h-full" />
                 </div>
               </Card>
             )
