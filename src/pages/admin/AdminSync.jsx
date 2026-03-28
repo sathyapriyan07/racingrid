@@ -34,7 +34,8 @@ async function ergastFetch(endpoint, devPath) {
 function SyncStatus({ result }) {
   if (result.status === 'fetching') return (
     <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
-      <Loader size={11} className="animate-spin" /> Fetching from API...
+      <Loader size={11} className="animate-spin" />
+      Fetching{result.fetched ? ` — ${result.fetched} records so far...` : ' from API...'}
     </div>
   )
   if (result.status === 'saving') {
@@ -77,7 +78,6 @@ const GLOBAL_SYNC_ACTIONS = [
     table: 'drivers',
     conflictCol: 'name',
     pageSize: 200,
-    getTotal: (data) => parseInt(data?.MRData?.total || 0),
     normalize: (data) => normalizeDrivers(data, 'ergast'),
   },
   {
@@ -89,7 +89,6 @@ const GLOBAL_SYNC_ACTIONS = [
     table: 'teams',
     conflictCol: 'name',
     pageSize: 200,
-    getTotal: (data) => parseInt(data?.MRData?.total || 0),
     normalize: (data) => normalizeTeams(data, 'ergast'),
   },
   {
@@ -101,7 +100,6 @@ const GLOBAL_SYNC_ACTIONS = [
     table: 'circuits',
     conflictCol: 'name',
     pageSize: 100,
-    getTotal: (data) => parseInt(data?.MRData?.total || 0),
     normalize: (data) => normalizeCircuits(data, 'ergast'),
   },
 ]
@@ -143,14 +141,18 @@ export default function AdminSync() {
 
   const runGlobalSync = async (action) => {
     setRun(action.id, true)
-    setResult(action.id, { status: 'fetching' })
+    setResult(action.id, { status: 'fetching', fetched: 0 })
     try {
-      const firstPage = await fetchPage(action, 0)
-      const total = action.getTotal(firstPage)
-      let all = action.normalize(firstPage)
-      const pages = Math.ceil(total / action.pageSize)
-      for (let p = 1; p < pages; p++) {
-        all = all.concat(action.normalize(await fetchPage(action, p * action.pageSize)))
+      let all = []
+      let offset = 0
+      while (true) {
+        const page = await fetchPage(action, offset)
+        const batch = action.normalize(page)
+        if (!batch.length) break
+        all = all.concat(batch)
+        setResult(action.id, { status: 'fetching', fetched: all.length })
+        if (batch.length < action.pageSize) break
+        offset += action.pageSize
       }
       if (!all.length) throw new Error('No data returned')
       const clean = all.map(r => { const x = { ...r }; delete x.id; return x })
