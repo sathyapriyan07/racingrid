@@ -35,30 +35,17 @@ async function ergastFetch(endpoint, devPath) {
 function SyncStatus({ result }) {
   if (result.status === 'fetching') return (
     <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
-      <Loader size={11} className="animate-spin" />
-      Fetching{result.fetched ? ` — ${result.fetched} records so far...` : ' from API...'}
+      <Loader size={11} className="animate-spin" /> Fetching...
     </div>
   )
-  if (result.status === 'saving') {
-    const pct = result.total ? Math.round((result.saved / result.total) * 100) : 0
-    return (
-      <div className="mt-2 space-y-1">
-        <div className="flex items-center gap-2 text-xs text-white/50">
-          <Loader size={11} className="animate-spin" />
-          Saving... {result.saved} / {result.total} records
-        </div>
-        <div className="w-full bg-white/10 rounded-full h-1">
-          <div className="bg-f1red h-1 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-    )
-  }
+  if (result.status === 'saving') return (
+    <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
+      <Loader size={11} className="animate-spin" /> Saving {result.total} records...
+    </div>
+  )
   if (result.status === 'done') return (
-    <div className="mt-2 flex flex-wrap gap-3 text-xs">
-      <span className="flex items-center gap-1 text-green-400">
-        <CheckCircle size={11} /> {result.saved} upserted
-      </span>
-      <span className="text-white/30">Total: {result.total}</span>
+    <div className="mt-2 flex items-center gap-2 text-xs text-green-400">
+      <CheckCircle size={11} /> {result.saved} upserted
     </div>
   )
   if (result.status === 'error') return (
@@ -115,18 +102,15 @@ export default function AdminSync() {
   const setRun = (id, val) => setRunning(r => ({ ...r, [id]: val }))
 
   const upsertChunked = async (id, table, rows, conflictCol) => {
-    const CHUNK = 200
-    let saved = 0
     setResult(id, { status: 'saving', total: rows.length, saved: 0 })
+    const CHUNK = 1000
     for (let i = 0; i < rows.length; i += CHUNK) {
       const { error } = await supabase.from(table)
         .upsert(rows.slice(i, i + CHUNK), { onConflict: conflictCol, ignoreDuplicates: false })
       if (error) throw error
-      saved += Math.min(CHUNK, rows.length - i)
-      setResult(id, { status: 'saving', total: rows.length, saved })
     }
-    setResult(id, { status: 'done', total: rows.length, saved })
-    return saved
+    setResult(id, { status: 'done', total: rows.length, saved: rows.length })
+    return rows.length
   }
 
   // ── global sync (drivers / teams / circuits) ─────────────
@@ -139,19 +123,13 @@ export default function AdminSync() {
 
   const runGlobalSync = async (action) => {
     setRun(action.id, true)
-    setResult(action.id, { status: 'fetching', fetched: 0 })
+    setResult(action.id, { status: 'fetching' })
     try {
       const firstPage = await fetchPage(action, 0)
       const total = parseInt(firstPage?.MRData?.total || 0)
-      let all = action.normalize(firstPage)
-      setResult(action.id, { status: 'fetching', fetched: all.length })
-      for (let offset = 100; offset < total; offset += 100) {
-        const page = await fetchPage(action, offset)
-        const batch = action.normalize(page)
-        if (!batch.length) break
-        all = all.concat(batch)
-        setResult(action.id, { status: 'fetching', fetched: all.length })
-      }
+      const offsets = Array.from({ length: Math.ceil(total / 100) - 1 }, (_, i) => (i + 1) * 100)
+      const pages = await Promise.all(offsets.map(o => fetchPage(action, o)))
+      const all = [firstPage, ...pages].flatMap(p => action.normalize(p))
       if (!all.length) throw new Error('No data returned')
       const clean = all.map(r => { const x = { ...r }; delete x.id; return x })
       const saved = await upsertChunked(action.id, action.table, clean, action.conflictCol)
@@ -236,21 +214,17 @@ export default function AdminSync() {
     try {
       const seasonId = await getSeasonId(yr)
       const [driverMap, teamMap, raceMap] = await Promise.all([getDriverMap(), getTeamMap(), getRaceMap(seasonId)])
-      // fetch all results for the season (paginated)
       const firstPage = await ergastFetch(
         `https://api.jolpi.ca/ergast/f1/${yr}/results/?limit=100&format=json`,
         `/api/ergast/${yr}/results/?limit=100&format=json`
       )
       const total = parseInt(firstPage?.MRData?.total || 0)
-      const pages = Math.ceil(total / 100)
-      let allRaces = firstPage?.MRData?.RaceTable?.Races || []
-      for (let p = 1; p < pages; p++) {
-        const page = await ergastFetch(
-          `https://api.jolpi.ca/ergast/f1/${yr}/results/?limit=100&offset=${p * 100}&format=json`,
-          `/api/ergast/${yr}/results/?limit=100&offset=${p * 100}&format=json`
-        )
-        allRaces = allRaces.concat(page?.MRData?.RaceTable?.Races || [])
-      }
+      const offsets = Array.from({ length: Math.ceil(total / 100) - 1 }, (_, i) => (i + 1) * 100)
+      const rest = await Promise.all(offsets.map(o => ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/results/?limit=100&offset=${o}&format=json`,
+        `/api/ergast/${yr}/results/?limit=100&offset=${o}&format=json`
+      )))
+      const allRaces = [firstPage, ...rest].flatMap(p => p?.MRData?.RaceTable?.Races || [])
       const rows = allRaces.flatMap(race => {
         const raceId = raceMap[parseInt(race.round)]
         if (!raceId) return []
@@ -289,15 +263,12 @@ export default function AdminSync() {
         `/api/ergast/${yr}/qualifying/?limit=100&format=json`
       )
       const total = parseInt(firstPage?.MRData?.total || 0)
-      const pages = Math.ceil(total / 100)
-      let allRaces = firstPage?.MRData?.RaceTable?.Races || []
-      for (let p = 1; p < pages; p++) {
-        const page = await ergastFetch(
-          `https://api.jolpi.ca/ergast/f1/${yr}/qualifying/?limit=100&offset=${p * 100}&format=json`,
-          `/api/ergast/${yr}/qualifying/?limit=100&offset=${p * 100}&format=json`
-        )
-        allRaces = allRaces.concat(page?.MRData?.RaceTable?.Races || [])
-      }
+      const offsets = Array.from({ length: Math.ceil(total / 100) - 1 }, (_, i) => (i + 1) * 100)
+      const rest = await Promise.all(offsets.map(o => ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/qualifying/?limit=100&offset=${o}&format=json`,
+        `/api/ergast/${yr}/qualifying/?limit=100&offset=${o}&format=json`
+      )))
+      const allRaces = [firstPage, ...rest].flatMap(p => p?.MRData?.RaceTable?.Races || [])
       const rows = allRaces.flatMap(race => {
         const raceId = raceMap[parseInt(race.round)]
         if (!raceId) return []
@@ -306,9 +277,7 @@ export default function AdminSync() {
           driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
           team_id: teamMap[r.Constructor?.constructorId] || teamMap[r.Constructor?.name] || null,
           position: parseInt(r.position) || null,
-          q1: r.Q1 || null,
-          q2: r.Q2 || null,
-          q3: r.Q3 || null,
+          q1: r.Q1 || null, q2: r.Q2 || null, q3: r.Q3 || null,
         }))
       })
       if (!rows.length) throw new Error('No qualifying data found')
@@ -419,28 +388,25 @@ export default function AdminSync() {
     setRun(id, true)
     setResult(id, { status: 'fetching' })
     try {
-      // fetch OpenF1 race sessions for the year
-      const res = await fetch(`https://api.openf1.org/v1/sessions?year=${yr}&session_name=Race`)
-      if (!res.ok) throw new Error(`OpenF1 fetch failed: ${res.status}`)
-      const sessions = await res.json()
-      if (!sessions.length) throw new Error('No sessions found on OpenF1')
-
-      // fetch our races for the year
-      const seasonId = await getSeasonId(yr)
-      const { data: races, error } = await supabase
-        .from('races').select('id, date, round').eq('season_id', seasonId)
+      const [sessionsRes, seasonId] = await Promise.all([
+        fetch(`https://api.openf1.org/v1/sessions?year=${yr}&session_name=Race`).then(r => {
+          if (!r.ok) throw new Error(`OpenF1 fetch failed: ${r.status}`)
+          return r.json()
+        }),
+        getSeasonId(yr),
+      ])
+      if (!sessionsRes.length) throw new Error('No sessions found on OpenF1')
+      const { data: races, error } = await supabase.from('races').select('id, date, round').eq('season_id', seasonId)
       if (error) throw error
-
-      // match by closest date
       let matched = 0
-      for (const race of races) {
-        const raceDate = new Date(race.date).toISOString().slice(0, 10)
-        const session = sessions.find(s => s.date_start?.slice(0, 10) === raceDate)
-          || sessions.find(s => Math.abs(new Date(s.date_start) - new Date(race.date)) < 86400000 * 2)
-        if (!session) continue
-        await supabase.from('races').update({ openf1_session_key: session.session_key }).eq('id', race.id)
+      const updates = races.flatMap(race => {
+        const session = sessionsRes.find(s => s.date_start?.slice(0, 10) === new Date(race.date).toISOString().slice(0, 10))
+          || sessionsRes.find(s => Math.abs(new Date(s.date_start) - new Date(race.date)) < 86400000 * 2)
+        if (!session) return []
         matched++
-      }
+        return [supabase.from('races').update({ openf1_session_key: session.session_key }).eq('id', race.id)]
+      })
+      await Promise.all(updates)
       setResult(id, { status: 'done', total: races.length, saved: matched })
       toast.success(`Session keys ${yr}: ${matched}/${races.length} matched`)
     } catch (err) {

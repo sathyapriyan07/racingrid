@@ -133,33 +133,13 @@ export default function AdminImport() {
     if (!preview?.length) return
     setLoading(true)
     try {
-      const CHUNK = 500
-      let totalSaved = 0
-      for (let i = 0; i < preview.length; i += CHUNK) {
-        const chunk = preview.slice(i, i + CHUNK)
-        // Strip any undefined/null id so Supabase auto-generates UUIDs
-        const clean = chunk.map(row => {
-          const r = { ...row }
-          if (!r.id) delete r.id
-          return r
-        })
-        const { error, data } = await supabase.from(dataType).insert(clean, { defaultToNull: true })
-        if (error) {
-          // On duplicate, try upsert for rows that have an id
-          const withId = clean.filter(r => r.id)
-          const withoutId = clean.filter(r => !r.id)
-          if (withId.length) {
-            const { error: e2 } = await supabase.from(dataType).upsert(withId)
-            if (e2) throw e2
-          }
-          if (withoutId.length) {
-            const { error: e3 } = await supabase.from(dataType).insert(withoutId)
-            if (e3) throw e3
-          }
-        }
-        totalSaved += chunk.length
+      const clean = preview.map(row => { const r = { ...row }; if (!r.id) delete r.id; return r })
+      const CHUNK = 1000
+      for (let i = 0; i < clean.length; i += CHUNK) {
+        const { error } = await supabase.from(dataType).upsert(clean.slice(i, i + CHUNK), { ignoreDuplicates: false })
+        if (error) throw error
       }
-      toast.success(`Saved ${totalSaved} ${dataType} records`)
+      toast.success(`Saved ${clean.length} ${dataType} records`)
       setPreview(null)
       setRawText('')
       invalidateCache()
