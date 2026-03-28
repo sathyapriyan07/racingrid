@@ -109,6 +109,27 @@ export default function CircuitPage() {
                     <Link to={`/race/${race.id}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
                       {race.name}
                     </Link>
+                    {/* Mobile: winner below race name */}
+                    <div className="flex items-center gap-3 mt-1 sm:hidden">
+                      {race.winner && (
+                        <Link to={`/driver/${race.winner.id}`} className="flex items-center gap-1.5 hover:text-f1red transition-colors">
+                          {race.winner.image_url
+                            ? <img src={race.winner.image_url} alt={race.winner.name} className="w-5 h-5 object-cover object-top shrink-0" />
+                            : null
+                          }
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🏆 {race.winner.name}</span>
+                        </Link>
+                      )}
+                      {race.sprintWinner && (
+                        <Link to={`/driver/${race.sprintWinner.id}`} className="flex items-center gap-1.5 hover:text-f1red transition-colors">
+                          {race.sprintWinner.image_url
+                            ? <img src={race.sprintWinner.image_url} alt={race.sprintWinner.name} className="w-5 h-5 object-cover object-top shrink-0" />
+                            : null
+                          }
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⚡ {race.sprintWinner.name}</span>
+                        </Link>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2.5 hidden sm:table-cell">
                     {race.winner ? (
