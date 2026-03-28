@@ -20,9 +20,9 @@ export default function AdminLayout({ children }) {
   if (!user || !isAdmin()) return <Navigate to="/login" replace />
 
   return (
-    <div className="min-h-screen bg-dark-900 flex">
+    <div className="min-h-screen flex" style={{ background: 'var(--bg-base)' }}>
       {/* Sidebar */}
-      <aside className="w-52 shrink-0 bg-dark-800 border-r border-white/5 flex flex-col">
+      <aside className="w-52 shrink-0 border-r flex flex-col" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
         <div className="p-4 border-b border-white/5">
           <Link to="/" className="flex items-center gap-1.5">
             <span className="text-f1red font-black">F1</span>
