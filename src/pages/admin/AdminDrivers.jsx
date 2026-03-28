@@ -18,11 +18,17 @@ export default function AdminDrivers() {
 
   const load = async () => {
     setLoading(true)
-    let q = supabase.from('drivers').select('*').order('name').range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-    if (search) q = q.ilike('name', `%${search}%`)
-    const { data } = await q
-    setData(data || [])
-    setLoading(false)
+    try {
+      let q = supabase.from('drivers').select('*').order('name').range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+      if (search) q = q.ilike('name', `%${search}%`)
+      const { data, error } = await q
+      if (error) throw error
+      setData(data || [])
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [page, search])

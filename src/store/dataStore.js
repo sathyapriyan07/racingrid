@@ -5,7 +5,7 @@ const fetchTable = async (table, query = null) => {
   let q = supabase.from(table).select(query || '*')
   const { data, error } = await q
   if (error) throw error
-  return data
+  return data || []
 }
 
 export const useDataStore = create((set, get) => ({

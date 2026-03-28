@@ -19,15 +19,23 @@ export default function AdminRaces() {
 
   const load = async () => {
     setLoading(true)
-    let q = supabase.from('races').select('*, seasons(year)').order('date', { ascending: false })
-    if (seasonId) q = q.eq('season_id', seasonId)
-    const { data } = await q
-    setData(data || [])
-    setLoading(false)
+    try {
+      let q = supabase.from('races').select('*, seasons(year)').order('date', { ascending: false })
+      if (seasonId) q = q.eq('season_id', seasonId)
+      const { data, error } = await q
+      if (error) throw error
+      setData(data || [])
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    supabase.from('seasons').select('*').order('year', { ascending: false }).then(({ data }) => setSeasons(data || []))
+    supabase.from('seasons').select('*').order('year', { ascending: false })
+      .then(({ data }) => setSeasons(data || []))
+      .catch(console.error)
   }, [])
 
   useEffect(() => { load() }, [seasonId])

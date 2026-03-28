@@ -15,9 +15,15 @@ export default function AdminTeams() {
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('teams').select('*').order('name')
-    setData(data || [])
-    setLoading(false)
+    try {
+      const { data, error } = await supabase.from('teams').select('*').order('name')
+      if (error) throw error
+      setData(data || [])
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])

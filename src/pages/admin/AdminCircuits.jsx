@@ -15,9 +15,15 @@ export default function AdminCircuits() {
 
   const load = async () => {
     setLoading(true)
-    const { data } = await supabase.from('circuits').select('*').order('name')
-    setData(data || [])
-    setLoading(false)
+    try {
+      const { data, error } = await supabase.from('circuits').select('*').order('name')
+      if (error) throw error
+      setData(data || [])
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { load() }, [])

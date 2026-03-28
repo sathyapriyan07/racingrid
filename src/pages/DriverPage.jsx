@@ -19,6 +19,7 @@ export default function DriverPage() {
         setResults(r || [])
         setChampYears(champs.driverChamps[id] || [])
       })
+      .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
 

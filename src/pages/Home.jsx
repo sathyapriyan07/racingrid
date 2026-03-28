@@ -11,17 +11,26 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      fetchRaces().then(setRaces),
-      fetchDrivers(),
-      fetchSeasons(),
-    ]).then(async () => {
-      const allSeasons = useDataStore.getState().seasons
-      if (allSeasons.length) {
-        const s = await fetchStandings(allSeasons[0].id)
-        setStandings(s)
+    const load = async () => {
+      try {
+        const [racesData] = await Promise.all([
+          fetchRaces(),
+          fetchDrivers(),
+          fetchSeasons(),
+        ])
+        setRaces(racesData)
+        const allSeasons = useDataStore.getState().seasons
+        if (allSeasons.length) {
+          const s = await fetchStandings(allSeasons[0].id).catch(() => null)
+          setStandings(s)
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
       }
-    }).finally(() => setLoading(false))
+    }
+    load()
   }, [])
 
   const latestRaces = races.slice(0, 6)

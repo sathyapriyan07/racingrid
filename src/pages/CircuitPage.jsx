@@ -13,16 +13,22 @@ export default function CircuitPage() {
 
   useEffect(() => {
     const load = async () => {
-      const c = await fetchCircuit(id)
-      setCircuit(c)
-      const { data } = await supabase
-        .from('races')
-        .select('*, seasons(*)')
-        .eq('circuit_id', id)
-        .order('date', { ascending: false })
-      setRaces(data || [])
+      try {
+        const c = await fetchCircuit(id)
+        setCircuit(c)
+        const { data } = await supabase
+          .from('races')
+          .select('*, seasons(*)')
+          .eq('circuit_id', id)
+          .order('date', { ascending: false })
+        setRaces(data || [])
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
     }
-    load().finally(() => setLoading(false))
+    load()
   }, [id])
 
   if (loading) return <Spinner />

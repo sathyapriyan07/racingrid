@@ -16,7 +16,10 @@ export default function Races() {
 
   useEffect(() => {
     setLoading(true)
-    fetchRaces(seasonId || null).then(setRaces).finally(() => setLoading(false))
+    fetchRaces(seasonId || null)
+      .then(setRaces)
+      .catch(console.error)
+      .finally(() => setLoading(false))
   }, [seasonId])
 
   return (

@@ -15,17 +15,23 @@ export default function TeamPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [t, champs] = await Promise.all([fetchTeam(id), fetchAllChampionships()])
-      setTeam(t)
-      setChampYears(champs.teamChamps[id] || [])
-      const { data } = await supabase
-        .from('results')
-        .select('*, drivers(name, code), races(name, date, seasons(year))')
-        .eq('team_id', id)
-        .order('races(date)', { ascending: true })
-      setResults(data || [])
+      try {
+        const [t, champs] = await Promise.all([fetchTeam(id), fetchAllChampionships()])
+        setTeam(t)
+        setChampYears(champs.teamChamps[id] || [])
+        const { data } = await supabase
+          .from('results')
+          .select('*, drivers(name, code), races(name, date, seasons(year))')
+          .eq('team_id', id)
+          .order('races(date)', { ascending: true })
+        setResults(data || [])
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
     }
-    load().finally(() => setLoading(false))
+    load()
   }, [id])
 
   if (loading) return <Spinner />
