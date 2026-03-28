@@ -105,13 +105,24 @@ export default function AdminSync() {
     setResults(r => ({ ...r, [action.id]: { status: 'fetching' } }))
     try {
       // Step 1: fetch data
+      // In dev: use Vite proxy (/api/ergast) to avoid CORS on HTTP
+      // In prod: fetch jolpi.ca directly — it supports CORS over HTTPS
       let rawData
-      try {
-        rawData = await callEdgeFunction('sync-ergast', { endpoint: action.edgeEndpoint })
-      } catch {
-        const res = await fetch(action.devPath)
+      const isDev = import.meta.env.DEV
+      if (!isDev) {
+        // Production: direct HTTPS fetch (jolpi.ca has CORS headers)
+        const res = await fetch(action.edgeEndpoint)
         if (!res.ok) throw new Error(`Fetch failed: ${res.status} ${res.statusText}`)
         rawData = await res.json()
+      } else {
+        // Development: try Edge Function first, fall back to Vite proxy
+        try {
+          rawData = await callEdgeFunction('sync-ergast', { endpoint: action.edgeEndpoint })
+        } catch {
+          const res = await fetch(action.devPath)
+          if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status} ${res.statusText}`)
+          rawData = await res.json()
+        }
       }
 
       // Step 2: normalize
