@@ -5,8 +5,9 @@ import { RefreshCw, ExternalLink, CheckCircle, XCircle, Loader } from 'lucide-re
 import { Card } from '../../components/ui'
 import {
   normalizeDrivers, normalizeTeams, normalizeCircuits,
-  normalizeRaces, normalizeResults, normalizeQualifying,
+  normalizeRaces, normalizeQualifying,
   normalizeDriverStandings, normalizeConstructorStandings,
+  normalizeSprintResults,
 } from '../../utils/normalizers'
 
 async function callEdgeFunction(name, payload) {
@@ -367,6 +368,52 @@ export default function AdminSync() {
     }
   }
 
+  const syncSprintResults = async (yr) => {
+    const id = `sprint-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      const seasonId = await getSeasonId(yr)
+      const [driverMap, teamMap, raceMap] = await Promise.all([getDriverMap(), getTeamMap(), getRaceMap(seasonId)])
+      const firstPage = await ergastFetch(
+        `https://api.jolpi.ca/ergast/f1/${yr}/sprint/?limit=100&format=json`,
+        `/api/ergast/${yr}/sprint/?limit=100&format=json`
+      )
+      const total = parseInt(firstPage?.MRData?.total || 0)
+      let allRaces = firstPage?.MRData?.RaceTable?.Races || []
+      for (let p = 100; p < total; p += 100) {
+        const page = await ergastFetch(
+          `https://api.jolpi.ca/ergast/f1/${yr}/sprint/?limit=100&offset=${p}&format=json`,
+          `/api/ergast/${yr}/sprint/?limit=100&offset=${p}&format=json`
+        )
+        allRaces = allRaces.concat(page?.MRData?.RaceTable?.Races || [])
+      }
+      const rows = allRaces.flatMap(race => {
+        const raceId = raceMap[parseInt(race.round)]
+        if (!raceId) return []
+        return (race.SprintResults || []).map(r => ({
+          race_id: raceId,
+          driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
+          team_id: teamMap[r.Constructor?.constructorId] || teamMap[r.Constructor?.name] || null,
+          position: parseInt(r.position) || null,
+          grid: parseInt(r.grid) || null,
+          laps: parseInt(r.laps) || null,
+          time: r.Time?.time || null,
+          points: parseFloat(r.points) || 0,
+          status: r.status || 'Finished',
+        }))
+      })
+      if (!rows.length) throw new Error(`No sprint results found for ${yr}`)
+      const saved = await upsertChunked(id, 'sprint_results', rows, 'race_id,driver_id')
+      toast.success(`Sprint results ${yr}: ${saved} upserted`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
+    }
+  }
+
   const syncSessionKeys = async (yr) => {
     const id = `session-keys-${yr}`
     setRun(id, true)
@@ -427,9 +474,10 @@ export default function AdminSync() {
     { key: 'races', label: 'Races', description: 'Race schedule + circuit links', fn: syncRaces },
     { key: 'session-keys', label: 'OpenF1 Session Keys', description: 'Link races to OpenF1 for live lap/pit/event data', fn: syncSessionKeys },
     { key: 'results', label: 'Race Results', description: 'Final positions, points, status', fn: syncRaceResults },
+    { key: 'sprint', label: 'Sprint Results', description: 'Sprint race results + points (2021+)', fn: syncSprintResults },
     { key: 'qualifying', label: 'Qualifying Results', description: 'Q1/Q2/Q3 times per driver', fn: syncQualifying },
-    { key: 'driver-standings', label: 'Driver Standings', description: 'Championship standings', fn: syncDriverStandings },
-    { key: 'constructor-standings', label: 'Constructor Standings', description: 'Team championship standings', fn: syncConstructorStandings },
+    { key: 'driver-standings', label: 'Driver Standings', description: 'Championship standings (includes sprint points)', fn: syncDriverStandings },
+    { key: 'constructor-standings', label: 'Constructor Standings', description: 'Team championship standings (includes sprint points)', fn: syncConstructorStandings },
   ]
 
   return (

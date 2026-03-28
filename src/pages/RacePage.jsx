@@ -34,11 +34,12 @@ function fmtLapTime(sec) {
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchQualifying } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchQualifying, fetchSprintResults } = useDataStore()
 
   const [race, setRace] = useState(null)
   const [results, setResults] = useState([])
   const [qualifying, setQualifying] = useState([])
+  const [sprintResults, setSprintResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('results')
 
@@ -53,11 +54,12 @@ export default function RacePage() {
 
   // Load race + results + qualifying from Supabase
   useEffect(() => {
-    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id)])
-      .then(([r, res, q]) => {
+    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id), fetchSprintResults(id)])
+      .then(([r, res, q, sp]) => {
         setRace(r)
         setResults(res || [])
         setQualifying(q || [])
+        setSprintResults(sp || [])
       })
       .finally(() => setLoading(false))
   }, [id])
@@ -131,6 +133,7 @@ export default function RacePage() {
   const tabs = [
     { id: 'results', label: 'Results', icon: Flag },
     { id: 'qualifying', label: 'Qualifying', icon: Clock },
+    ...(sprintResults.length ? [{ id: 'sprint', label: 'Sprint', icon: Flag }] : []),
     { id: 'replay', label: 'Lap Replay', icon: Activity },
     { id: 'pits', label: 'Pit Stops', icon: Clock },
     { id: 'events', label: 'Events', icon: AlertTriangle },
@@ -263,6 +266,45 @@ export default function RacePage() {
               </tbody>
             </table>
           )}
+        </Card>
+      )}
+
+      {/* Sprint Tab */}
+      {activeTab === 'sprint' && (
+        <Card className="p-0 overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="text-white/30 border-b border-white/5" style={{ fontSize: 10 }}>
+                <th className="text-left py-2 pl-3 w-7">#</th>
+                <th className="text-left py-2">Driver</th>
+                <th className="text-left py-2 hidden sm:table-cell">Team</th>
+                <th className="text-center py-2 hidden sm:table-cell">Grid</th>
+                <th className="text-right py-2">Time</th>
+                <th className="text-right py-2 pr-3">Pts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sprintResults.map((r, i) => (
+                <tr key={r.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                  <td className="py-1.5 pl-3">
+                    <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
+                  </td>
+                  <td className="py-1.5">
+                    <Link to={`/driver/${r.driver_id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
+                      <span className="hidden sm:inline">{r.drivers?.name || '—'}</span>
+                      <span className="sm:hidden font-semibold">{r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}</span>
+                    </Link>
+                  </td>
+                  <td className="py-1.5 hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</td>
+                  <td className="py-1.5 text-center hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
+                  <td className="py-1.5 text-right" style={{ fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                    {r.time || r.status || '—'}
+                  </td>
+                  <td className="py-1.5 text-right pr-3 font-semibold" style={{ fontSize: 11 }}>{r.points ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Card>
       )}
 

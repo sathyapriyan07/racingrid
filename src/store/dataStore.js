@@ -122,6 +122,19 @@ export const useDataStore = create((set, get) => ({
     return data
   },
 
+  fetchSprintResults: async (raceId) => {
+    const key = `sprint_${raceId}`
+    if (get().cache[key]) return get().cache[key]
+    const { data, error } = await supabase
+      .from('sprint_results')
+      .select('*, drivers(*), teams(*)')
+      .eq('race_id', raceId)
+      .order('position')
+    if (error) throw error
+    set(s => ({ cache: { ...s.cache, [key]: data } }))
+    return data
+  },
+
   fetchDriver: async (id, force = false) => {
     const key = `driver_${id}`
     if (!force && get().cache[key]) return get().cache[key]

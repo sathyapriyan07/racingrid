@@ -105,6 +105,20 @@ create table if not exists constructor_standings (
   unique (season_id, team_id)
 );
 
+create table if not exists sprint_results (
+  id uuid primary key default uuid_generate_v4(),
+  race_id uuid references races(id) on delete cascade,
+  driver_id uuid references drivers(id) on delete cascade,
+  team_id uuid references teams(id) on delete set null,
+  position integer,
+  grid integer,
+  laps integer,
+  time text,
+  points numeric(5,2) default 0,
+  status text default 'Finished',
+  unique (race_id, driver_id)
+);
+
 create table if not exists laps (
   id uuid primary key default uuid_generate_v4(),
   race_id uuid references races(id) on delete cascade,
@@ -178,6 +192,10 @@ alter table constructor_standings enable row level security;
 create policy "public_read_qualifying" on qualifying_results for select using (true);
 create policy "public_read_driver_standings" on driver_standings for select using (true);
 create policy "public_read_constructor_standings" on constructor_standings for select using (true);
+
+alter table sprint_results enable row level security;
+create policy "public_read_sprint_results" on sprint_results for select using (true);
+create policy "admin_write_sprint_results" on sprint_results for all using (is_admin());
 
 -- Admin write
 create policy "admin_write_drivers" on drivers for all using (is_admin());

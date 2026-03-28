@@ -147,6 +147,22 @@ export function normalizeConstructorStandings(raw, seasonId, teamMap = {}) {
   }))
 }
 
+export function normalizeSprintResults(raw, raceId, driverMap = {}, teamMap = {}) {
+  const races = raw?.MRData?.RaceTable?.Races || []
+  const results = races[0]?.SprintResults || []
+  return results.map(r => ({
+    race_id: raceId,
+    driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
+    team_id: teamMap[r.Constructor?.constructorId] || teamMap[r.Constructor?.name] || null,
+    position: parseInt(r.position) || null,
+    grid: parseInt(r.grid) || null,
+    laps: parseInt(r.laps) || null,
+    time: r.Time?.time || null,
+    points: parseFloat(r.points) || 0,
+    status: r.status || 'Finished',
+  }))
+}
+
 export function normalizeLaps(raw, raceId, driverMap = {}) {
   return (Array.isArray(raw) ? raw : []).map(l => ({
     race_id: raceId,
