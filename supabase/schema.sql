@@ -29,6 +29,7 @@ create table if not exists teams (
   nationality text,
   base text,
   logo_url text,
+  car_image text,
   created_at timestamptz default now()
 );
 

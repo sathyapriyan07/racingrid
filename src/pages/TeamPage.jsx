@@ -79,6 +79,13 @@ export default function TeamPage() {
         </div>
       </div>
 
+      {team.car_image && (
+        <div className="glass overflow-hidden">
+          <img src={team.car_image} alt={`${team.name} car`}
+            className="w-full max-h-52 object-contain p-4" />
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Wins" value={wins} />
         <StatCard label="Podiums" value={podiums} />
