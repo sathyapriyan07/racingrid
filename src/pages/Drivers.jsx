@@ -9,7 +9,7 @@ export default function Drivers() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    fetchDrivers().finally(() => setLoading(false))
+    fetchDrivers().catch(console.error).finally(() => setLoading(false))
   }, [])
 
   const filtered = drivers.filter(d =>

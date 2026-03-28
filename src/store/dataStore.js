@@ -13,27 +13,32 @@ export const useDataStore = create((set, get) => ({
   cache: {},
 
   fetchDrivers: async (force = false) => {
-    if (!force && get().drivers.length) return
+    if (!force && get().drivers.length) return get().drivers
     const data = await fetchTable('drivers')
     set({ drivers: data })
+    return data
   },
 
   fetchTeams: async (force = false) => {
-    if (!force && get().teams.length) return
+    if (!force && get().teams.length) return get().teams
     const data = await fetchTable('teams')
     set({ teams: data })
+    return data
   },
 
   fetchCircuits: async (force = false) => {
-    if (!force && get().circuits.length) return
+    if (!force && get().circuits.length) return get().circuits
     const data = await fetchTable('circuits')
     set({ circuits: data })
+    return data
   },
 
   fetchSeasons: async () => {
-    if (get().seasons.length) return
+    if (get().seasons.length) return get().seasons
     const data = await fetchTable('seasons', '*')
-    set({ seasons: data.sort((a, b) => b.year - a.year) })
+    const sorted = data.sort((a, b) => b.year - a.year)
+    set({ seasons: sorted })
+    return sorted
   },
 
   fetchRaces: async (seasonId = null) => {

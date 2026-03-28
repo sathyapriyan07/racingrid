@@ -9,7 +9,7 @@ export default function Teams() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    fetchTeams().finally(() => setLoading(false))
+    fetchTeams().catch(console.error).finally(() => setLoading(false))
   }, [])
 
   const filtered = teams.filter(t =>

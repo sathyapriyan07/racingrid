@@ -11,7 +11,7 @@ export default function Races() {
   const seasonId = searchParams.get('season')
 
   useEffect(() => {
-    fetchSeasons()
+    fetchSeasons().catch(console.error)
   }, [])
 
   useEffect(() => {

@@ -9,7 +9,7 @@ export default function Circuits() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    fetchCircuits().finally(() => setLoading(false))
+    fetchCircuits().catch(console.error).finally(() => setLoading(false))
   }, [])
 
   const filtered = circuits.filter(c =>
