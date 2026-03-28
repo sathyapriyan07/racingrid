@@ -109,6 +109,19 @@ export const useDataStore = create((set, get) => ({
     return data
   },
 
+  fetchQualifying: async (raceId) => {
+    const key = `qualifying_${raceId}`
+    if (get().cache[key]) return get().cache[key]
+    const { data, error } = await supabase
+      .from('qualifying_results')
+      .select('*, drivers(*), teams(*)')
+      .eq('race_id', raceId)
+      .order('position')
+    if (error) throw error
+    set(s => ({ cache: { ...s.cache, [key]: data } }))
+    return data
+  },
+
   fetchDriver: async (id) => {
     const key = `driver_${id}`
     if (get().cache[key]) return get().cache[key]

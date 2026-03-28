@@ -19,9 +19,10 @@ const POSITION_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchLaps, fetchPitStops, fetchRaceEvents } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchLaps, fetchPitStops, fetchRaceEvents, fetchQualifying } = useDataStore()
   const [race, setRace] = useState(null)
   const [results, setResults] = useState([])
+  const [qualifying, setQualifying] = useState([])
   const [laps, setLaps] = useState([])
   const [pitStops, setPitStops] = useState([])
   const [events, setEvents] = useState([])
@@ -31,15 +32,17 @@ export default function RacePage() {
 
   useEffect(() => {
     const load = async () => {
-      const [r, res, l, p, e] = await Promise.all([
+      const [r, res, q, l, p, e] = await Promise.all([
         fetchRace(id),
         fetchRaceResults(id),
+        fetchQualifying(id),
         fetchLaps(id),
         fetchPitStops(id),
         fetchRaceEvents(id),
       ])
       setRace(r)
       setResults(res || [])
+      setQualifying(q || [])
       setLaps(l || [])
       setPitStops(p || [])
       setEvents(e || [])
@@ -72,6 +75,7 @@ export default function RacePage() {
 
   const tabs = [
     { id: 'results', label: 'Results', icon: Flag },
+    { id: 'qualifying', label: 'Qualifying', icon: Clock },
     { id: 'replay', label: 'Lap Replay', icon: Activity },
     { id: 'pits', label: 'Pit Stops', icon: Clock },
     { id: 'events', label: 'Events', icon: AlertTriangle },
@@ -162,6 +166,57 @@ export default function RacePage() {
                       <td className="py-3 text-center text-white/40 text-xs hidden md:table-cell">{r.laps ?? '—'}</td>
                       <td className="py-3 text-right text-xs text-white/50">{r.time || r.status || '—'}</td>
                       <td className="py-3 text-right font-semibold text-xs">{r.points ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Qualifying Tab */}
+      {activeTab === 'qualifying' && (
+        <Card>
+          {qualifying.length === 0 ? (
+            <p className="text-white/30 text-sm text-center py-4">No qualifying data imported.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-white/30 text-xs border-b border-white/5">
+                    <th className="text-left pb-3 w-10">Pos</th>
+                    <th className="text-left pb-3">Driver</th>
+                    <th className="text-left pb-3 hidden sm:table-cell">Team</th>
+                    <th className="text-right pb-3">Q1</th>
+                    <th className="text-right pb-3">Q2</th>
+                    <th className="text-right pb-3">Q3</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {qualifying.map((q, i) => (
+                    <tr key={q.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                      <td className="py-3">
+                        <span className={`font-bold ${POSITION_COLORS[i] || 'text-white/60'}`}>
+                          {q.position ?? '—'}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <Link to={`/driver/${q.driver_id}`} className="hover:text-f1red transition-colors font-medium">
+                          {q.drivers?.name || '—'}
+                        </Link>
+                        {q.drivers?.code && <span className="text-xs text-white/30 ml-2">{q.drivers.code}</span>}
+                      </td>
+                      <td className="py-3 hidden sm:table-cell">
+                        <Link to={`/team/${q.team_id}`} className="text-white/50 hover:text-white transition-colors text-xs">
+                          {q.teams?.name || '—'}
+                        </Link>
+                      </td>
+                      <td className="py-3 text-right text-xs font-mono text-white/60">{q.q1 || '—'}</td>
+                      <td className="py-3 text-right text-xs font-mono text-white/60">{q.q2 || '—'}</td>
+                      <td className="py-3 text-right text-xs font-mono text-white/50">
+                        {q.q3 ? <span className="text-white font-semibold">{q.q3}</span> : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
