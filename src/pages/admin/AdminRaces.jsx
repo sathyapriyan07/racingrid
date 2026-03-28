@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, Youtube, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, PlayCircle, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 function getYoutubeId(url) {
@@ -67,7 +67,7 @@ function HighlightsEditor({ race }) {
                     {h.title || h.youtube_url}
                   </span>
                   <a href={h.youtube_url} target="_blank" rel="noopener noreferrer"
-                    className="text-f1red hover:opacity-70 shrink-0"><Youtube size={13} /></a>
+                    className="text-f1red hover:opacity-70 shrink-0"><PlayCircle size={13} /></a>
                   <button onClick={() => removeHighlight(h.id)}
                     className="shrink-0 hover:text-f1red transition-colors" style={{ color: 'var(--text-muted)' }}>
                     <Trash2 size={13} />
@@ -163,7 +163,7 @@ export default function AdminRaces() {
                         <button onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
                           className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-white/5 transition-colors text-xs"
                           style={{ color: expandedId === row.id ? '#E10600' : 'var(--text-muted)' }}>
-                          <Youtube size={11} />
+                          <PlayCircle size={11} />
                           Highlights
                           {expandedId === row.id ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                         </button>

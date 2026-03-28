@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
-import { Flag, Activity, AlertTriangle, Clock, Youtube } from 'lucide-react'
+import { Flag, Activity, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 
 const LapChart = lazy(() => import('../components/charts/LapChart'))
 
@@ -140,7 +140,7 @@ export default function RacePage() {
     { id: 'replay', label: 'Lap Replay', icon: Activity },
     { id: 'pits', label: 'Pit Stops', icon: Clock },
     { id: 'events', label: 'Events', icon: AlertTriangle },
-    ...(highlights.length ? [{ id: 'highlights', label: 'Highlights', icon: Youtube }] : []),
+    ...(highlights.length ? [{ id: 'highlights', label: 'Highlights', icon: PlayCircle }] : []),
   ]
 
   return (
@@ -476,7 +476,7 @@ export default function RacePage() {
               <Card key={h.id} className="p-0 overflow-hidden">
                 {h.title && (
                   <div className="px-4 pt-3 pb-2 text-sm font-semibold flex items-center gap-2">
-                    <Youtube size={14} className="text-f1red" />
+                    <PlayCircle size={14} className="text-f1red" />
                     {h.title}
                   </div>
                 )}
