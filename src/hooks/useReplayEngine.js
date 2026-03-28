@@ -45,6 +45,7 @@ export function useReplayEngine(sessionKey) {
   const [leaderboard, setLeaderboard] = useState([])
   const [trackPoints, setTrackPoints] = useState([])
   const [loadingLap, setLoadingLap] = useState(false)
+  const [overtakes, setOvertakes] = useState([]) // [{abbr, color, ts}]
 
   const driverInfoRef = useRef({})
   const lapFramesRef = useRef({})      // lap → [{ts, positions: {num: {nx,ny}}}]
@@ -58,6 +59,7 @@ export function useReplayEngine(sessionKey) {
   const lastRafTimeRef = useRef(null)
   const currentTimeRef = useRef(0)
   const totalTimeRef = useRef(0)
+  const lastPositionsRef = useRef({}) // abbr → position, for overtake detection
   const totalLapsRef = useRef(0)
 
   const setSpeed = useCallback((s) => { speedRef.current = s; setSpeedState(s) }, [])
@@ -104,6 +106,21 @@ export function useReplayEngine(sessionKey) {
         position: pos.pos ?? (i + 1),
       }
     })
+
+    // Detect overtakes: position improved compared to last frame
+    const newOvertakes = []
+    const now = Date.now()
+    markers.forEach(m => {
+      const prev = lastPositionsRef.current[m.abbr]
+      if (prev != null && m.position != null && prev > m.position) {
+        newOvertakes.push({ abbr: m.abbr, color: m.color, ts: now })
+      }
+      if (m.position != null) lastPositionsRef.current[m.abbr] = m.position
+    })
+    if (newOvertakes.length > 0) {
+      setOvertakes(prev => [...prev, ...newOvertakes].slice(-10))
+    }
+
     setDrivers(markers)
     buildLeaderboard(markers)
   }, [buildLeaderboard])
@@ -323,6 +340,7 @@ export function useReplayEngine(sessionKey) {
     currentTime, totalTime,
     currentLap, totalLaps,
     drivers, leaderboard, trackPoints,
+    overtakes,
     play, pause, seek, seekToLap, reset,
   }
 }

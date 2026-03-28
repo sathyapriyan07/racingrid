@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useReplayEngine } from '../../hooks/useReplayEngine'
 import TrackCanvas from './TrackCanvas'
 import { Spinner } from '../ui'
 
 const SPEED_OPTIONS = [0.5, 1, 2, 5, 10, 20]
+const OVERTAKE_DURATION = 2500 // ms to show flash
 
 function formatTime(sec) {
   const h = Math.floor(sec / 3600)
@@ -20,13 +21,56 @@ export default function RaceReplay({ sessionKey }) {
     currentTime, totalTime,
     currentLap, totalLaps,
     drivers, leaderboard, trackPoints,
+    overtakes,
     play, pause, seek, seekToLap, reset,
   } = useReplayEngine(sessionKey)
 
   const [highlighted, setHighlighted] = useState([])
+  const [overtakeFlashes, setOvertakeFlashes] = useState([]) // active canvas rings
+  const [overtakeToasts, setOvertakeToasts] = useState([])   // UI notifications
+  const seenOvertakesRef = useRef(new Set())
 
   const toggleHighlight = useCallback((abbr) => {
-    setHighlighted(h => h.includes(abbr) ? h.filter(x => x !== abbr) : [...h, abbr])
+    setHighlighted(h => {
+      if (h.includes(abbr)) return h.filter(x => x !== abbr)
+      if (h.length >= 2) return [h[1], abbr] // replace oldest
+      return [...h, abbr]
+    })
+  }, [])
+
+  const battleMode = highlighted.length === 2
+
+  // Process new overtakes
+  useEffect(() => {
+    const now = Date.now()
+    const newFlashes = []
+    const newToasts = []
+
+    overtakes.forEach(ov => {
+      const key = `${ov.abbr}-${ov.ts}`
+      if (seenOvertakesRef.current.has(key)) return
+      seenOvertakesRef.current.add(key)
+      newFlashes.push({ abbr: ov.abbr, color: ov.color, startTime: now })
+      newToasts.push({ abbr: ov.abbr, color: ov.color, id: key })
+    })
+
+    if (newFlashes.length > 0) {
+      setOvertakeFlashes(prev => [...prev, ...newFlashes].slice(-10))
+      setOvertakeToasts(prev => [...prev, ...newToasts].slice(-3))
+      // Auto-remove toasts
+      setTimeout(() => {
+        setOvertakeToasts(prev => prev.filter(t => !newToasts.find(n => n.id === t.id)))
+      }, OVERTAKE_DURATION)
+    }
+  }, [overtakes])
+
+  // Clean up expired flashes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now()
+      setOvertakeFlashes(prev => prev.filter(f => now - f.startTime < 900))
+    }, 500)
+    return () => clearInterval(interval)
   }, [])
 
   const progress = totalTime > 0 ? (currentTime / totalTime) * 100 : 0
@@ -55,10 +99,10 @@ export default function RaceReplay({ sessionKey }) {
   return (
     <div className="rounded-2xl overflow-hidden border" style={{ borderColor: 'var(--border)', background: '#0a0a0f' }}>
 
-      {/* Main layout: track + leaderboard */}
+      {/* Main layout */}
       <div className="flex flex-col md:flex-row">
 
-        {/* Track canvas — tall on mobile */}
+        {/* Track canvas */}
         <div className="relative w-full" style={{ height: 'min(80vw, 420px)' }}>
           <TrackCanvas
             trackPoints={trackPoints}
@@ -66,6 +110,7 @@ export default function RaceReplay({ sessionKey }) {
             highlightedDrivers={highlighted}
             playbackSpeed={speed}
             showDriverNames={true}
+            overtakeFlashes={overtakeFlashes}
           />
 
           {/* Lap badge */}
@@ -75,18 +120,46 @@ export default function RaceReplay({ sessionKey }) {
             Lap {currentLap} / {totalLaps}
           </div>
 
-          {/* Speed badge */}
-          <div className="absolute top-3 right-3 px-2 py-1 rounded-lg text-xs font-bold"
-            style={{ background: 'rgba(0,0,0,0.75)', color: 'rgba(255,255,255,0.6)' }}>
-            {speed}x
+          {/* Speed + battle mode badge */}
+          <div className="absolute top-3 right-3 flex items-center gap-1.5">
+            {battleMode && (
+              <div className="px-2 py-1 rounded-lg text-xs font-bold"
+                style={{ background: 'rgba(225,6,0,0.85)', color: '#fff' }}>
+                ⚔ Battle
+              </div>
+            )}
+            <div className="px-2 py-1 rounded-lg text-xs font-bold"
+              style={{ background: 'rgba(0,0,0,0.75)', color: 'rgba(255,255,255,0.6)' }}>
+              {speed}x
+            </div>
           </div>
+
+          {/* Overtake toasts */}
+          <div className="absolute bottom-3 left-3 flex flex-col gap-1.5 pointer-events-none">
+            {overtakeToasts.map(t => (
+              <div key={t.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold animate-pulse"
+                style={{ background: 'rgba(0,0,0,0.85)', color: '#fff', borderLeft: `3px solid ${t.color}` }}>
+                <span style={{ color: t.color }}>▲</span>
+                {t.abbr} overtook!
+              </div>
+            ))}
+          </div>
+
+          {/* Battle view hint */}
+          {!battleMode && highlighted.length === 1 && (
+            <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg text-xs"
+              style={{ background: 'rgba(0,0,0,0.7)', color: 'rgba(255,255,255,0.5)' }}>
+              Select 1 more for ⚔ Battle
+            </div>
+          )}
         </div>
 
-        {/* Leaderboard — horizontal scroll on mobile, vertical on desktop */}
+        {/* Leaderboard */}
         <div className="flex md:flex-col overflow-x-auto md:overflow-y-auto md:w-44 border-t md:border-t-0 md:border-l"
           style={{ borderColor: 'rgba(255,255,255,0.08)', maxHeight: 420 }}>
           {leaderboard.map((drv, i) => {
             const isHighlighted = highlighted.includes(drv.abbr)
+            const highlightIdx = highlighted.indexOf(drv.abbr)
             return (
               <button key={drv.abbr} onClick={() => toggleHighlight(drv.abbr)}
                 className="flex md:flex-row items-center gap-1.5 px-3 py-2 shrink-0 transition-colors hover:bg-white/5"
@@ -96,10 +169,21 @@ export default function RaceReplay({ sessionKey }) {
                   {i + 1}
                 </span>
                 <div className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: drv.color }} />
-                <span className="text-xs font-bold text-white">{drv.abbr}</span>
+                <span className="text-xs font-bold flex-1 text-white">{drv.abbr}</span>
+                {isHighlighted && (
+                  <span className="text-xs font-black shrink-0" style={{ color: '#E10600' }}>
+                    {highlightIdx + 1}
+                  </span>
+                )}
               </button>
             )
           })}
+          {leaderboard.length > 0 && (
+            <div className="px-3 py-2 text-center shrink-0 md:block hidden"
+              style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10 }}>
+              Tap 2 drivers<br />for ⚔ Battle View
+            </div>
+          )}
         </div>
       </div>
 
@@ -118,7 +202,7 @@ export default function RaceReplay({ sessionKey }) {
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Controls row */}
         <div className="flex items-center gap-2 flex-wrap">
 
           {/* Play/Pause/Reset */}
@@ -156,7 +240,16 @@ export default function RaceReplay({ sessionKey }) {
             </div>
           )}
 
-          {/* Speed buttons */}
+          {/* Clear battle */}
+          {highlighted.length > 0 && (
+            <button onClick={() => setHighlighted([])}
+              className="text-xs px-2 py-1 rounded transition-colors"
+              style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
+              ✕ Clear
+            </button>
+          )}
+
+          {/* Speed */}
           <div className="flex items-center gap-1 ml-auto flex-wrap justify-end">
             {SPEED_OPTIONS.map(s => (
               <button key={s} onClick={() => setSpeed(s)}
