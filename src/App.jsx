@@ -15,6 +15,7 @@ import Races from './pages/Races'
 import RacePage from './pages/RacePage'
 import Compare from './pages/Compare'
 import Standings from './pages/Standings'
+import SearchPage from './pages/Search'
 
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
