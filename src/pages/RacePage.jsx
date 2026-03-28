@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, Activity, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
+import RaceReplay from '../components/replay/RaceReplay'
 
 const LapChart = lazy(() => import('../components/charts/LapChart'))
 
@@ -346,56 +347,8 @@ export default function RacePage() {
         <div className="space-y-4">
           {!hasOf1 ? (
             <Card><p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p></Card>
-          ) : of1Loading ? (
-            <Card><div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading lap data...</div></Card>
-          ) : of1Error ? (
-            <Card><p className="text-f1red text-sm text-center py-4">{of1Error}</p></Card>
-          ) : laps.length === 0 ? (
-            <Card><p className="text-white/30 text-sm text-center py-4">No lap data available.</p></Card>
           ) : (
-            <>
-              <Card>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-bold text-white/70">Lap Position Chart</h2>
-                  <Badge color="red">Lap {currentLap} / {maxLap}</Badge>
-                </div>
-                <Suspense fallback={<Spinner />}>
-                  <LapChart laps={laps} currentLap={currentLap} driverMap={of1Drivers} />
-                </Suspense>
-              </Card>
-
-              <Card>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-bold text-white/70">Replay Slider</h2>
-                  <span className="text-xs text-white/40">Lap {currentLap}</span>
-                </div>
-                <input type="range" min={1} max={maxLap} value={currentLap}
-                  onChange={e => setCurrentLap(Number(e.target.value))}
-                  className="w-full accent-f1red" />
-                <div className="flex justify-between text-xs text-white/30 mt-1">
-                  <span>Lap 1</span><span>Lap {maxLap}</span>
-                </div>
-
-                <div className="mt-4 space-y-1">
-                  {replayPositions.map((item, i) => {
-                    const d = of1Drivers[item.driver_number]
-                    const hasPit = pitsAtLap.some(p => p.driver_number === item.driver_number && p.lap_number === currentLap)
-                    return (
-                      <div key={item.driver_number} className="flex items-center gap-3 py-1.5 border-b border-white/5">
-                        <span className={`w-6 text-center text-xs font-bold ${POSITION_COLORS[i] || 'text-white/50'}`}>
-                          {item.position}
-                        </span>
-                        {d?.team_colour && (
-                          <div className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: `#${d.team_colour}` }} />
-                        )}
-                        <span className="text-sm flex-1">{d?.name_acronym || `#${item.driver_number}`}</span>
-                        {hasPit && <Badge color="yellow">PIT</Badge>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </Card>
-            </>
+            <RaceReplay sessionKey={race.openf1_session_key} />
           )}
         </div>
       )}
