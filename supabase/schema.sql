@@ -53,6 +53,7 @@ create table if not exists races (
   name text not null,
   date date,
   round integer,
+  openf1_session_key integer,
   created_at timestamptz default now(),
   unique (season_id, round)
 );

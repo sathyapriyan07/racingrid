@@ -367,6 +367,43 @@ export default function AdminSync() {
     }
   }
 
+  const syncSessionKeys = async (yr) => {
+    const id = `session-keys-${yr}`
+    setRun(id, true)
+    setResult(id, { status: 'fetching' })
+    try {
+      // fetch OpenF1 race sessions for the year
+      const res = await fetch(`https://api.openf1.org/v1/sessions?year=${yr}&session_name=Race`)
+      if (!res.ok) throw new Error(`OpenF1 fetch failed: ${res.status}`)
+      const sessions = await res.json()
+      if (!sessions.length) throw new Error('No sessions found on OpenF1')
+
+      // fetch our races for the year
+      const seasonId = await getSeasonId(yr)
+      const { data: races, error } = await supabase
+        .from('races').select('id, date, round').eq('season_id', seasonId)
+      if (error) throw error
+
+      // match by closest date
+      let matched = 0
+      for (const race of races) {
+        const raceDate = new Date(race.date).toISOString().slice(0, 10)
+        const session = sessions.find(s => s.date_start?.slice(0, 10) === raceDate)
+          || sessions.find(s => Math.abs(new Date(s.date_start) - new Date(race.date)) < 86400000 * 2)
+        if (!session) continue
+        await supabase.from('races').update({ openf1_session_key: session.session_key }).eq('id', race.id)
+        matched++
+      }
+      setResult(id, { status: 'done', total: races.length, saved: matched })
+      toast.success(`Session keys ${yr}: ${matched}/${races.length} matched`)
+    } catch (err) {
+      setResult(id, { status: 'error', error: err.message })
+      toast.error(err.message)
+    } finally {
+      setRun(id, false)
+    }
+  }
+
   const syncSeason = async () => {
     setRun('season', true)
     setSeasonResult(null)
@@ -388,6 +425,7 @@ export default function AdminSync() {
 
   const SEASON_ACTIONS = [
     { key: 'races', label: 'Races', description: 'Race schedule + circuit links', fn: syncRaces },
+    { key: 'session-keys', label: 'OpenF1 Session Keys', description: 'Link races to OpenF1 for live lap/pit/event data', fn: syncSessionKeys },
     { key: 'results', label: 'Race Results', description: 'Final positions, points, status', fn: syncRaceResults },
     { key: 'qualifying', label: 'Qualifying Results', description: 'Q1/Q2/Q3 times per driver', fn: syncQualifying },
     { key: 'driver-standings', label: 'Driver Standings', description: 'Championship standings', fn: syncDriverStandings },

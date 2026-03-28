@@ -6,72 +6,116 @@ import { Flag, Activity, AlertTriangle, Clock } from 'lucide-react'
 
 const LapChart = lazy(() => import('../components/charts/LapChart'))
 
-const EVENT_COLORS = {
-  safety_car: 'yellow',
-  yellow_flag: 'yellow',
-  crash: 'red',
-  overtake: 'green',
-  vsc: 'yellow',
-  red_flag: 'red',
+const POSITION_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
+
+const FLAG_COLOR = {
+  YELLOW: 'yellow', 'DOUBLE YELLOW': 'yellow', RED: 'red',
+  GREEN: 'green', CHEQUERED: 'gray', BLUE: 'blue',
 }
 
-const POSITION_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
+async function openf1Fetch(path) {
+  const res = await fetch(`https://api.openf1.org/v1${path}`)
+  if (!res.ok) throw new Error(`OpenF1 ${res.status}`)
+  return res.json()
+}
+
+// Convert lap_duration (seconds float) to mm:ss.mmm
+function fmtLapTime(sec) {
+  if (!sec) return '—'
+  const m = Math.floor(sec / 60)
+  const s = (sec % 60).toFixed(3).padStart(6, '0')
+  return `${m}:${s}`
+}
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchLaps, fetchPitStops, fetchRaceEvents, fetchQualifying } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchQualifying } = useDataStore()
+
   const [race, setRace] = useState(null)
   const [results, setResults] = useState([])
   const [qualifying, setQualifying] = useState([])
-  const [laps, setLaps] = useState([])
-  const [pitStops, setPitStops] = useState([])
-  const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
-  const [currentLap, setCurrentLap] = useState(null)
   const [activeTab, setActiveTab] = useState('results')
 
+  // OpenF1 state
+  const [of1Drivers, setOf1Drivers] = useState({}) // driver_number → {name_acronym, full_name, team_colour}
+  const [laps, setLaps] = useState([])             // all laps from OpenF1
+  const [pitStops, setPitStops] = useState([])
+  const [events, setEvents] = useState([])
+  const [of1Loading, setOf1Loading] = useState(false)
+  const [of1Error, setOf1Error] = useState(null)
+  const [currentLap, setCurrentLap] = useState(1)
+
+  // Load race + results + qualifying from Supabase
   useEffect(() => {
-    const load = async () => {
-      const [r, res, q, l, p, e] = await Promise.all([
-        fetchRace(id),
-        fetchRaceResults(id),
-        fetchQualifying(id),
-        fetchLaps(id),
-        fetchPitStops(id),
-        fetchRaceEvents(id),
-      ])
-      setRace(r)
-      setResults(res || [])
-      setQualifying(q || [])
-      setLaps(l || [])
-      setPitStops(p || [])
-      setEvents(e || [])
-      const maxLap = l?.length ? Math.max(...l.map(x => x.lap_number)) : 0
-      setCurrentLap(maxLap || null)
-    }
-    load().finally(() => setLoading(false))
+    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id)])
+      .then(([r, res, q]) => {
+        setRace(r)
+        setResults(res || [])
+        setQualifying(q || [])
+      })
+      .finally(() => setLoading(false))
   }, [id])
 
-  const maxLap = useMemo(() => laps.length ? Math.max(...laps.map(l => l.lap_number)) : 0, [laps])
+  // Load OpenF1 data when race is ready and has a session key
+  useEffect(() => {
+    if (!race?.openf1_session_key) return
+    const sk = race.openf1_session_key
+    setOf1Loading(true)
+    setOf1Error(null)
 
+    Promise.all([
+      openf1Fetch(`/drivers?session_key=${sk}`),
+      openf1Fetch(`/laps?session_key=${sk}`),
+      openf1Fetch(`/pit?session_key=${sk}`),
+      openf1Fetch(`/race_control?session_key=${sk}`),
+    ]).then(([drivers, lapsData, pitsData, rcData]) => {
+      // Build driver map: number → info
+      const dMap = {}
+      drivers.forEach(d => { dMap[d.driver_number] = d })
+      setOf1Drivers(dMap)
+      setLaps(lapsData)
+      setPitStops(pitsData)
+      // Filter meaningful events: flags + safety car + session status
+      const meaningful = rcData.filter(e =>
+        (e.category === 'Flag' && e.flag && !['GREEN', 'CLEAR'].includes(e.flag) && e.scope === 'Track') ||
+        e.category === 'SafetyCar' ||
+        (e.category === 'SessionStatus' && ['Started', 'Finished', 'Aborted'].includes(e.message))
+      )
+      setEvents(meaningful)
+      const maxL = lapsData.length ? Math.max(...lapsData.map(l => l.lap_number)) : 1
+      setCurrentLap(maxL)
+    }).catch(err => setOf1Error(err.message))
+      .finally(() => setOf1Loading(false))
+  }, [race?.openf1_session_key])
+
+  const maxLap = useMemo(() =>
+    laps.length ? Math.max(...laps.map(l => l.lap_number)) : 0, [laps])
+
+  // Derive positions at currentLap from cumulative lap times
   const replayPositions = useMemo(() => {
-    if (!currentLap || !laps.length) return results
-    const lapData = laps.filter(l => l.lap_number === currentLap)
-    return lapData.sort((a, b) => (a.position || 99) - (b.position || 99))
-  }, [currentLap, laps, results])
+    if (!laps.length) return []
+    // Sum lap durations up to currentLap per driver
+    const totals = {}
+    laps.filter(l => l.lap_number <= currentLap && l.lap_duration).forEach(l => {
+      totals[l.driver_number] = (totals[l.driver_number] || 0) + l.lap_duration
+    })
+    return Object.entries(totals)
+      .sort((a, b) => a[1] - b[1])
+      .map(([num, total], i) => ({
+        driver_number: parseInt(num),
+        position: i + 1,
+        total,
+      }))
+  }, [laps, currentLap])
 
-  const currentPitStops = useMemo(() =>
-    pitStops.filter(p => p.lap <= (currentLap || maxLap)),
-    [pitStops, currentLap, maxLap]
-  )
-
-  const currentEvents = useMemo(() =>
-    events.filter(e => e.lap <= (currentLap || maxLap)),
-    [events, currentLap, maxLap]
-  )
+  const pitsAtLap = useMemo(() =>
+    pitStops.filter(p => p.lap_number <= currentLap), [pitStops, currentLap])
 
   if (loading) return <Spinner />
   if (!race) return <div className="text-white/40 text-center py-16">Race not found.</div>
+
+  const hasOf1 = !!race.openf1_session_key
 
   const tabs = [
     { id: 'results', label: 'Results', icon: Flag },
@@ -103,7 +147,7 @@ export default function RacePage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <StatCard label="Laps" value={maxLap || '—'} />
+            <StatCard label="Laps" value={maxLap || results[0]?.laps || '—'} />
             <StatCard label="Drivers" value={results.length || '—'} />
           </div>
         </div>
@@ -112,13 +156,10 @@ export default function RacePage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-dark-800 p-1 rounded-xl w-fit flex-wrap">
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
               activeTab === tab.id ? 'bg-f1red text-white' : 'text-white/50 hover:text-white'
-            }`}
-          >
+            }`}>
             <tab.icon size={12} /> {tab.label}
           </button>
         ))}
@@ -214,7 +255,7 @@ export default function RacePage() {
                       </td>
                       <td className="py-3 text-right text-xs font-mono text-white/60">{q.q1 || '—'}</td>
                       <td className="py-3 text-right text-xs font-mono text-white/60">{q.q2 || '—'}</td>
-                      <td className="py-3 text-right text-xs font-mono text-white/50">
+                      <td className="py-3 text-right text-xs font-mono">
                         {q.q3 ? <span className="text-white font-semibold">{q.q3}</span> : '—'}
                       </td>
                     </tr>
@@ -229,8 +270,14 @@ export default function RacePage() {
       {/* Replay Tab */}
       {activeTab === 'replay' && (
         <div className="space-y-4">
-          {laps.length === 0 ? (
-            <Card><p className="text-white/30 text-sm text-center py-4">No lap data imported.</p></Card>
+          {!hasOf1 ? (
+            <Card><p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p></Card>
+          ) : of1Loading ? (
+            <Card><div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading lap data...</div></Card>
+          ) : of1Error ? (
+            <Card><p className="text-f1red text-sm text-center py-4">{of1Error}</p></Card>
+          ) : laps.length === 0 ? (
+            <Card><p className="text-white/30 text-sm text-center py-4">No lap data available.</p></Card>
           ) : (
             <>
               <Card>
@@ -239,7 +286,7 @@ export default function RacePage() {
                   <Badge color="red">Lap {currentLap} / {maxLap}</Badge>
                 </div>
                 <Suspense fallback={<Spinner />}>
-                  <LapChart laps={laps} currentLap={currentLap} />
+                  <LapChart laps={laps} currentLap={currentLap} driverMap={of1Drivers} />
                 </Suspense>
               </Card>
 
@@ -248,32 +295,26 @@ export default function RacePage() {
                   <h2 className="text-sm font-bold text-white/70">Replay Slider</h2>
                   <span className="text-xs text-white/40">Lap {currentLap}</span>
                 </div>
-                <input
-                  type="range"
-                  min={1}
-                  max={maxLap}
-                  value={currentLap || maxLap}
+                <input type="range" min={1} max={maxLap} value={currentLap}
                   onChange={e => setCurrentLap(Number(e.target.value))}
-                  className="w-full accent-f1red"
-                />
+                  className="w-full accent-f1red" />
                 <div className="flex justify-between text-xs text-white/30 mt-1">
-                  <span>Lap 1</span>
-                  <span>Lap {maxLap}</span>
+                  <span>Lap 1</span><span>Lap {maxLap}</span>
                 </div>
 
-                {/* Live positions at current lap */}
                 <div className="mt-4 space-y-1">
-                  {replayPositions.slice(0, 10).map((item, i) => {
-                    const hasPit = currentPitStops.some(p =>
-                      p.driver_id === (item.driver_id || item.id) && p.lap === currentLap
-                    )
-                    const driverName = item.drivers?.name || item.drivers?.code || `P${i + 1}`
+                  {replayPositions.map((item, i) => {
+                    const d = of1Drivers[item.driver_number]
+                    const hasPit = pitsAtLap.some(p => p.driver_number === item.driver_number && p.lap_number === currentLap)
                     return (
-                      <div key={item.id || i} className="flex items-center gap-3 py-1.5 border-b border-white/5">
+                      <div key={item.driver_number} className="flex items-center gap-3 py-1.5 border-b border-white/5">
                         <span className={`w-6 text-center text-xs font-bold ${POSITION_COLORS[i] || 'text-white/50'}`}>
-                          {item.position || i + 1}
+                          {item.position}
                         </span>
-                        <span className="text-sm flex-1">{driverName}</span>
+                        {d?.team_colour && (
+                          <div className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: `#${d.team_colour}` }} />
+                        )}
+                        <span className="text-sm flex-1">{d?.name_acronym || `#${item.driver_number}`}</span>
                         {hasPit && <Badge color="yellow">PIT</Badge>}
                       </div>
                     )
@@ -289,24 +330,35 @@ export default function RacePage() {
       {activeTab === 'pits' && (
         <Card>
           <h2 className="text-sm font-bold mb-4 text-white/70">Pit Stop Timeline</h2>
-          {pitStops.length === 0 ? (
+          {!hasOf1 ? (
+            <p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
+          ) : of1Loading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading...</div>
+          ) : pitStops.length === 0 ? (
             <p className="text-white/30 text-sm text-center py-4">No pit stop data.</p>
           ) : (
             <div className="relative">
               <div className="absolute left-16 top-0 bottom-0 w-px bg-white/10" />
               <div className="space-y-3">
-                {pitStops
-                  .sort((a, b) => a.lap - b.lap)
-                  .map(pit => (
-                    <div key={pit.id} className="flex items-center gap-4">
-                      <span className="text-xs text-white/40 w-14 text-right shrink-0">Lap {pit.lap}</span>
+                {[...pitStops].sort((a, b) => a.lap_number - b.lap_number).map((pit, i) => {
+                  const d = of1Drivers[pit.driver_number]
+                  return (
+                    <div key={i} className="flex items-center gap-4">
+                      <span className="text-xs text-white/40 w-14 text-right shrink-0">Lap {pit.lap_number}</span>
                       <div className="w-2 h-2 rounded-full bg-f1red shrink-0 relative z-10" />
-                      <div className="glass px-3 py-2 flex-1">
-                        <span className="text-sm font-medium">{pit.drivers?.name || pit.drivers?.code || '—'}</span>
-                        {pit.duration && <span className="text-xs text-white/40 ml-2">{pit.duration}s</span>}
+                      <div className="glass px-3 py-2 flex-1 flex items-center gap-3">
+                        {d?.team_colour && (
+                          <div className="w-1 h-4 rounded-full" style={{ backgroundColor: `#${d.team_colour}` }} />
+                        )}
+                        <span className="text-sm font-medium">{d?.name_acronym || `#${pit.driver_number}`}</span>
+                        <span className="text-xs text-white/30 flex-1">{d?.full_name}</span>
+                        {pit.pit_duration && (
+                          <span className="text-xs font-mono text-white/60">{pit.pit_duration.toFixed(1)}s</span>
+                        )}
                       </div>
                     </div>
-                  ))}
+                  )
+                })}
               </div>
             </div>
           )}
@@ -316,22 +368,26 @@ export default function RacePage() {
       {/* Events Tab */}
       {activeTab === 'events' && (
         <Card>
-          <h2 className="text-sm font-bold mb-4 text-white/70">Race Events</h2>
-          {events.length === 0 ? (
+          <h2 className="text-sm font-bold mb-4 text-white/70">Race Control</h2>
+          {!hasOf1 ? (
+            <p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
+          ) : of1Loading ? (
+            <div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading...</div>
+          ) : events.length === 0 ? (
             <p className="text-white/30 text-sm text-center py-4">No events recorded.</p>
           ) : (
             <div className="space-y-2">
-              {events.map(ev => (
-                <div key={ev.id} className="flex items-start gap-3 py-2 border-b border-white/5">
-                  <Badge color={EVENT_COLORS[ev.type] || 'gray'}>
-                    {ev.type?.replace('_', ' ').toUpperCase()}
-                  </Badge>
-                  <div className="flex-1">
-                    <span className="text-sm">{ev.description || '—'}</span>
+              {events.map((ev, i) => {
+                const color = FLAG_COLOR[ev.flag] || (ev.category === 'SafetyCar' ? 'yellow' : 'gray')
+                const label = ev.flag || ev.category
+                return (
+                  <div key={i} className="flex items-start gap-3 py-2 border-b border-white/5">
+                    <Badge color={color}>{label}</Badge>
+                    <span className="text-sm flex-1 text-white/70">{ev.message}</span>
+                    {ev.lap_number && <span className="text-xs text-white/30 shrink-0">Lap {ev.lap_number}</span>}
                   </div>
-                  <span className="text-xs text-white/30 shrink-0">Lap {ev.lap}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </Card>
