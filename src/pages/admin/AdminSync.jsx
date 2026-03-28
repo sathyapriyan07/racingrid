@@ -77,7 +77,6 @@ const GLOBAL_SYNC_ACTIONS = [
     devBasePath: '/api/ergast/drivers/',
     table: 'drivers',
     conflictCol: 'name',
-    pageSize: 200,
     normalize: (data) => normalizeDrivers(data, 'ergast'),
   },
   {
@@ -88,7 +87,6 @@ const GLOBAL_SYNC_ACTIONS = [
     devBasePath: '/api/ergast/constructors/',
     table: 'teams',
     conflictCol: 'name',
-    pageSize: 200,
     normalize: (data) => normalizeTeams(data, 'ergast'),
   },
   {
@@ -99,7 +97,6 @@ const GLOBAL_SYNC_ACTIONS = [
     devBasePath: '/api/ergast/circuits/',
     table: 'circuits',
     conflictCol: 'name',
-    pageSize: 100,
     normalize: (data) => normalizeCircuits(data, 'ergast'),
   },
 ]
@@ -134,8 +131,8 @@ export default function AdminSync() {
   // ── global sync (drivers / teams / circuits) ─────────────
 
   const fetchPage = async (action, offset) => {
-    const url = `${action.baseEndpoint}?limit=${action.pageSize}&offset=${offset}&format=json`
-    const devUrl = `${action.devBasePath}?limit=${action.pageSize}&offset=${offset}&format=json`
+    const url = `${action.baseEndpoint}?limit=100&offset=${offset}&format=json`
+    const devUrl = `${action.devBasePath}?limit=100&offset=${offset}&format=json`
     return ergastFetch(url, devUrl)
   }
 
@@ -143,16 +140,16 @@ export default function AdminSync() {
     setRun(action.id, true)
     setResult(action.id, { status: 'fetching', fetched: 0 })
     try {
-      let all = []
-      let offset = 0
-      while (true) {
+      const firstPage = await fetchPage(action, 0)
+      const total = parseInt(firstPage?.MRData?.total || 0)
+      let all = action.normalize(firstPage)
+      setResult(action.id, { status: 'fetching', fetched: all.length })
+      for (let offset = 100; offset < total; offset += 100) {
         const page = await fetchPage(action, offset)
         const batch = action.normalize(page)
         if (!batch.length) break
         all = all.concat(batch)
         setResult(action.id, { status: 'fetching', fetched: all.length })
-        if (batch.length < action.pageSize) break
-        offset += action.pageSize
       }
       if (!all.length) throw new Error('No data returned')
       const clean = all.map(r => { const x = { ...r }; delete x.id; return x })
