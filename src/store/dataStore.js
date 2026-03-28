@@ -162,17 +162,12 @@ export const useDataStore = create((set, get) => ({
   fetchStandings: async (seasonId) => {
     const key = `standings_${seasonId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('results')
-      .select('driver_id, team_id, points, position, drivers(id, name, code, image_url, nationality), teams(id, name, logo_url)')
-      .eq('races.season_id', seasonId)
-      .not('points', 'is', null)
-    // join via races
-    const { data: raceResults, error: e2 } = await supabase
+
+    const { data: raceResults, error } = await supabase
       .from('results')
       .select('driver_id, team_id, points, position, drivers(id, name, code, image_url, nationality), teams(id, name, logo_url), races!inner(season_id)')
       .eq('races.season_id', seasonId)
-    if (e2) throw e2
+    if (error) throw error
 
     // Driver standings
     const driverMap = {}
