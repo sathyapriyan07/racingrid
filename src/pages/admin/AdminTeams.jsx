@@ -3,13 +3,16 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Car, Pencil, Flag } from 'lucide-react'
+import { Plus, ImagePlus, Car, Pencil, Flag, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
+import TextEditRow from './TextEditRow'
 
 function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
   const [base, setBase] = useState(row.base || '')
+  const [fullName, setFullName] = useState(row.full_name || '')
+  const [founded, setFounded] = useState(row.founded || '')
   return (
     <tr className="bg-white/3">
       <td colSpan={colSpan} className="px-3 py-3">
@@ -20,10 +23,14 @@ function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
             <span className="text-xs text-white/70">Active (current season)</span>
           </label>
           <input value={base} onChange={e => setBase(e.target.value)}
-            placeholder="Base location..." className="input text-xs py-1 w-56" />
+            placeholder="Base location..." className="input text-xs py-1 w-48" />
+          <input value={fullName} onChange={e => setFullName(e.target.value)}
+            placeholder="Full team name..." className="input text-xs py-1 w-48" />
+          <input value={founded} onChange={e => setFounded(e.target.value)}
+            placeholder="Founded year..." className="input text-xs py-1 w-28" type="number" />
           <div className="flex gap-2 ml-auto">
             <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
-            <button onClick={() => onSave(isActive, base)} className="btn-primary text-xs py-1">Save</button>
+            <button onClick={() => onSave(isActive, base, fullName, founded)} className="btn-primary text-xs py-1">Save</button>
           </div>
         </div>
       </td>
@@ -61,8 +68,13 @@ export default function AdminTeams() {
     load()
   }
 
-  const saveDetails = async (id, is_active, base) => {
-    const { error } = await supabase.from('teams').update({ is_active, base: base || null }).eq('id', id)
+  const saveDetails = async (id, is_active, base, full_name, founded) => {
+    const { error } = await supabase.from('teams').update({
+      is_active,
+      base: base || null,
+      full_name: full_name || null,
+      founded: founded ? parseInt(founded) : null,
+    }).eq('id', id)
     if (error) return toast.error(error.message)
     toast.success('Updated')
     setEditId(null)
@@ -136,6 +148,11 @@ export default function AdminTeams() {
                             style={{ color: editId === `${row.id}-details` ? undefined : 'var(--text-muted)' }}>
                             <Pencil size={11} /> Edit
                           </button>
+                          <button onClick={() => toggle(`${row.id}-bio`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-bio` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            style={{ color: editId === `${row.id}-bio` ? undefined : 'var(--text-muted)' }}>
+                            <FileText size={11} /> Bio
+                          </button>
                           <button onClick={() => toggle(`${row.id}-logo`)}
                             className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-logo` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
                             style={{ color: editId === `${row.id}-logo` ? undefined : 'var(--text-muted)' }}>
@@ -162,7 +179,16 @@ export default function AdminTeams() {
                       <DetailsEditRow
                         colSpan={7}
                         row={row}
-                        onSave={(active, base) => saveDetails(row.id, active, base)}
+                        onSave={(active, base, fullName, founded) => saveDetails(row.id, active, base, fullName, founded)}
+                        onCancel={() => setEditId(null)}
+                      />
+                    )}
+                    {editId === `${row.id}-bio` && (
+                      <TextEditRow
+                        colSpan={7}
+                        label="About / Bio"
+                        currentValue={row.bio}
+                        onSave={(val) => saveField(row.id, 'bio', val || null)}
                         onCancel={() => setEditId(null)}
                       />
                     )}

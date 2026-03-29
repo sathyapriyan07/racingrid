@@ -3,9 +3,10 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Flag, Image, Pencil } from 'lucide-react'
+import { Plus, ImagePlus, Flag, Image, Pencil, FileText } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
+import TextEditRow from './TextEditRow'
 
 function ActiveEditRow({ colSpan, row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
@@ -133,6 +134,11 @@ export default function AdminDrivers() {
                               style={{ color: editId === `${row.id}-active` ? undefined : 'var(--text-muted)' }}>
                               <Pencil size={11} /> Edit
                             </button>
+                            <button onClick={() => toggle(`${row.id}-bio`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-bio` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              style={{ color: editId === `${row.id}-bio` ? undefined : 'var(--text-muted)' }}>
+                              <FileText size={11} /> Bio
+                            </button>
                             <button onClick={() => toggle(`${row.id}-image`)}
                               className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-image` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
                               style={{ color: editId === `${row.id}-image` ? undefined : 'var(--text-muted)' }}>
@@ -156,6 +162,15 @@ export default function AdminDrivers() {
                           colSpan={7}
                           row={row}
                           onSave={(active) => saveActive(row.id, active)}
+                          onCancel={() => setEditId(null)}
+                        />
+                      )}
+                      {editId === `${row.id}-bio` && (
+                        <TextEditRow
+                          colSpan={7}
+                          label="Biography"
+                          currentValue={row.biography}
+                          onSave={(val) => saveField(row.id, 'biography', val || null)}
                           onCancel={() => setEditId(null)}
                         />
                       )}

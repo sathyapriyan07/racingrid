@@ -86,6 +86,7 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
 const TABS = [
   { id: 'results', label: 'Results' },
   { id: 'performance', label: 'Performance' },
+  { id: 'biography', label: 'Biography' },
   { id: 'championships', label: 'Championships' },
 ]
 
@@ -141,7 +142,10 @@ export default function DriverPage() {
       return { year, pts, wins: w, podiums: pod, races: races.length, isChamp, teams: Object.values(teamMap) }
     })
 
-  const activeTabs = champYears.length > 0 ? TABS : TABS.filter(t => t.id !== 'championships')
+  const activeTabs = [
+    ...TABS.filter(t => t.id !== 'championships' || champYears.length > 0),
+    ...(!driver.biography ? TABS.filter(t => t.id === 'biography') : []),
+  ].filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i)
 
   return (
     <div className="space-y-6">
@@ -213,6 +217,16 @@ export default function DriverPage() {
         <Card>
           <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Points Per Race</p>
           <PerformanceChart data={chartData} dataKey="points" label="Points" />
+        </Card>
+      )}
+
+      {/* ── Biography ── */}
+      {tab === 'biography' && (
+        <Card>
+          {driver.biography
+            ? <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{driver.biography}</p>
+            : <p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>No biography added yet.</p>
+          }
         </Card>
       )}
 

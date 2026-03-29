@@ -73,6 +73,7 @@ export default function TeamPage() {
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart2 },
+    { id: 'info', label: 'Info', icon: Flag },
     { id: 'results', label: 'Results', icon: Flag },
   ]
 
@@ -164,6 +165,52 @@ export default function TeamPage() {
             </Card>
           )}
         </>
+      )}
+
+      {/* Info Tab */}
+      {tab === 'info' && (
+        <div className="space-y-4">
+          <Card>
+            <div className="space-y-4">
+              {team.full_name && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Full Name</p>
+                  <p className="text-sm font-medium">{team.full_name}</p>
+                </div>
+              )}
+              {team.founded && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Founded</p>
+                  <p className="text-sm font-medium">{team.founded}</p>
+                </div>
+              )}
+              {team.base && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Base</p>
+                  <p className="text-sm font-medium">{team.base}</p>
+                </div>
+              )}
+              {team.nationality && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Nationality</p>
+                  <div className="flex items-center gap-1.5">
+                    {team.flag_url && <img src={team.flag_url} alt="" className="h-4 w-auto rounded-sm" />}
+                    <p className="text-sm font-medium">{team.nationality}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+          {team.bio && (
+            <Card>
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>About</p>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{team.bio}</p>
+            </Card>
+          )}
+          {!team.full_name && !team.founded && !team.bio && (
+            <Card><p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>No team info added yet.</p></Card>
+          )}
+        </div>
       )}
 
       {/* Results Tab */}
