@@ -17,12 +17,11 @@ export default function PerformanceChart({ data, dataKey = 'points', color = '#E
         <YAxis stroke="transparent" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} tickLine={false} axisLine={false} />
         <Tooltip
           contentStyle={{
-            background: 'rgba(20,20,32,0.95)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border)',
             borderRadius: '0.75rem',
             fontSize: 12,
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--shadow)',
           }}
           labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
           itemStyle={{ color: color }}

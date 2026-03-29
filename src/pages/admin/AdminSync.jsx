@@ -34,12 +34,12 @@ async function ergastFetch(endpoint, devPath) {
 
 function SyncStatus({ result }) {
   if (result.status === 'fetching') return (
-    <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
+    <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
       <Loader size={11} className="animate-spin" /> Fetching...
     </div>
   )
   if (result.status === 'saving') return (
-    <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
+    <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
       <Loader size={11} className="animate-spin" /> Saving {result.total} records...
     </div>
   )
@@ -450,7 +450,7 @@ export default function AdminSync() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black">Sync Tools</h1>
-        <p className="text-white/40 text-sm mt-1">
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
           Fetch data from Ergast API. All syncs are idempotent — re-running will upsert, not duplicate.
         </p>
       </div>
@@ -460,7 +460,7 @@ export default function AdminSync() {
         <h2 className="text-sm font-bold mb-3">Add Season</h2>
         <div className="flex gap-3 items-end">
           <div>
-            <label className="text-xs text-white/50 mb-1 block">Year</label>
+            <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Year</label>
             <input type="number" value={year} onChange={e => setYear(e.target.value)}
               className="input w-28" min="1950" max="2030" />
           </div>
@@ -478,9 +478,9 @@ export default function AdminSync() {
 
       {/* Global sync — drivers / teams / circuits */}
       <div>
-        <h2 className="text-sm font-bold mb-3 text-white/70 flex items-center gap-2">
+        <h2 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
           Global Data
-          <a href="https://api.jolpi.ca" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white">
+          <a href="https://api.jolpi.ca" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-muted)' }} className="hover:text-f1red">
             <ExternalLink size={12} />
           </a>
         </h2>
@@ -489,7 +489,7 @@ export default function AdminSync() {
             <div key={action.id} className="glass p-4 flex items-center justify-between gap-4">
               <div>
                 <div className="font-medium text-sm">{action.label}</div>
-                <div className="text-xs text-white/40 mt-0.5">{action.description}</div>
+                <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{action.description}</div>
                 {results[action.id] && <SyncStatus result={results[action.id]} />}
               </div>
               <button onClick={() => runGlobalSync(action)} disabled={running[action.id]}
@@ -505,10 +505,10 @@ export default function AdminSync() {
       {/* Season-scoped sync */}
       <div>
         <div className="flex items-center gap-3 mb-3">
-          <h2 className="text-sm font-bold text-white/70">Season Data</h2>
+          <h2 className="text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>Season Data</h2>
           <input type="number" value={syncYear} onChange={e => setSyncYear(parseInt(e.target.value))}
             className="input w-24 text-sm" min="1950" max="2030" />
-          <span className="text-xs text-white/30">Sync races, results & standings for this year</span>
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Sync races, results &amp; standings for this year</span>
         </div>
         <div className="space-y-3">
           {SEASON_ACTIONS.map(({ key, label, description, fn }) => {
@@ -517,7 +517,7 @@ export default function AdminSync() {
               <div key={key} className="glass p-4 flex items-center justify-between gap-4">
                 <div>
                   <div className="font-medium text-sm">{label}</div>
-                  <div className="text-xs text-white/40 mt-0.5">{description}</div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{description}</div>
                   {results[id] && <SyncStatus result={results[id]} />}
                 </div>
                 <button onClick={() => fn(syncYear)} disabled={running[id]}
@@ -533,7 +533,7 @@ export default function AdminSync() {
 
       <Card>
         <h2 className="text-sm font-bold mb-3">Deploy Edge Function</h2>
-        <pre className="text-xs text-white/50 bg-dark-900 rounded-lg p-3 overflow-x-auto">{`supabase login
+        <pre className="text-xs rounded-lg p-3 overflow-x-auto" style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)' }}>{`supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 supabase functions deploy sync-ergast`}</pre>
       </Card>

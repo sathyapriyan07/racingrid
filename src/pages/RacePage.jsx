@@ -111,11 +111,11 @@ export default function RacePage() {
       <div className="glass p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <div className="text-xs text-white/40 mb-1">{race.seasons?.year} · Round {race.round}</div>
+            <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{race.seasons?.year} · Round {race.round}</div>
             <h1 className="text-3xl font-black">{race.name}</h1>
-            <div className="flex gap-4 mt-2 text-sm text-white/50 flex-wrap">
+            <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
               {race.circuits && (
-                <Link to={`/circuit/${race.circuit_id}`} className="hover:text-white transition-colors flex items-center gap-1">
+                <Link to={`/circuit/${race.circuit_id}`} className="hover:text-f1red transition-colors flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                   <Icon settingKey="icon_location" emoji="📍" /> {race.circuits.name}
                 </Link>
               )}
@@ -132,13 +132,11 @@ export default function RacePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-dark-800 p-1 rounded-xl w-fit flex-wrap">
+      <div className="tab-bar">
         {tabs.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === tab.id ? 'bg-f1red text-white' : 'text-white/50 hover:text-white'
-            }`}>
-            <tab.icon size={12} /> {tab.label}
+            className={`tab-pill ${activeTab === tab.id ? 'active' : ''}`}>
+            <tab.icon size={12} className="inline mr-1" /> {tab.label}
           </button>
         ))}
       </div>
@@ -147,11 +145,11 @@ export default function RacePage() {
       {activeTab === 'results' && (
         <Card className="p-0 overflow-hidden">
           {results.length === 0 ? (
-            <p className="text-white/30 text-xs text-center py-4">No results imported.</p>
+            <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>No results imported.</p>
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="text-white/30 border-b border-white/5" style={{ fontSize: 10 }}>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                   <th className="text-left py-2 pl-3 w-7">#</th>
                   <th className="text-left py-2">Driver</th>
                   <th className="text-left py-2 hidden sm:table-cell">Team</th>
@@ -162,7 +160,7 @@ export default function RacePage() {
               </thead>
               <tbody>
                 {results.map((r, i) => (
-                  <tr key={r.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                  <tr key={r.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
                     <td className="py-1.5 pl-3">
                       <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
                     </td>
@@ -201,11 +199,11 @@ export default function RacePage() {
       {activeTab === 'qualifying' && (
         <Card className="p-0 overflow-hidden">
           {qualifying.length === 0 ? (
-            <p className="text-white/30 text-xs text-center py-4">No qualifying data imported.</p>
+            <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>No qualifying data imported.</p>
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="text-white/30 border-b border-white/5" style={{ fontSize: 10 }}>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                   <th className="text-left py-2 pl-3 w-7">#</th>
                   <th className="text-left py-2">Driver</th>
                   <th className="text-left py-2 hidden sm:table-cell">Team</th>
@@ -216,7 +214,7 @@ export default function RacePage() {
               </thead>
               <tbody>
                 {qualifying.map((q, i) => (
-                  <tr key={q.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                  <tr key={q.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
                     <td className="py-1.5 pl-3">
                       <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{q.position ?? '—'}</span>
                     </td>
@@ -256,7 +254,7 @@ export default function RacePage() {
         <Card className="p-0 overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="text-white/30 border-b border-white/5" style={{ fontSize: 10 }}>
+              <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                 <th className="text-left py-2 pl-3 w-7">#</th>
                 <th className="text-left py-2">Driver</th>
                 <th className="text-left py-2 hidden sm:table-cell">Team</th>
@@ -267,7 +265,7 @@ export default function RacePage() {
             </thead>
             <tbody>
               {sprintResults.map((r, i) => (
-                <tr key={r.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                <tr key={r.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
                   <td className="py-1.5 pl-3">
                     <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
                   </td>
@@ -307,15 +305,15 @@ export default function RacePage() {
       {/* Pit Stops — OpenF1 */}
       {activeTab === 'pits' && (
         <Card>
-          <h2 className="text-sm font-bold mb-4 text-white/70">Pit Stop Timeline</h2>
+          <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--text-secondary)' }}>Pit Stop Timeline</h2>
           {!hasOf1 ? (
-            <p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
+            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
           ) : of1Loading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading...</div>
+            <div className="flex items-center justify-center gap-2 py-8 text-sm" style={{ color: 'var(--text-muted)' }}><Spinner />Loading...</div>
           ) : of1Error ? (
             <p className="text-f1red text-sm text-center py-4">{of1Error}</p>
           ) : pitStops.length === 0 ? (
-            <p className="text-white/30 text-sm text-center py-4">No pit stop data.</p>
+            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No pit stop data.</p>
           ) : (
             <div className="relative">
               <div className="absolute left-16 top-0 bottom-0 w-px bg-white/10" />
@@ -324,13 +322,13 @@ export default function RacePage() {
                   const d = of1Drivers[pit.driver_number]
                   return (
                     <div key={i} className="flex items-center gap-4">
-                      <span className="text-xs text-white/40 w-14 text-right shrink-0">Lap {pit.lap_number}</span>
+                      <span className="text-xs w-14 text-right shrink-0" style={{ color: 'var(--text-muted)' }}>Lap {pit.lap_number}</span>
                       <div className="w-2 h-2 rounded-full bg-f1red shrink-0 relative z-10" />
                       <div className="glass px-3 py-2 flex-1 flex items-center gap-3">
                         {d?.team_colour && <div className="w-1 h-4 rounded-full" style={{ backgroundColor: `#${d.team_colour}` }} />}
                         <span className="text-sm font-medium">{d?.name_acronym || `#${pit.driver_number}`}</span>
-                        <span className="text-xs text-white/30 flex-1">{d?.full_name}</span>
-                        {pit.pit_duration && <span className="text-xs font-mono text-white/60">{pit.pit_duration.toFixed(1)}s</span>}
+                        <span className="text-xs flex-1" style={{ color: 'var(--text-muted)' }}>{d?.full_name}</span>
+                        {pit.pit_duration && <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{pit.pit_duration.toFixed(1)}s</span>}
                       </div>
                     </div>
                   )
@@ -344,24 +342,24 @@ export default function RacePage() {
       {/* Events — OpenF1 */}
       {activeTab === 'events' && (
         <Card>
-          <h2 className="text-sm font-bold mb-4 text-white/70">Race Control</h2>
+          <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--text-secondary)' }}>Race Control</h2>
           {!hasOf1 ? (
-            <p className="text-white/30 text-sm text-center py-4">No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
+            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
           ) : of1Loading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-white/40 text-sm"><Spinner />Loading...</div>
+            <div className="flex items-center justify-center gap-2 py-8 text-sm" style={{ color: 'var(--text-muted)' }}><Spinner />Loading...</div>
           ) : of1Error ? (
             <p className="text-f1red text-sm text-center py-4">{of1Error}</p>
           ) : events.length === 0 ? (
-            <p className="text-white/30 text-sm text-center py-4">No events recorded.</p>
+            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No events recorded.</p>
           ) : (
             <div className="space-y-2">
               {events.map((ev, i) => {
                 const color = FLAG_COLOR[ev.flag] || (ev.category === 'SafetyCar' ? 'yellow' : 'gray')
                 return (
-                  <div key={i} className="flex items-start gap-3 py-2 border-b border-white/5">
+                  <div key={i} className="flex items-start gap-3 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
                     <Badge color={color}>{ev.flag || ev.category}</Badge>
-                    <span className="text-sm flex-1 text-white/70">{ev.message}</span>
-                    {ev.lap_number && <span className="text-xs text-white/30 shrink-0">Lap {ev.lap_number}</span>}
+                    <span className="text-sm flex-1" style={{ color: 'var(--text-secondary)' }}>{ev.message}</span>
+                    {ev.lap_number && <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>Lap {ev.lap_number}</span>}
                   </div>
                 )
               })}

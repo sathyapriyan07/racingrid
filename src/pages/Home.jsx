@@ -80,7 +80,7 @@ export default function Home() {
               <span className="text-xs font-semibold uppercase tracking-widest text-f1red">Formula 1 Database</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black leading-none mb-4" style={{ letterSpacing: '-0.05em' }}>
-              <span className="text-white">F1</span>
+              <span style={{ color: 'var(--text-primary)' }}>F1</span>
               <span className="text-f1red">Base</span>
             </h1>
             <p className="text-base md:text-lg mb-8 max-w-md font-medium" style={{ color: 'rgba(245,245,247,0.5)' }}>

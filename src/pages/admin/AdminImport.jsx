@@ -161,19 +161,19 @@ export default function AdminImport() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black">Import Data</h1>
-        <p className="text-white/40 text-sm mt-1">Upload JSON/CSV or paste API response to import data</p>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>Upload JSON/CSV or paste API response to import data</p>
       </div>
 
       <div className="glass p-5 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-white/50 mb-1 block">Data Type</label>
+            <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Data Type</label>
             <select value={dataType} onChange={e => { setDataType(e.target.value); setPreview(null) }} className="input">
               {DATA_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-white/50 mb-1 block">Source Format</label>
+            <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Source Format</label>
             <select value={source} onChange={e => setSource(e.target.value)} className="input">
               {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
@@ -182,7 +182,7 @@ export default function AdminImport() {
 
         {needsRaceId && (
           <div>
-            <label className="text-xs text-white/50 mb-1 block">Race</label>
+            <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Race</label>
             <select value={raceId} onChange={e => setRaceId(e.target.value)} className="input">
               <option value="">Select race...</option>
               {races.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -192,7 +192,7 @@ export default function AdminImport() {
 
         {needsSeasonId && (
           <div>
-            <label className="text-xs text-white/50 mb-1 block">Season</label>
+            <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Season</label>
             <select value={seasonId} onChange={e => setSeasonId(e.target.value)} className="input">
               <option value="">Select season...</option>
               {seasons.map(s => <option key={s.id} value={s.id}>{s.year}</option>)}
@@ -201,7 +201,7 @@ export default function AdminImport() {
         )}
 
         <div>
-          <label className="text-xs text-white/50 mb-1 block">Upload File (JSON or CSV)</label>
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Upload File (JSON or CSV)</label>
           <input ref={fileRef} type="file" accept=".json,.csv" onChange={handleFile} className="hidden" />
           <button onClick={() => fileRef.current.click()} className="btn-ghost flex items-center gap-2">
             <Upload size={14} /> Choose File
@@ -209,7 +209,7 @@ export default function AdminImport() {
         </div>
 
         <div>
-          <label className="text-xs text-white/50 mb-1 block">Or Paste JSON / CSV</label>
+          <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Or Paste JSON / CSV</label>
           <textarea
             value={rawText}
             onChange={e => setRawText(e.target.value)}
@@ -239,11 +239,11 @@ export default function AdminImport() {
       {/* Preview Table */}
       {preview && (
         <div className="glass p-4">
-          <h2 className="text-sm font-bold mb-3 text-white/70">Preview ({preview.length} records)</h2>
+          <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text-secondary)' }}>Preview ({preview.length} records)</h2>
           <div className="overflow-x-auto max-h-80 overflow-y-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-dark-800">
-                <tr className="text-white/30 border-b border-white/5">
+              <thead className="sticky top-0" style={{ background: 'var(--bg-raised)' }}>
+                <tr className="border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                   {Object.keys(preview[0] || {}).map(k => (
                     <th key={k} className="text-left pb-2 pr-4 font-medium">{k}</th>
                   ))}
@@ -251,10 +251,10 @@ export default function AdminImport() {
               </thead>
               <tbody>
                 {preview.slice(0, 50).map((row, i) => (
-                  <tr key={i} className="border-b border-white/5">
+                  <tr key={i} className="border-b" style={{ borderColor: 'var(--border)' }}>
                     {Object.values(row).map((v, j) => (
-                      <td key={j} className="py-1.5 pr-4 text-white/60 max-w-32 truncate">
-                        {v === null || v === undefined ? <span className="text-white/20">null</span> : String(v)}
+                      <td key={j} className="py-1.5 pr-4 max-w-32 truncate" style={{ color: 'var(--text-secondary)' }}>
+                        {v === null || v === undefined ? <span style={{ color: 'var(--text-muted)' }}>null</span> : String(v)}
                       </td>
                     ))}
                   </tr>
@@ -262,7 +262,7 @@ export default function AdminImport() {
               </tbody>
             </table>
             {preview.length > 50 && (
-              <p className="text-white/30 text-xs text-center py-2">Showing 50 of {preview.length} records</p>
+              <p className="text-xs text-center py-2" style={{ color: 'var(--text-muted)' }}>Showing 50 of {preview.length} records</p>
             )}
           </div>
         </div>
