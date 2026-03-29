@@ -33,7 +33,7 @@ export default function AdminLayout({ children }) {
 
       {/* ── Mobile top bar ── */}
       <div className="md:hidden border-b sticky top-0 z-40"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        style={{ background: 'rgba(13,13,20,0.9)', borderColor: 'var(--border)', backdropFilter: 'blur(20px)' }}>
         <div className="flex items-center justify-between px-4 h-12">
           <Link to="/" className="flex items-center gap-1.5">
             <span className="text-f1red font-black">F1</span>
@@ -80,7 +80,7 @@ export default function AdminLayout({ children }) {
 
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex w-52 shrink-0 border-r flex-col sticky top-0 h-screen"
-        style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+        style={{ background: 'rgba(13,13,20,0.95)', borderColor: 'var(--border)', backdropFilter: 'blur(20px)' }}>
         <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
           <Link to="/" className="flex items-center gap-1.5">
             <span className="text-f1red font-black">F1</span>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, PageHeader, EmptyState } from '../components/ui'
+import { motion } from 'framer-motion'
 
 export default function Circuits() {
   const { fetchCircuits, circuits } = useDataStore()
@@ -21,7 +22,7 @@ export default function Circuits() {
   if (loading) return <Spinner />
 
   return (
-    <div>
+    <div className="space-y-8">
       <PageHeader title="Circuits" subtitle={`${circuits.length} circuits in database`}>
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search circuits..." className="input w-48" />
@@ -29,20 +30,38 @@ export default function Circuits() {
 
       {filtered.length === 0 ? <EmptyState message="No circuits found." /> : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map(circuit => (
-            <Link key={circuit.id} to={`/circuit/${circuit.id}`}>
-              <div className="glass-hover group overflow-hidden">
-                {circuit.layout_image && (
-                  <div className="h-32 bg-dark-700 overflow-hidden">
-                    <img src={circuit.layout_image} alt={circuit.name} className="w-full h-full object-contain p-4 opacity-60 group-hover:opacity-100 transition-opacity" />
+          {filtered.map((circuit, i) => (
+            <motion.div
+              key={circuit.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.35 }}
+            >
+              <Link to={`/circuit/${circuit.id}`}>
+                <motion.div
+                  whileHover={{ y: -3, scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                  className="apple-card overflow-hidden group"
+                >
+                  <div className="h-36 relative flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    {circuit.layout_image
+                      ? <img src={circuit.layout_image} alt={circuit.name}
+                          className="h-full w-full object-contain p-6 opacity-50 group-hover:opacity-90 transition-opacity duration-300" />
+                      : <div className="text-4xl font-black" style={{ color: 'var(--text-muted)', opacity: 0.2 }}>
+                          {circuit.country?.slice(0, 2).toUpperCase() || '??'}
+                        </div>
+                    }
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,5,8,0.6) 0%, transparent 60%)' }} />
                   </div>
-                )}
-                <div className="p-4">
-                  <div className="font-semibold group-hover:text-f1red transition-colors">{circuit.name}</div>
-                  <div className="text-xs text-white/40 mt-1">{circuit.location}{circuit.country ? `, ${circuit.country}` : ''}</div>
-                </div>
-              </div>
-            </Link>
+                  <div className="p-4">
+                    <div className="font-bold text-sm" style={{ letterSpacing: '-0.02em' }}>{circuit.name}</div>
+                    <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      {circuit.location}{circuit.country ? `, ${circuit.country}` : ''}
+                    </div>
+                  </div>
+                </motion.div>
+              </Link>
+            </motion.div>
           ))}
         </div>
       )}
