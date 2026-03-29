@@ -3,7 +3,77 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { Trophy } from 'lucide-react'
+import { Trophy, ChevronDown } from 'lucide-react'
+
+function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const wins = races.filter(r => r.position === 1).length
+  const pts = races.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
+
+  return (
+    <div className="apple-card overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-white/3 transition-colors"
+      >
+        <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Season {year}</span>
+        {isChamp && (
+          <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">🏆 Champion</span>
+        )}
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{races.length} races</span>
+          {wins > 0 && <span className="text-xs font-semibold text-f1red">{wins}W</span>}
+          <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{pts.toFixed(0)} pts</span>
+          <ChevronDown
+            size={14}
+            style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+          />
+        </div>
+      </button>
+
+      {open && (
+        <div style={{ borderTop: '1px solid var(--border)' }}>
+          <table className="w-full">
+            <thead>
+              <tr style={{ fontSize: 10, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                <th className="text-left py-2 pl-5">Race</th>
+                <th className="text-center py-2">Pos</th>
+                <th className="text-center py-2 hidden sm:table-cell">Grid</th>
+                <th className="text-center py-2">Pts</th>
+                <th className="text-left py-2 pr-5">Team</th>
+              </tr>
+            </thead>
+            <tbody>
+              {races.map(r => (
+                <tr key={r.id} className="hover:bg-white/3 transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td className="py-2 pl-5">
+                    <Link to={`/race/${r.race_id}`} className="text-xs font-medium hover:text-f1red transition-colors">
+                      {r.races?.name?.replace('Grand Prix', 'GP') || '—'}
+                    </Link>
+                  </td>
+                  <td className="py-2 text-center">
+                    <span className={`text-xs font-bold ${r.position === 1 ? 'pos-1' : r.position <= 3 ? 'pos-2' : ''}`}
+                      style={{ color: r.position > 3 ? 'var(--text-secondary)' : undefined }}>
+                      {r.position ?? '—'}
+                    </span>
+                  </td>
+                  <td className="py-2 text-center text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
+                  <td className="py-2 text-center text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{r.points ?? 0}</td>
+                  <td className="py-2 pr-5">
+                    <div className="flex items-center gap-1.5">
+                      {r.teams?.logo_url && <img src={r.teams.logo_url} alt={r.teams.name} className="h-4 w-auto object-contain shrink-0" loading="lazy" />}
+                      <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const TABS = [
   { id: 'results', label: 'Results' },
@@ -68,20 +138,20 @@ export default function DriverPage() {
   return (
     <div className="space-y-6">
       {/* ── Banner ── */}
-      <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 280 }}>
+      <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 320 }}>
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0008 0%, #0f0010 50%, #0a0a0f 100%)' }} />
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 100% at 80% 50%, rgba(225,6,0,0.12) 0%, transparent 70%)' }} />
 
         {driver.image_url && (
-          <div className="absolute right-0 bottom-0 h-full w-1/2 md:w-2/5 pointer-events-none">
+          <div className="absolute right-0 bottom-0 h-full w-1/2 md:w-2/5 pointer-events-none overflow-hidden">
             <img src={driver.image_url} alt={driver.name}
-              className="absolute bottom-0 right-0 h-full w-full object-contain object-bottom"
-              style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,0.9) 40%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,0.9) 40%, transparent 100%)' }}
+              className="absolute bottom-0 right-0 h-[115%] w-full object-contain object-bottom transition-transform duration-700 hover:scale-105"
+              style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent 100%)' }}
             />
           </div>
         )}
 
-        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
+        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 320 }}>
           <div className="flex items-center gap-2 mb-3">
             {driver.code && <Badge color="red">{driver.code}</Badge>}
           </div>
@@ -138,54 +208,17 @@ export default function DriverPage() {
 
       {/* ── Results ── */}
       {tab === 'results' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {results.length === 0
             ? <Card><p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>No race results for this driver.</p></Card>
-            : Object.keys(seasonGroups).sort((a, b) => b - a).map(year => (
-              <Card key={year} className="p-0 overflow-hidden">
-                <div className="px-5 py-3 flex items-center gap-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                  <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Season {year}</span>
-                  {champYears.includes(Number(year)) && (
-                    <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">🏆 Champion</span>
-                  )}
-                </div>
-                <table className="w-full">
-                  <thead>
-                    <tr style={{ fontSize: 10, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-                      <th className="text-left py-2 pl-5">Race</th>
-                      <th className="text-center py-2">Pos</th>
-                      <th className="text-center py-2 hidden sm:table-cell">Grid</th>
-                      <th className="text-center py-2">Pts</th>
-                      <th className="text-left py-2 pr-5">Team</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {seasonGroups[year].map(r => (
-                      <tr key={r.id} className="hover:bg-white/3 transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td className="py-2 pl-5">
-                          <Link to={`/race/${r.race_id}`} className="text-xs font-medium hover:text-f1red transition-colors">
-                            {r.races?.name?.replace('Grand Prix', 'GP') || '—'}
-                          </Link>
-                        </td>
-                        <td className="py-2 text-center">
-                          <span className={`text-xs font-bold ${r.position === 1 ? 'pos-1' : r.position <= 3 ? 'pos-2' : ''}`}
-                            style={{ color: r.position > 3 ? 'var(--text-secondary)' : undefined }}>
-                            {r.position ?? '—'}
-                          </span>
-                        </td>
-                        <td className="py-2 text-center text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
-                        <td className="py-2 text-center text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{r.points ?? 0}</td>
-                        <td className="py-2 pr-5">
-                          <div className="flex items-center gap-1.5">
-                            {r.teams?.logo_url && <img src={r.teams.logo_url} alt={r.teams.name} className="h-4 w-auto object-contain shrink-0" loading="lazy" />}
-                            <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Card>
+            : Object.keys(seasonGroups).sort((a, b) => b - a).map((year, i) => (
+              <SeasonCard
+                key={year}
+                year={year}
+                races={seasonGroups[year]}
+                isChamp={champYears.includes(Number(year))}
+                defaultOpen={i === 0}
+              />
             ))
           }
         </div>
