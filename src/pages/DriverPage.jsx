@@ -3,14 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { Trophy, ChevronDown } from 'lucide-react'
+import { Trophy, ChevronDown, Cake, MapPin } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
-function Icon({ settingKey, emoji, className = '' }) {
+function Icon({ settingKey, LucideIcon, size = 14, className = '' }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
     ? <img src={url} alt="" className={`inline-block w-4 h-4 object-contain ${className}`} />
-    : <span>{emoji}</span>
+    : <LucideIcon size={size} className={className} />
 }
 
 function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
@@ -26,7 +26,9 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
       >
         <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Season {year}</span>
         {isChamp && (
-          <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">🏆 Champion</span>
+          <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+            <Trophy size={10} /> Champion
+          </span>
         )}
         <div className="ml-auto flex items-center gap-3">
           <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{races.length} races</span>
@@ -178,8 +180,8 @@ export default function DriverPage() {
               </span>
             )}
             {driver.dob && (
-              <span className="text-sm font-medium" style={{ color: 'rgba(245,245,247,0.7)' }}>
-                <Icon settingKey="icon_birthday" emoji="🎂" /> {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              <span className="text-sm font-medium flex items-center gap-1.5" style={{ color: 'rgba(245,245,247,0.7)' }}>
+                <Icon settingKey="icon_birthday" LucideIcon={Cake} /> {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             )}
             <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3 ml-auto">Compare</Link>
@@ -256,7 +258,7 @@ export default function DriverPage() {
               style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(5,5,8,0) 100%)', borderColor: 'rgba(234,179,8,0.2)' }}>
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
                 style={{ background: 'rgba(234,179,8,0.12)' }}>
-                <Icon settingKey="icon_trophy" emoji="🏆" className="w-8 h-8" />
+                <Icon settingKey="icon_trophy" LucideIcon={Trophy} className="w-8 h-8 text-yellow-400" />
               </div>
               <div>
                 <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(234,179,8,0.7)' }}>World Champion</div>
@@ -276,8 +278,8 @@ export default function DriverPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-black" style={{ letterSpacing: '-0.04em' }}>{s.year}</span>
                     {s.isChamp && (
-                      <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
-                        <Icon settingKey="icon_trophy" emoji="🏆" />
+                      <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                        <Icon settingKey="icon_trophy" LucideIcon={Trophy} size={10} />
                       </span>
                     )}
                   </div>

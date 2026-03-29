@@ -43,11 +43,14 @@ export default function AdminTeams() {
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null)
+  const [search, setSearch] = useState('')
 
   const load = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('teams').select('*').order('name')
+      let q = supabase.from('teams').select('*').order('name')
+      if (search) q = q.ilike('name', `%${search}%`)
+      const { data, error } = await q
       if (error) throw error
       setData(data || [])
     } catch (err) {
@@ -57,7 +60,7 @@ export default function AdminTeams() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [search])
 
   const saveField = async (id, field, url) => {
     const { error } = await supabase.from('teams').update({ [field]: url || null }).eq('id', id)
@@ -93,6 +96,8 @@ export default function AdminTeams() {
         </Link>
       </div>
       <div className="glass p-4">
+        <input value={search} onChange={e => { setSearch(e.target.value); setEditId(null) }}
+          placeholder="Search by name..." className="input mb-4 max-w-xs" />
         {loading ? <Spinner /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">

@@ -3,13 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, Card } from '../components/ui'
+import { MapPin, Trophy } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
-function Icon({ settingKey, emoji }) {
+function Icon({ settingKey, LucideIcon, size = 14 }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
     ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
-    : <span>{emoji}</span>
+    : <LucideIcon size={size} />
 }
 
 export default function CircuitPage() {
@@ -76,8 +77,8 @@ export default function CircuitPage() {
         <div className="flex-1">
           <h1 className="text-3xl font-black">{circuit.name}</h1>
           <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
-            {circuit.location && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {circuit.location}</span>}
-            {circuit.country && <span className="flex items-center gap-1"><Icon settingKey="icon_flag" emoji="🌍" /> {circuit.country}</span>}
+            {circuit.location && <span className="flex items-center gap-1"><Icon settingKey="icon_location" LucideIcon={MapPin} /> {circuit.location}</span>}
+            {circuit.country && <span className="flex items-center gap-1"><Icon settingKey="icon_flag" LucideIcon={MapPin} /> {circuit.country}</span>}
           </div>
         </div>
         {circuit.layout_image && (
@@ -121,12 +122,12 @@ export default function CircuitPage() {
                     <div className="flex items-center gap-3 mt-1 sm:hidden">
                       {race.winner && (
                         <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors">
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🏆 {race.winner.name}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}><Trophy size={11} className="inline mr-0.5" /> {race.winner.name}</span>
                         </Link>
                       )}
                       {race.sprintWinner && (
                         <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors">
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⚡ {race.sprintWinner.name}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}><Trophy size={11} className="inline mr-0.5" /> {race.sprintWinner.name}</span>
                         </Link>
                       )}
                     </div>
