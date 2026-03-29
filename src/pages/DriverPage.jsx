@@ -174,9 +174,9 @@ export default function DriverPage() {
                       <tr style={{ fontSize: 10, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
                         <th className="text-left py-2 pl-5">Race</th>
                         <th className="text-center py-2">Pos</th>
-                        <th className="text-center py-2">Grid</th>
+                        <th className="text-center py-2 hidden sm:table-cell">Grid</th>
                         <th className="text-center py-2">Pts</th>
-                        <th className="text-left py-2 pr-5 hidden sm:table-cell">Team</th>
+                        <th className="text-left py-2 pr-5">Team</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -193,9 +193,17 @@ export default function DriverPage() {
                               {r.position ?? '—'}
                             </span>
                           </td>
-                          <td className="py-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
+                          <td className="py-2 text-center text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
                           <td className="py-2 text-center text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{r.points ?? 0}</td>
-                          <td className="py-2 pr-5 text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</td>
+                          <td className="py-2 pr-5">
+                            <div className="flex items-center gap-1.5">
+                              {r.teams?.logo_url
+                                ? <img src={r.teams.logo_url} alt={r.teams.name} className="h-4 w-auto object-contain shrink-0" />
+                                : null
+                              }
+                              <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
