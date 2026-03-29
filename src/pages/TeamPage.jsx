@@ -80,8 +80,16 @@ export default function TeamPage() {
         </div>
         <div>
           <h1 className="text-3xl font-black">{team.name}</h1>
-          <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
-            {team.nationality && <span>🌍 {team.nationality}</span>}
+          <div className="flex gap-4 mt-2 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
+            {team.nationality && (
+              <span className="flex items-center gap-1.5">
+                {team.flag_url
+                  ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
+                  : '🌍'
+                }
+                {team.nationality}
+              </span>
+            )}
             {team.base && <span>📍 {team.base}</span>}
           </div>
           {champYears.length > 0 && (

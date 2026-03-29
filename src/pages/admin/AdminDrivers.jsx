@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus } from 'lucide-react'
+import { Plus, ImagePlus, Flag } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 
@@ -13,7 +13,7 @@ export default function AdminDrivers() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
-  const [editId, setEditId] = useState(null)
+  const [editId, setEditId] = useState(null)  // `${id}-image` or `${id}-flag`
   const PAGE_SIZE = 20
 
   const load = async () => {
@@ -33,12 +33,12 @@ export default function AdminDrivers() {
 
   useEffect(() => { load() }, [page, search])
 
-  const cancelEdit = () => setEditId(null)
+  const toggle = (key) => setEditId(prev => prev === key ? null : key)
 
-  const saveImage = async (id, url) => {
-    const { error } = await supabase.from('drivers').update({ image_url: url || null }).eq('id', id)
+  const saveField = async (id, field, url) => {
+    const { error } = await supabase.from('drivers').update({ [field]: url || null }).eq('id', id)
     if (error) return toast.error(error.message)
-    toast.success('Image updated')
+    toast.success('Updated')
     setEditId(null)
     invalidateCache()
     load()
@@ -68,7 +68,7 @@ export default function AdminDrivers() {
                     <th className="text-left pb-2 pr-4">Code</th>
                     <th className="text-left pb-2 pr-4 hidden sm:table-cell">Nationality</th>
                     <th className="text-left pb-2 pr-4 hidden md:table-cell">DOB</th>
-                    <th className="text-right pb-2">Image</th>
+                    <th className="text-right pb-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -83,24 +83,44 @@ export default function AdminDrivers() {
                         </td>
                         <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
                         <td className="py-2 pr-4" style={{ color: 'var(--text-muted)' }}>{row.code || '—'}</td>
-                        <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.nationality || '—'}</td>
+                        <td className="py-2 pr-4 hidden sm:table-cell">
+                          <div className="flex items-center gap-1.5">
+                            {row.flag_url && <img src={row.flag_url} alt="" className="h-3.5 w-auto rounded-sm" />}
+                            <span style={{ color: 'var(--text-muted)' }}>{row.nationality || '—'}</span>
+                          </div>
+                        </td>
                         <td className="py-2 pr-4 hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>{row.dob || '—'}</td>
                         <td className="py-2 text-right">
-                          <button onClick={() => setEditId(editId === row.id ? null : row.id)}
-                            className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-white/5 transition-colors"
-                            style={{ color: 'var(--text-muted)' }}>
-                            <ImagePlus size={11} />
-                            {row.image_url ? 'Edit' : 'Add'}
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => toggle(`${row.id}-image`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-image` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              style={{ color: editId === `${row.id}-image` ? undefined : 'var(--text-muted)' }}>
+                              <ImagePlus size={11} /> Photo
+                            </button>
+                            <button onClick={() => toggle(`${row.id}-flag`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-flag` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
+                              <Flag size={11} /> Flag
+                            </button>
+                          </div>
                         </td>
                       </tr>
-                      {editId === row.id && (
+                      {editId === `${row.id}-image` && (
                         <ImageEditRow
                           colSpan={6}
                           folder="drivers"
                           currentUrl={row.image_url}
-                          onSave={(url) => saveImage(row.id, url)}
-                          onCancel={cancelEdit}
+                          onSave={(url) => saveField(row.id, 'image_url', url)}
+                          onCancel={() => setEditId(null)}
+                        />
+                      )}
+                      {editId === `${row.id}-flag` && (
+                        <ImageEditRow
+                          colSpan={6}
+                          folder="drivers/flags"
+                          currentUrl={row.flag_url}
+                          onSave={(url) => saveField(row.id, 'flag_url', url)}
+                          onCancel={() => setEditId(null)}
                         />
                       )}
                     </>

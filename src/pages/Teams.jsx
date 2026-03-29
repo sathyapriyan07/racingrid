@@ -3,6 +3,25 @@ import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, PageHeader, EmptyState } from '../components/ui'
 
+function TeamCard({ team }) {
+  return (
+    <Link to={`/team/${team.id}`}>
+      <div className="glass-hover p-5 group flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-dark-600 overflow-hidden shrink-0 flex items-center justify-center">
+          {team.logo_url
+            ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-1" />
+            : <span className="text-xs font-black text-white/20">{team.name.slice(0, 2).toUpperCase()}</span>
+          }
+        </div>
+        <div>
+          <div className="font-semibold group-hover:text-f1red transition-colors">{team.name}</div>
+          <div className="text-xs text-white/40 mt-0.5">{team.nationality}{team.base ? ` · ${team.base}` : ''}</div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default function Teams() {
   const { fetchTeams, teams } = useDataStore()
   const [loading, setLoading] = useState(true)
@@ -17,6 +36,9 @@ export default function Teams() {
     (t.nationality || '').toLowerCase().includes(search.toLowerCase())
   )
 
+  const current = filtered.filter(t => t.is_active)
+  const others = filtered.filter(t => !t.is_active)
+
   if (loading) return <Spinner />
 
   return (
@@ -27,24 +49,25 @@ export default function Teams() {
       </PageHeader>
 
       {filtered.length === 0 ? <EmptyState message="No teams found." /> : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map(team => (
-            <Link key={team.id} to={`/team/${team.id}`}>
-              <div className="glass-hover p-5 group flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-dark-600 overflow-hidden shrink-0 flex items-center justify-center">
-                  {team.logo_url
-                    ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-1" />
-                    : <span className="text-xs font-black text-white/20">{team.name.slice(0, 2).toUpperCase()}</span>
-                  }
-                </div>
-                <div>
-                  <div className="font-semibold group-hover:text-f1red transition-colors">{team.name}</div>
-                  <div className="text-xs text-white/40 mt-0.5">{team.nationality} {team.base ? `· ${team.base}` : ''}</div>
-                </div>
+        <>
+          {current.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-bold text-white mb-3">Current Teams</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {current.map(team => <TeamCard key={team.id} team={team} />)}
               </div>
-            </Link>
-          ))}
-        </div>
+            </div>
+          )}
+
+          {others.length > 0 && (
+            <div>
+              {current.length > 0 && <h2 className="text-lg font-bold text-white mb-3">All Teams</h2>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {others.map(team => <TeamCard key={team.id} team={team} />)}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

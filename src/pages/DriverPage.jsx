@@ -63,8 +63,16 @@ export default function DriverPage() {
               </span>
             ))}
           </div>
-          <div className="flex gap-4 mt-2 text-sm text-white/50 flex-wrap">
-            {driver.nationality && <span>🌍 {driver.nationality}</span>}
+          <div className="flex gap-4 mt-2 text-sm text-white/50 flex-wrap items-center">
+            {driver.nationality && (
+              <span className="flex items-center gap-1.5">
+                {driver.flag_url
+                  ? <img src={driver.flag_url} alt={driver.nationality} className="h-4 w-auto rounded-sm" />
+                  : '🌍'
+                }
+                {driver.nationality}
+              </span>
+            )}
             {driver.dob && <span>🎂 {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>}
           </div>
         </div>

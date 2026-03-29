@@ -19,6 +19,8 @@ create table if not exists drivers (
   nationality text,
   dob date,
   image_url text,
+  flag_url text,
+  is_active boolean default false,
   created_at timestamptz default now()
 );
 
@@ -30,6 +32,8 @@ create table if not exists teams (
   base text,
   logo_url text,
   car_image text,
+  flag_url text,
+  is_active boolean default false,
   created_at timestamptz default now()
 );
 
