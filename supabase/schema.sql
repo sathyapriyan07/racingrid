@@ -233,5 +233,14 @@ create policy "admin_write_race_events" on race_events for all using (is_admin()
 create policy "read_own_role" on user_roles for select using (user_id = auth.uid());
 create policy "admin_manage_roles" on user_roles for all using (is_admin());
 
+-- App settings (global UI config)
+create table if not exists app_settings (
+  key text primary key,
+  value text
+);
+alter table app_settings enable row level security;
+create policy "public_read_settings" on app_settings for select using (true);
+create policy "admin_write_settings" on app_settings for all using (is_admin());
+
 -- To make a user admin, run:
 -- INSERT INTO user_roles (user_id, role) VALUES ('<user-uuid>', 'admin');

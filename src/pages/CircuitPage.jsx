@@ -3,6 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, Card } from '../components/ui'
+import { useSettingsStore } from '../store/settingsStore'
+
+function Icon({ settingKey, emoji }) {
+  const url = useSettingsStore(s => s.settings[settingKey])
+  return url
+    ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
+    : <span>{emoji}</span>
+}
 
 export default function CircuitPage() {
   const { id } = useParams()
@@ -68,8 +76,8 @@ export default function CircuitPage() {
         <div className="flex-1">
           <h1 className="text-3xl font-black">{circuit.name}</h1>
           <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
-            {circuit.location && <span>📍 {circuit.location}</span>}
-            {circuit.country && <span>🌍 {circuit.country}</span>}
+            {circuit.location && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {circuit.location}</span>}
+            {circuit.country && <span className="flex items-center gap-1"><Icon settingKey="icon_flag" emoji="🌍" /> {circuit.country}</span>}
           </div>
         </div>
         {circuit.layout_image && (

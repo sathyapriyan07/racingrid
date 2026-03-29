@@ -5,6 +5,14 @@ import { supabase } from '../lib/supabase'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { BarChart2, Flag } from 'lucide-react'
+import { useSettingsStore } from '../store/settingsStore'
+
+function Icon({ settingKey, emoji }) {
+  const url = useSettingsStore(s => s.settings[settingKey])
+  return url
+    ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
+    : <span>{emoji}</span>
+}
 
 const POS_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
 
@@ -85,18 +93,18 @@ export default function TeamPage() {
               <span className="flex items-center gap-1.5">
                 {team.flag_url
                   ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
-                  : '🌍'
+                  : <Icon settingKey="icon_flag" emoji="🌍" />
                 }
                 {team.nationality}
               </span>
             )}
-            {team.base && <span>📍 {team.base}</span>}
+            {team.base && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {team.base}</span>}
           </div>
           {champYears.length > 0 && (
             <div className="flex gap-2 mt-2 flex-wrap">
               {champYears.sort().map(y => (
                 <span key={y} className="flex items-center gap-1 text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
-                  🏆 {y}
+                  <Icon settingKey="icon_trophy" emoji="🏆" /> {y}
                 </span>
               ))}
             </div>

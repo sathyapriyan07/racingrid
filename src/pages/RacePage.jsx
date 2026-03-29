@@ -3,6 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, Activity, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
+import { useSettingsStore } from '../store/settingsStore'
+
+function Icon({ settingKey, emoji }) {
+  const url = useSettingsStore(s => s.settings[settingKey])
+  return url
+    ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
+    : <span>{emoji}</span>
+}
 import RaceReplaySimple from '../components/replay/RaceReplaySimple'
 
 const POSITION_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
@@ -107,12 +115,12 @@ export default function RacePage() {
             <h1 className="text-3xl font-black">{race.name}</h1>
             <div className="flex gap-4 mt-2 text-sm text-white/50 flex-wrap">
               {race.circuits && (
-                <Link to={`/circuit/${race.circuit_id}`} className="hover:text-white transition-colors">
-                  📍 {race.circuits.name}
+                <Link to={`/circuit/${race.circuit_id}`} className="hover:text-white transition-colors flex items-center gap-1">
+                  <Icon settingKey="icon_location" emoji="📍" /> {race.circuits.name}
                 </Link>
               )}
               {race.date && (
-                <span>📅 {new Date(race.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <span className="flex items-center gap-1"><Icon settingKey="icon_calendar" emoji="📅" /> {new Date(race.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               )}
             </div>
           </div>

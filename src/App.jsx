@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import { useSettingsStore } from './store/settingsStore'
 import Layout from './components/Layout'
 
 import Home from './pages/Home'
@@ -25,6 +26,7 @@ import AdminTeams from './pages/admin/AdminTeams'
 import AdminCircuits from './pages/admin/AdminCircuits'
 import AdminRaces from './pages/admin/AdminRaces'
 import AdminSync from './pages/admin/AdminSync'
+import AdminMedia from './pages/admin/AdminMedia'
 
 function PublicRoute({ children }) {
   return <Layout>{children}</Layout>
@@ -36,8 +38,9 @@ function AdminRoute({ children }) {
 
 export default function App() {
   const { init } = useAuthStore()
+  const { fetchSettings } = useSettingsStore()
 
-  useEffect(() => { init() }, [])
+  useEffect(() => { init(); fetchSettings() }, [])
 
   return (
     <BrowserRouter>
@@ -66,6 +69,7 @@ export default function App() {
         <Route path="/admin/circuits" element={<AdminRoute><AdminCircuits /></AdminRoute>} />
         <Route path="/admin/races" element={<AdminRoute><AdminRaces /></AdminRoute>} />
         <Route path="/admin/sync" element={<AdminRoute><AdminSync /></AdminRoute>} />
+        <Route path="/admin/media" element={<AdminRoute><AdminMedia /></AdminRoute>} />
       </Routes>
     </BrowserRouter>
   )
