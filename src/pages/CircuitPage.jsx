@@ -3,13 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, Card } from '../components/ui'
+import { MapPin, Trophy } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
-function Icon({ settingKey, emoji }) {
+function Icon({ settingKey, LucideIcon, size = 14 }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
     ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
-    : <span>{emoji}</span>
+    : <LucideIcon size={size} />
 }
 
 export default function CircuitPage() {
@@ -34,17 +35,9 @@ export default function CircuitPage() {
         if (!racesData?.length) { setRaces([]); return }
 
         const raceIds = racesData.map(r => r.id)
-
-        // Fetch race winners and sprint winners in parallel
         const [{ data: winners }, { data: sprintWinners }] = await Promise.all([
-          supabase.from('results')
-            .select('race_id, drivers(id, name, code, image_url)')
-            .in('race_id', raceIds)
-            .eq('position', 1),
-          supabase.from('sprint_results')
-            .select('race_id, drivers(id, name, code, image_url)')
-            .in('race_id', raceIds)
-            .eq('position', 1),
+          supabase.from('results').select('race_id, drivers(id, name, code, image_url)').in('race_id', raceIds).eq('position', 1),
+          supabase.from('sprint_results').select('race_id, drivers(id, name, code, image_url)').in('race_id', raceIds).eq('position', 1),
         ])
 
         const winnerMap = {}
@@ -71,85 +64,92 @@ export default function CircuitPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="glass p-6 flex gap-6 items-center flex-wrap">
-        <div className="flex-1">
-          <h1 className="text-3xl font-black">{circuit.name}</h1>
-          <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
-            {circuit.location && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {circuit.location}</span>}
-            {circuit.country && <span className="flex items-center gap-1"><Icon settingKey="icon_flag" emoji="🌍" /> {circuit.country}</span>}
-          </div>
-        </div>
+      {/* ── Cinematic Banner ── */}
+      <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 280 }}>
+        {circuit.hero_image_url
+          ? <img src={circuit.hero_image_url} alt={circuit.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0a0a0f 100%)' }} />
+        }
+        <div className="absolute inset-0" style={{
+          background: circuit.hero_image_url
+            ? 'linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.5) 50%, rgba(5,5,8,0.15) 100%)'
+            : 'radial-gradient(ellipse 60% 100% at 20% 50%, rgba(225,6,0,0.08) 0%, transparent 70%)'
+        }} />
+
+        {/* Layout image overlay — bottom right */}
         {circuit.layout_image && (
-          <div className="w-48 h-32 shrink-0">
-            <img src={circuit.layout_image} alt={circuit.name} className="w-full h-full object-contain opacity-80" />
+          <div className="absolute right-6 bottom-6 w-36 h-24 pointer-events-none hidden sm:block">
+            <img src={circuit.layout_image} alt={circuit.name}
+              className="w-full h-full object-contain opacity-40"
+              style={{ filter: 'invert(1) brightness(2)' }}
+            />
           </div>
         )}
+
+        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
+          <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{circuit.name}</h1>
+          <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'rgba(245,245,247,0.6)' }}>
+            {circuit.location && <span className="flex items-center gap-1.5"><Icon settingKey="icon_location" LucideIcon={MapPin} /> {circuit.location}</span>}
+            {circuit.country && <span className="flex items-center gap-1.5"><MapPin size={14} /> {circuit.country}</span>}
+          </div>
+        </div>
       </div>
 
+      {/* Circuit Layout */}
       {circuit.layout_image && (
         <Card>
-          <h2 className="text-sm font-bold mb-3" style={{ color: 'var(--text-secondary)' }}>Circuit Layout</h2>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Circuit Layout</p>
           <img src={circuit.layout_image} alt={circuit.name} className="max-h-72 mx-auto object-contain" />
         </Card>
       )}
 
+      {/* Races table */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-sm font-bold" style={{ color: 'var(--text-secondary)' }}>
-          Races Hosted ({races.length})
+        <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+          <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Races Hosted ({races.length})</span>
         </div>
         {races.length === 0 ? (
-          <p className="text-sm px-4 pb-4" style={{ color: 'var(--text-muted)' }}>No races recorded.</p>
+          <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No races recorded.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                <th className="text-left py-2 pl-4">Race</th>
+                <th className="text-left py-2 pl-5">Race</th>
                 <th className="text-left py-2 hidden sm:table-cell">Winner</th>
                 <th className="text-left py-2 hidden md:table-cell">Sprint Winner</th>
-                <th className="text-right py-2 pr-4">Season</th>
+                <th className="text-right py-2 pr-5">Season</th>
               </tr>
             </thead>
             <tbody>
               {races.map(race => (
                 <tr key={race.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
-                  <td className="py-2.5 pl-4">
+                  <td className="py-2.5 pl-5">
                     <Link to={`/race/${race.id}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
                       {race.name}
                     </Link>
-                    {/* Mobile: winner below race name */}
                     <div className="flex items-center gap-3 mt-1 sm:hidden">
                       {race.winner && (
                         <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors">
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🏆 {race.winner.name}</span>
-                        </Link>
-                      )}
-                      {race.sprintWinner && (
-                        <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors">
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⚡ {race.sprintWinner.name}</span>
+                          <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                            <Trophy size={10} /> {race.winner.name}
+                          </span>
                         </Link>
                       )}
                     </div>
                   </td>
                   <td className="py-2.5 hidden sm:table-cell">
-                    {race.winner ? (
-                      <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
-                        {race.winner.name}
-                      </Link>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                    )}
+                    {race.winner
+                      ? <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>{race.winner.name}</Link>
+                      : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                    }
                   </td>
                   <td className="py-2.5 hidden md:table-cell">
-                    {race.sprintWinner ? (
-                      <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>
-                        {race.sprintWinner.name}
-                      </Link>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                    )}
+                    {race.sprintWinner
+                      ? <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>{race.sprintWinner.name}</Link>
+                      : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                    }
                   </td>
-                  <td className="py-2.5 pr-4 text-right" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <td className="py-2.5 pr-5 text-right" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {race.seasons?.year} · R{race.round}
                   </td>
                 </tr>
