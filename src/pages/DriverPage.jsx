@@ -147,17 +147,19 @@ export default function DriverPage() {
     <div className="space-y-6">
       {/* ── Banner ── */}
       <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 320 }}>
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0008 0%, #0f0010 50%, #0a0a0f 100%)' }} />
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 100% at 80% 50%, rgba(225,6,0,0.12) 0%, transparent 70%)' }} />
-
-        {driver.image_url && (
-          <div className="absolute right-0 bottom-0 h-full w-2/3 md:w-2/5 pointer-events-none overflow-hidden">
-            <img src={driver.image_url} alt={driver.name}
-              className="absolute bottom-0 right-0 h-[120%] w-full object-contain object-bottom transition-transform duration-700"
-              style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 20%, transparent 90%)', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 20%, transparent 90%)' }}
+        {/* Hero image full-bleed */}
+        {driver.hero_image_url
+          ? <img src={driver.hero_image_url} alt={driver.name}
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
-          </div>
-        )}
+          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0008 0%, #0f0010 50%, #0a0a0f 100%)' }} />
+        }
+        {/* Gradient overlay so text is always readable */}
+        <div className="absolute inset-0" style={{
+          background: driver.hero_image_url
+            ? 'linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.5) 50%, rgba(5,5,8,0.2) 100%)'
+            : 'radial-gradient(ellipse 60% 100% at 80% 50%, rgba(225,6,0,0.12) 0%, transparent 70%)'
+        }} />
 
         <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 320 }}>
           <div className="flex items-center gap-2 mb-3">
@@ -166,13 +168,13 @@ export default function DriverPage() {
           <h1 className="text-4xl md:text-5xl font-black mb-3" style={{ letterSpacing: '-0.04em' }}>{driver.name}</h1>
           <div className="flex items-center gap-4 flex-wrap">
             {driver.nationality && (
-              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'rgba(245,245,247,0.55)' }}>
+              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'rgba(245,245,247,0.7)' }}>
                 {driver.flag_url ? <img src={driver.flag_url} alt={driver.nationality} className="h-4 w-auto rounded-sm" /> : <Icon settingKey="icon_flag" emoji="🌍" />}
                 {driver.nationality}
               </span>
             )}
             {driver.dob && (
-              <span className="text-sm font-medium" style={{ color: 'rgba(245,245,247,0.55)' }}>
+              <span className="text-sm font-medium" style={{ color: 'rgba(245,245,247,0.7)' }}>
                 <Icon settingKey="icon_birthday" emoji="🎂" /> {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             )}

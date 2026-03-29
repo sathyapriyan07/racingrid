@@ -20,6 +20,7 @@ create table if not exists drivers (
   dob date,
   image_url text,
   flag_url text,
+  hero_image_url text,
   is_active boolean default false,
   created_at timestamptz default now()
 );

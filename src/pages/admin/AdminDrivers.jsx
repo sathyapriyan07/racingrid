@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Flag } from 'lucide-react'
+import { Plus, ImagePlus, Flag, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 
@@ -97,6 +97,11 @@ export default function AdminDrivers() {
                               style={{ color: editId === `${row.id}-image` ? undefined : 'var(--text-muted)' }}>
                               <ImagePlus size={11} /> Photo
                             </button>
+                            <button onClick={() => toggle(`${row.id}-hero`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
+                              <Image size={11} /> Hero
+                            </button>
                             <button onClick={() => toggle(`${row.id}-flag`)}
                               className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-flag` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
                               style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
@@ -111,6 +116,15 @@ export default function AdminDrivers() {
                           folder="drivers"
                           currentUrl={row.image_url}
                           onSave={(url) => saveField(row.id, 'image_url', url)}
+                          onCancel={() => setEditId(null)}
+                        />
+                      )}
+                      {editId === `${row.id}-hero` && (
+                        <ImageEditRow
+                          colSpan={6}
+                          folder="drivers/heroes"
+                          currentUrl={row.hero_image_url}
+                          onSave={(url) => saveField(row.id, 'hero_image_url', url)}
                           onCancel={() => setEditId(null)}
                         />
                       )}
