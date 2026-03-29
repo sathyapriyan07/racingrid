@@ -3,9 +3,30 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Flag, Image } from 'lucide-react'
+import { Plus, ImagePlus, Flag, Image, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
+
+function ActiveEditRow({ colSpan, row, onSave, onCancel }) {
+  const [isActive, setIsActive] = useState(row.is_active || false)
+  return (
+    <tr className="bg-white/3">
+      <td colSpan={colSpan} className="px-3 py-3">
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)}
+              className="w-4 h-4 accent-f1red" />
+            <span className="text-xs text-white/70">Active (current season)</span>
+          </label>
+          <div className="flex gap-2 ml-auto">
+            <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+            <button onClick={() => onSave(isActive)} className="btn-primary text-xs py-1">Save</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 export default function AdminDrivers() {
   const { invalidateCache } = useDataStore()
@@ -44,6 +65,15 @@ export default function AdminDrivers() {
     load()
   }
 
+  const saveActive = async (id, is_active) => {
+    const { error } = await supabase.from('drivers').update({ is_active }).eq('id', id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated')
+    setEditId(null)
+    invalidateCache()
+    load()
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -68,6 +98,7 @@ export default function AdminDrivers() {
                     <th className="text-left pb-2 pr-4">Code</th>
                     <th className="text-left pb-2 pr-4 hidden sm:table-cell">Nationality</th>
                     <th className="text-left pb-2 pr-4 hidden md:table-cell">DOB</th>
+                    <th className="text-left pb-2 pr-4">Active</th>
                     <th className="text-right pb-2">Actions</th>
                   </tr>
                 </thead>
@@ -90,8 +121,18 @@ export default function AdminDrivers() {
                           </div>
                         </td>
                         <td className="py-2 pr-4 hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>{row.dob || '—'}</td>
+                        <td className="py-2 pr-4">
+                          <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-white/30'}`}>
+                            {row.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
                         <td className="py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => toggle(`${row.id}-active`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-active` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              style={{ color: editId === `${row.id}-active` ? undefined : 'var(--text-muted)' }}>
+                              <Pencil size={11} /> Edit
+                            </button>
                             <button onClick={() => toggle(`${row.id}-image`)}
                               className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-image` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
                               style={{ color: editId === `${row.id}-image` ? undefined : 'var(--text-muted)' }}>
@@ -110,9 +151,17 @@ export default function AdminDrivers() {
                           </div>
                         </td>
                       </tr>
+                      {editId === `${row.id}-active` && (
+                        <ActiveEditRow
+                          colSpan={7}
+                          row={row}
+                          onSave={(active) => saveActive(row.id, active)}
+                          onCancel={() => setEditId(null)}
+                        />
+                      )}
                       {editId === `${row.id}-image` && (
                         <ImageEditRow
-                          colSpan={6}
+                          colSpan={7}
                           folder="drivers"
                           currentUrl={row.image_url}
                           onSave={(url) => saveField(row.id, 'image_url', url)}
@@ -121,7 +170,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-hero` && (
                         <ImageEditRow
-                          colSpan={6}
+                          colSpan={7}
                           folder="drivers/heroes"
                           currentUrl={row.hero_image_url}
                           onSave={(url) => saveField(row.id, 'hero_image_url', url)}
@@ -130,7 +179,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-flag` && (
                         <ImageEditRow
-                          colSpan={6}
+                          colSpan={7}
                           folder="drivers/flags"
                           currentUrl={row.flag_url}
                           onSave={(url) => saveField(row.id, 'flag_url', url)}
