@@ -79,45 +79,55 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="glass p-6 flex gap-6 items-start flex-wrap">
-        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ background: 'var(--bg-raised)' }}>
-          {team.logo_url
-            ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
-            : <span className="text-2xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
-          }
-        </div>
-        <div>
-          <h1 className="text-3xl font-black">{team.name}</h1>
-          <div className="flex gap-4 mt-2 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
-            {team.nationality && (
-              <span className="flex items-center gap-1.5">
-                {team.flag_url
-                  ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
-                  : <Icon settingKey="icon_flag" emoji="🌍" />
-                }
-                {team.nationality}
-              </span>
-            )}
-            {team.base && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {team.base}</span>}
-          </div>
-          {champYears.length > 0 && (
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {champYears.sort().map(y => (
-                <span key={y} className="flex items-center gap-1 text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
-                  <Icon settingKey="icon_trophy" emoji="🏆" /> {y}
-                </span>
-              ))}
+      {/* ── Cinematic Banner ── */}
+      <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 280 }}>
+        {team.hero_image_url
+          ? <img src={team.hero_image_url} alt={team.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0a0a0f 100%)' }} />
+        }
+        <div className="absolute inset-0" style={{
+          background: team.hero_image_url
+            ? 'linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.5) 50%, rgba(5,5,8,0.2) 100%)'
+            : 'radial-gradient(ellipse 60% 100% at 20% 50%, rgba(225,6,0,0.1) 0%, transparent 70%)'
+        }} />
+
+        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
+          <div className="flex items-end gap-5 flex-wrap">
+            {/* Logo */}
+            <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              {team.logo_url
+                ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
+                : <span className="text-xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
+              }
             </div>
-          )}
+            <div className="flex-1">
+              <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
+              <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'rgba(245,245,247,0.6)' }}>
+                {team.nationality && (
+                  <span className="flex items-center gap-1.5">
+                    {team.flag_url
+                      ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
+                      : <Icon settingKey="icon_flag" emoji="🌍" />
+                    }
+                    {team.nationality}
+                  </span>
+                )}
+                {team.base && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {team.base}</span>}
+                {team.founded && <span>Est. {team.founded}</span>}
+              </div>
+              {champYears.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {champYears.sort().map(y => (
+                    <span key={y} className="flex items-center gap-1 text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
+                      <Icon settingKey="icon_trophy" emoji="🏆" /> {y}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-
-      {team.car_image && (
-        <div className="glass overflow-hidden">
-          <img src={team.car_image} alt={`${team.name} car`} className="w-full max-h-52 object-contain p-4" />
-        </div>
-      )}
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Wins" value={wins} />

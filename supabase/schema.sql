@@ -38,6 +38,7 @@ create table if not exists teams (
   logo_url text,
   car_image text,
   flag_url text,
+  hero_image_url text,
   is_active boolean default false,
   created_at timestamptz default now()
 );

@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Car, Pencil, Flag, FileText } from 'lucide-react'
+import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 import TextEditRow from './TextEditRow'
@@ -143,6 +143,11 @@ export default function AdminTeams() {
                             style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
                             <Flag size={11} /> Flag
                           </button>
+                          <button onClick={() => toggle(`${row.id}-hero`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-hero` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
+                            <Image size={11} /> Hero
+                          </button>
                           <button onClick={() => toggle(`${row.id}-details`)}
                             className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-details` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
                             style={{ color: editId === `${row.id}-details` ? undefined : 'var(--text-muted)' }}>
@@ -166,6 +171,15 @@ export default function AdminTeams() {
                         </div>
                       </td>
                     </tr>
+                    {editId === `${row.id}-hero` && (
+                      <ImageEditRow
+                        colSpan={7}
+                        folder="teams/heroes"
+                        currentUrl={row.hero_image_url}
+                        onSave={(url) => saveField(row.id, 'hero_image_url', url)}
+                        onCancel={() => setEditId(null)}
+                      />
+                    )}
                     {editId === `${row.id}-flag` && (
                       <ImageEditRow
                         colSpan={7}
