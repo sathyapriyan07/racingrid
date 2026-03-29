@@ -32,7 +32,7 @@ export default function TeamPage() {
         setChampYears(champs.teamChamps[id] || [])
         const { data } = await supabase
           .from('results')
-          .select('*, drivers(id, name, code, image_url), races(id, name, date, round, seasons(year))')
+          .select('*, drivers(id, name, code, image_url, flag_url, nationality, is_active), races(id, name, date, round, seasons(year))')
           .eq('team_id', id)
           .order('races(date)', { ascending: false })
         setResults(data || [])
@@ -78,6 +78,7 @@ export default function TeamPage() {
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'drivers', label: 'Drivers' },
     { id: 'info', label: 'Info' },
     { id: 'results', label: 'Results' },
     ...(champYears.length > 0 ? [{ id: 'championships', label: 'Championships' }] : []),
@@ -164,7 +165,7 @@ export default function TeamPage() {
             <Card>
               <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Drivers</p>
               <div className="flex flex-wrap gap-2">
-                {drivers.map(d => (
+                {drivers.slice(0, 6).map(d => (
                   <Link key={d.driver_id} to={`/driver/${d.driver_id}`}>
                     <div className="glass-hover flex items-center gap-2 px-3 py-1.5 text-xs font-semibold">
                       {d.image_url && <img src={d.image_url} alt={d.name} className="w-5 h-5 rounded-full object-cover object-top" />}
@@ -173,10 +174,52 @@ export default function TeamPage() {
                     </div>
                   </Link>
                 ))}
+                {drivers.length > 6 && (
+                  <button onClick={() => setTab('drivers')} className="glass-hover px-3 py-1.5 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                    +{drivers.length - 6} more
+                  </button>
+                )}
               </div>
             </Card>
           )}
         </>
+      )}
+
+      {/* ── Drivers ── */}
+      {tab === 'drivers' && (
+        <div>
+          {drivers.length === 0
+            ? <Card><p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>No drivers found.</p></Card>
+            : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {drivers.map(d => (
+                  <Link key={d.driver_id} to={`/driver/${d.driver_id}`}>
+                    <div className="apple-card overflow-hidden">
+                      <div className="h-36 bg-white/4 overflow-hidden relative">
+                        {d.image_url
+                          ? <img src={d.image_url} alt={d.name} className="w-full h-full object-cover object-top" loading="lazy" />
+                          : <div className="w-full h-full flex items-center justify-center text-2xl font-black" style={{ color: 'var(--text-muted)' }}>{d.code || '?'}</div>
+                        }
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,5,8,0.75) 0%, transparent 55%)' }} />
+                        {d.flag_url && (
+                          <img src={d.flag_url} alt="" className="absolute bottom-2 right-2 h-4 w-auto rounded-sm shadow" loading="lazy" />
+                        )}
+                        {d.is_active && (
+                          <span className="absolute top-2 left-2 text-xs bg-green-500/20 text-green-400 border border-green-500/25 px-1.5 py-0.5 rounded-full font-semibold" style={{ fontSize: 9 }}>Active</span>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <div className="text-xs font-bold text-f1red">{d.code || '—'}</div>
+                        <div className="text-xs font-semibold mt-0.5 leading-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{d.name}</div>
+                        <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{d.nationality || '—'}</div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          }
+        </div>
       )}
 
       {/* ── Info ── */}

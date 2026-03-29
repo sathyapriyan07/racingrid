@@ -237,21 +237,6 @@ export default function Home() {
         </motion.section>
       )}
 
-      {/* ── Seasons ── */}
-      {seasons.length > 0 && (
-        <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-          <h2 className="section-title mb-4">Seasons</h2>
-          <div className="flex flex-wrap gap-2">
-            {seasons.map(s => (
-              <Link key={s.id} to={`/races?season=${s.id}`}>
-                <span className="glass-hover px-5 py-2 text-sm font-bold hover:text-f1red transition-colors" style={{ letterSpacing: '-0.02em' }}>
-                  {s.year}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </motion.section>
-      )}
     </div>
   )
 }
