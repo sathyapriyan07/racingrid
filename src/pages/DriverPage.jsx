@@ -60,7 +60,11 @@ export default function DriverPage() {
       const w = races.filter(r => r.position === 1).length
       const pod = races.filter(r => r.position <= 3).length
       const isChamp = champYears.includes(Number(year))
-      const teams = [...new Set(races.map(r => r.teams?.name).filter(Boolean))]
+      const teamMap = {}
+      races.forEach(r => {
+        if (r.teams?.name) teamMap[r.teams.name] = r.teams
+      })
+      const teams = Object.values(teamMap)
       return { year, pts, wins: w, podiums: pod, races: races.length, isChamp, teams }
     })
 
@@ -259,8 +263,15 @@ export default function DriverPage() {
                   </div>
 
                   {s.teams.length > 0 && (
-                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {s.teams.join(' · ')}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {s.teams.map(team => (
+                        <div key={team.name} className="flex items-center gap-1.5">
+                          {team.logo_url
+                            ? <img src={team.logo_url} alt={team.name} className="h-5 w-auto object-contain" />
+                            : <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{team.name}</span>
+                          }
+                        </div>
+                      ))}
                     </div>
                   )}
                 </motion.div>
