@@ -200,16 +200,31 @@
   }
 
   /* ── Tab pill ── */
-  .tab-pill {
-    padding: 0.375rem 1rem;
+  .tab-bar {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
     border-radius: 9999px;
-    font-size: 0.8rem;
+    background: var(--bg-raised);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+  .tab-bar::-webkit-scrollbar { display: none; }
+
+  .tab-pill {
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--text-secondary);
     cursor: pointer;
     border: none;
     background: transparent;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .tab-pill.active {
     background: rgba(225,6,0,0.15);

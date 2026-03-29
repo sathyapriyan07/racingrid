@@ -203,7 +203,7 @@ export default function DriverPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: 'var(--bg-raised)' }}>
+      <div className="tab-bar">
         {activeTabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`tab-pill ${tab === t.id ? 'active' : ''}`}>
             {t.id === 'championships' && <Trophy size={11} className="inline mr-1" />}
