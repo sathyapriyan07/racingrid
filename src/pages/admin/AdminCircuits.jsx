@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus } from 'lucide-react'
+import { Plus, ImagePlus, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 
@@ -11,7 +11,7 @@ export default function AdminCircuits() {
   const { invalidateCache } = useDataStore()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editId, setEditId] = useState(null)
+  const [editId, setEditId] = useState(null) // `${id}-layout` or `${id}-hero`
 
   const load = async () => {
     setLoading(true)
@@ -28,14 +28,16 @@ export default function AdminCircuits() {
 
   useEffect(() => { load() }, [])
 
-  const saveImage = async (id, url) => {
-    const { error } = await supabase.from('circuits').update({ layout_image: url || null }).eq('id', id)
+  const saveField = async (id, field, url) => {
+    const { error } = await supabase.from('circuits').update({ [field]: url || null }).eq('id', id)
     if (error) return toast.error(error.message)
-    toast.success('Image updated')
+    toast.success('Updated')
     setEditId(null)
     invalidateCache()
     load()
   }
+
+  const toggle = (key) => setEditId(prev => prev === key ? null : key)
 
   return (
     <div className="space-y-4">
@@ -56,7 +58,7 @@ export default function AdminCircuits() {
                   <th className="text-left pb-2 pr-4">Name</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Location</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Country</th>
-                  <th className="text-right pb-2">Image</th>
+                  <th className="text-right pb-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -73,20 +75,35 @@ export default function AdminCircuits() {
                       <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.location || '—'}</td>
                       <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.country || '—'}</td>
                       <td className="py-2 text-right">
-                        <button onClick={() => setEditId(editId === row.id ? null : row.id)}
-                          className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-white/5 transition-colors"
-                          style={{ color: 'var(--text-muted)' }}>
-                          <ImagePlus size={11} />
-                          {row.layout_image ? 'Edit' : 'Add'}
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => toggle(`${row.id}-layout`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-layout` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            style={{ color: editId === `${row.id}-layout` ? undefined : 'var(--text-muted)' }}>
+                            <ImagePlus size={11} /> Layout
+                          </button>
+                          <button onClick={() => toggle(`${row.id}-hero`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
+                            <Image size={11} /> Hero
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                    {editId === row.id && (
+                    {editId === `${row.id}-layout` && (
                       <ImageEditRow
                         colSpan={5}
                         folder="circuits"
                         currentUrl={row.layout_image}
-                        onSave={(url) => saveImage(row.id, url)}
+                        onSave={(url) => saveField(row.id, 'layout_image', url)}
+                        onCancel={() => setEditId(null)}
+                      />
+                    )}
+                    {editId === `${row.id}-hero` && (
+                      <ImageEditRow
+                        colSpan={5}
+                        folder="circuits/heroes"
+                        currentUrl={row.hero_image_url}
+                        onSave={(url) => saveField(row.id, 'hero_image_url', url)}
                         onCancel={() => setEditId(null)}
                       />
                     )}

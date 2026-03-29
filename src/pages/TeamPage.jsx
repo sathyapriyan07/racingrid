@@ -4,14 +4,14 @@ import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { BarChart2, Flag, Trophy, MapPin } from 'lucide-react'
+import { BarChart2, Flag, Trophy } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
-function Icon({ settingKey, LucideIcon, size = 14 }) {
+function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
     ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
-    : <LucideIcon size={size} />
+    : <span>{emoji}</span>
 }
 
 export default function TeamPage() {
@@ -112,12 +112,12 @@ export default function TeamPage() {
                   <span className="flex items-center gap-1.5">
                     {team.flag_url
                       ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
-                      : <Icon settingKey="icon_flag" LucideIcon={MapPin} />
+                      : <Icon settingKey="icon_flag" emoji="🌍" />
                     }
                     {team.nationality}
                   </span>
                 )}
-                {team.base && <span className="flex items-center gap-1"><Icon settingKey="icon_location" LucideIcon={MapPin} /> {team.base}</span>}
+                {team.base && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {team.base}</span>}
                 {team.founded && <span>Est. {team.founded}</span>}
               </div>
             </div>
@@ -294,7 +294,7 @@ export default function TeamPage() {
             style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(5,5,8,0) 100%)', borderColor: 'rgba(234,179,8,0.2)' }}>
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
               style={{ background: 'rgba(234,179,8,0.12)' }}>
-              <Icon settingKey="icon_trophy" LucideIcon={Trophy} size={28} />
+              <Icon settingKey="icon_trophy" emoji="🏆" />
             </div>
             <div>
               <div className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'rgba(234,179,8,0.7)' }}>Constructors Champion</div>
@@ -314,9 +314,7 @@ export default function TeamPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-black" style={{ letterSpacing: '-0.04em' }}>{s.year}</span>
                     {s.isChamp && (
-                      <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                        <Trophy size={10} />
-                      </span>
+                      <span className="text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">🏆</span>
                     )}
                   </div>
                   <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{s.races} races</span>

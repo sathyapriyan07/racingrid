@@ -2,14 +2,14 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
-import { Flag, Activity, AlertTriangle, Clock, PlayCircle, MapPin, CalendarDays } from 'lucide-react'
+import { Flag, Activity, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
-function Icon({ settingKey, LucideIcon, size = 14 }) {
+function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
     ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
-    : <LucideIcon size={size} />
+    : <span>{emoji}</span>
 }
 import RaceReplaySimple from '../components/replay/RaceReplaySimple'
 
@@ -120,7 +120,7 @@ export default function RacePage() {
                 </Link>
               )}
               {race.date && (
-                <span className="flex items-center gap-1"><Icon settingKey="icon_calendar" LucideIcon={CalendarDays} /> {new Date(race.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                <span className="flex items-center gap-1"><Icon settingKey="icon_calendar" emoji="📅" /> {new Date(race.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               )}
             </div>
           </div>

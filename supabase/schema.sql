@@ -49,6 +49,7 @@ create table if not exists circuits (
   location text,
   country text,
   layout_image text,
+  hero_image_url text,
   created_at timestamptz default now()
 );
 
