@@ -90,13 +90,8 @@ export default function DriverPage() {
 
         <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <div className="flex items-center gap-2 mb-3">
               {driver.code && <Badge color="red">{driver.code}</Badge>}
-              {champYears.sort().map(y => (
-                <span key={y} className="flex items-center gap-1 text-xs bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 px-2 py-0.5 rounded-full font-semibold">
-                  🏆 {y}
-                </span>
-              ))}
             </div>
             <h1 className="text-4xl md:text-5xl font-black mb-3" style={{ letterSpacing: '-0.04em' }}>{driver.name}</h1>
             <div className="flex items-center gap-4 flex-wrap">
