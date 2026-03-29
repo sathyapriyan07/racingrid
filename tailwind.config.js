@@ -8,33 +8,18 @@ export default {
         sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
+        // Semantic tokens mapped to CSS variables (MANDATORY structure)
+        base: 'var(--bg-base)',
+        surface: 'var(--bg-surface)',
+        card: 'var(--bg-card)',
+        muted: 'var(--bg-muted)',
+        primary: 'var(--text-primary)',
+        secondary: 'var(--text-secondary)',
+        border: 'var(--border)',
+        accent: 'var(--accent)',
+
+        // Back-compat literal red used across existing components
         f1red: '#E10600',
-        // Semantic tokens mapped to CSS variables
-        'bg-base':     'var(--bg-base)',
-        'bg-surface':  'var(--bg-surface)',
-        'bg-raised':   'var(--bg-raised)',
-        'bg-muted':    'var(--bg-muted)',
-        'bg-card':     'var(--bg-card)',
-        'text-primary':   'var(--text-primary)',
-        'text-secondary': 'var(--text-secondary)',
-        'text-muted':     'var(--text-muted)',
-        'border-subtle':  'var(--border)',
-        'accent':         'var(--accent)',
-        // Legacy dark palette (kept for any remaining references)
-        dark: {
-          950: '#000000',
-          900: '#0a0a0f',
-          800: '#111118',
-          700: '#1a1a24',
-          600: '#22222f',
-          500: '#2e2e3e',
-        },
-        light: {
-          50:  '#ffffff',
-          100: '#f5f5f7',
-          200: '#e8e8ed',
-          300: '#d1d1d6',
-        },
       },
       backgroundImage: {
         'radial-glow': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',

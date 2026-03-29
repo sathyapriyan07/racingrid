@@ -13,7 +13,7 @@ function Icon({ settingKey, emoji }) {
 }
 import RaceReplaySimple from '../components/replay/RaceReplaySimple'
 
-const POSITION_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
+const POSITION_COLORS = ['pos-1', 'pos-2', 'pos-3']
 
 const FLAG_COLOR = {
   YELLOW: 'yellow', 'DOUBLE YELLOW': 'yellow', RED: 'red',
@@ -93,7 +93,7 @@ export default function RacePage() {
   const hasOf1 = !!race?.openf1_session_key
 
   if (loading) return <Spinner />
-  if (!race) return <div className="text-white/40 text-center py-16">Race not found.</div>
+  if (!race) return <div className="text-secondary text-center py-16">Race not found.</div>
 
   const tabs = [
     { id: 'results', label: 'Results', icon: Flag },
@@ -160,9 +160,9 @@ export default function RacePage() {
               </thead>
               <tbody>
                 {results.map((r, i) => (
-                  <tr key={r.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                  <tr key={r.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                     <td className="py-1.5 pl-3">
-                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
+                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{r.position ?? '—'}</span>
                     </td>
                     <td className="py-1.5">
                       <div className="flex items-center gap-1.5">
@@ -214,9 +214,9 @@ export default function RacePage() {
               </thead>
               <tbody>
                 {qualifying.map((q, i) => (
-                  <tr key={q.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                  <tr key={q.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                     <td className="py-1.5 pl-3">
-                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{q.position ?? '—'}</span>
+                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{q.position ?? '—'}</span>
                     </td>
                     <td className="py-1.5">
                       <div className="flex items-center gap-1.5">
@@ -265,9 +265,9 @@ export default function RacePage() {
             </thead>
             <tbody>
               {sprintResults.map((r, i) => (
-                <tr key={r.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                <tr key={r.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                   <td className="py-1.5 pl-3">
-                    <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-white/50'}`}>{r.position ?? '—'}</span>
+                    <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{r.position ?? '—'}</span>
                   </td>
                   <td className="py-1.5">
                     <div className="flex items-center gap-1.5">
@@ -316,7 +316,7 @@ export default function RacePage() {
             <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No pit stop data.</p>
           ) : (
             <div className="relative">
-              <div className="absolute left-16 top-0 bottom-0 w-px bg-white/10" />
+              <div className="absolute left-16 top-0 bottom-0 w-px bg-border" />
               <div className="space-y-3">
                 {[...pitStops].sort((a, b) => a.lap_number - b.lap_number).map((pit, i) => {
                   const d = of1Drivers[pit.driver_number]

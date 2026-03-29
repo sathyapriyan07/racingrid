@@ -5,7 +5,7 @@ export default function TextEditRow({ colSpan, label, currentValue, onSave, onCa
   const [value, setValue] = useState(currentValue || '')
 
   return (
-    <tr className="border-b border-white/5 bg-white/3">
+    <tr className="border-b border-border bg-muted">
       <td colSpan={colSpan} className="px-3 py-3">
         <div className="flex flex-col gap-2">
           {label && <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{label}</p>}
@@ -24,7 +24,7 @@ export default function TextEditRow({ colSpan, label, currentValue, onSave, onCa
               <Check size={12} /> Save
             </button>
             <button onClick={onCancel}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-white/5 text-white/40 text-xs">
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-muted text-secondary text-xs">
               <X size={12} /> Cancel
             </button>
           </div>

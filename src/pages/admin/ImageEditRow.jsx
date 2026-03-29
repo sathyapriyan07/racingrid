@@ -28,7 +28,7 @@ export default function ImageEditRow({ colSpan, folder, currentUrl, onSave, onCa
   }
 
   return (
-    <tr className="border-b border-white/5 bg-white/3">
+    <tr className="border-b border-border bg-muted">
       <td colSpan={colSpan} className="px-3 py-3">
         <div className="flex flex-col gap-2">
           {/* URL input row */}
@@ -54,7 +54,7 @@ export default function ImageEditRow({ colSpan, folder, currentUrl, onSave, onCa
               {uploading ? 'Uploading...' : 'Upload File'}
             </button>
             {url && (
-              <img src={url} alt="preview" className="h-8 w-auto max-w-20 object-contain rounded bg-white/5" />
+              <img src={url} alt="preview" className="h-8 w-auto max-w-20 object-contain rounded bg-muted" />
             )}
           </div>
 
@@ -69,7 +69,7 @@ export default function ImageEditRow({ colSpan, folder, currentUrl, onSave, onCa
             </button>
             <button
               onClick={onCancel}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-white/5 text-white/40 text-xs"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-muted text-secondary text-xs"
             >
               <X size={13} /> Cancel
             </button>

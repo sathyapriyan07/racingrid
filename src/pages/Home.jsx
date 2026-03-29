@@ -50,24 +50,20 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative overflow-hidden rounded-3xl noise-overlay"
+        className="relative overflow-hidden rounded-3xl noise-overlay bg-surface border border-border shadow-[var(--shadow)]"
         style={{ minHeight: 320 }}
       >
         {/* Background layers */}
-        <div className="absolute inset-0" style={{
-          background: 'linear-gradient(135deg, #0a0008 0%, #0f0010 40%, #0a0a0f 100%)',
-        }} />
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(ellipse 70% 80% at 15% 50%, rgba(225,6,0,0.18) 0%, transparent 60%)',
-        }} />
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(ellipse 50% 60% at 85% 30%, rgba(100,0,200,0.08) 0%, transparent 60%)',
-        }} />
-        {/* Grid lines */}
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
-          backgroundSize: '60px 60px',
-        }} />
+        <div className="absolute inset-0 bg-surface" />
+        <div className="absolute inset-0 bg-radial-glow from-accent/15 via-transparent to-transparent" />
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
 
         <div className="relative z-10 p-8 md:p-14 flex flex-col justify-end" style={{ minHeight: 320 }}>
           <motion.div
@@ -76,14 +72,14 @@ export default function Home() {
             transition={{ delay: 0.15, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-f1red animate-pulse" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-f1red">Formula 1 Database</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-accent">Formula 1 Database</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black leading-none mb-4" style={{ letterSpacing: '-0.05em' }}>
-              <span style={{ color: 'var(--text-primary)' }}>F1</span>
-              <span className="text-f1red">Base</span>
+              <span className="text-primary">F1</span>
+              <span className="text-accent">Base</span>
             </h1>
-            <p className="text-base md:text-lg mb-8 max-w-md font-medium" style={{ color: 'rgba(245,245,247,0.5)' }}>
+            <p className="text-base md:text-lg mb-8 max-w-md font-medium text-secondary">
               The ultimate Formula 1 archive — races, drivers, teams, lap-by-lap replays.
             </p>
             <div className="flex gap-3 flex-wrap">
@@ -153,7 +149,7 @@ export default function Home() {
               <motion.div key={driver.id} variants={fadeUp}>
                 <Link to={`/driver/${driver.id}`}>
                   <div className="glass-hover flex flex-col items-center p-4 gap-3 text-center" style={{ width: 120 }}>
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/5 shrink-0">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted shrink-0">
                       {driver.image_url
                         ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover object-top" />
                         : <div className="w-full h-full flex items-center justify-center text-sm font-black" style={{ color: 'var(--text-muted)' }}>{driver.code || '?'}</div>
@@ -199,7 +195,7 @@ export default function Home() {
                       style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>{i + 1}</span>
                     {row.driver?.image_url
                       ? <img src={row.driver.image_url} alt={row.driver.name} className="w-7 h-7 rounded-full object-cover object-top shrink-0" />
-                      : <div className="w-7 h-7 rounded-full bg-white/8 shrink-0" />
+                      : <div className="w-7 h-7 rounded-full bg-muted shrink-0" />
                     }
                     <span className="text-sm flex-1 font-medium group-hover:text-f1red transition-colors" style={{ letterSpacing: '-0.01em' }}>
                       {row.driver?.name}
@@ -221,7 +217,7 @@ export default function Home() {
                       style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>{i + 1}</span>
                     {row.team?.logo_url
                       ? <img src={row.team.logo_url} alt={row.team.name} className="w-7 h-7 object-contain shrink-0" />
-                      : <div className="w-7 h-7 rounded bg-white/8 shrink-0" />
+                      : <div className="w-7 h-7 rounded bg-muted shrink-0" />
                     }
                     <span className="text-sm flex-1 font-medium group-hover:text-f1red transition-colors" style={{ letterSpacing: '-0.01em' }}>
                       {row.team?.name}

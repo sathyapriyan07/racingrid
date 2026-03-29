@@ -18,7 +18,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black">Admin Dashboard</h1>
-        <p className="text-white/40 text-sm mt-1">Manage all F1Base data</p>
+        <p className="text-secondary text-sm mt-1">Manage all F1Base data</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <div className="font-semibold">Import Data</div>
-              <div className="text-xs text-white/40 mt-0.5">Upload JSON/CSV or paste API response</div>
+              <div className="text-xs text-secondary mt-0.5">Upload JSON/CSV or paste API response</div>
             </div>
           </div>
         </Link>
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <div className="font-semibold">Sync Tools</div>
-              <div className="text-xs text-white/40 mt-0.5">Fetch from Ergast or OpenF1</div>
+              <div className="text-xs text-secondary mt-0.5">Fetch from Ergast or OpenF1</div>
             </div>
           </div>
         </Link>

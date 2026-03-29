@@ -49,7 +49,7 @@ export default function Standings() {
         </div>
       </motion.div>
 
-      <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: 'var(--bg-raised)' }}>
+      <div className="flex gap-1 p-1 rounded-2xl w-fit bg-muted border border-border">
         <button onClick={() => setTab('drivers')} className={`tab-pill ${tab === 'drivers' ? 'active' : ''}`}>Drivers</button>
         <button onClick={() => setTab('constructors')} className={`tab-pill ${tab === 'constructors' ? 'active' : ''}`}>Constructors</button>
       </div>
@@ -73,7 +73,7 @@ export default function Standings() {
                   </thead>
                   <tbody>
                     {driverRows.map((row, i) => (
-                      <tr key={row.id} className="hover:bg-white/3 transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                      <tr key={row.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="py-3 pl-5">
                           <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
                             style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>
@@ -119,7 +119,7 @@ export default function Standings() {
                   </thead>
                   <tbody>
                     {teamRows.map((row, i) => (
-                      <tr key={row.id} className="hover:bg-white/3 transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                      <tr key={row.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="py-3 pl-5">
                           <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
                             style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>

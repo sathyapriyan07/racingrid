@@ -12,7 +12,7 @@ export default function PerformanceChart({ data, dataKey = 'points', color = '#E
             <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.04)" vertical={false} />
+        <CartesianGrid strokeDasharray="0" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="name" stroke="transparent" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} tickLine={false} axisLine={false} />
         <YAxis stroke="transparent" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} tickLine={false} axisLine={false} />
         <Tooltip
@@ -25,7 +25,7 @@ export default function PerformanceChart({ data, dataKey = 'points', color = '#E
           }}
           labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
           itemStyle={{ color: color }}
-          cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
+          cursor={{ stroke: 'var(--border)', strokeWidth: 1 }}
         />
         <Area
           type="monotone"

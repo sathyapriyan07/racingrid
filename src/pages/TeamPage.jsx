@@ -46,7 +46,7 @@ export default function TeamPage() {
   }, [id])
 
   if (loading) return <Spinner />
-  if (!team) return <div className="text-white/40 text-center py-16">Team not found.</div>
+  if (!team) return <div className="text-secondary text-center py-16">Team not found.</div>
 
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
@@ -90,17 +90,16 @@ export default function TeamPage() {
       <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 280 }}>
         {team.hero_image_url
           ? <img src={team.hero_image_url} alt={team.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0a0a0f 100%)' }} />
+          : <div className="absolute inset-0 bg-surface" />
         }
-        <div className="absolute inset-0" style={{
-          background: team.hero_image_url
-            ? 'linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.5) 50%, rgba(5,5,8,0.2) 100%)'
-            : 'radial-gradient(ellipse 60% 100% at 20% 50%, rgba(225,6,0,0.1) 0%, transparent 70%)'
-        }} />
+        {team.hero_image_url
+          ? <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
+          : <div className="absolute inset-0 bg-radial-glow from-accent/10 via-transparent to-transparent" />
+        }
 
         <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
           <div className="flex items-end gap-5 flex-wrap">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center bg-surface border border-border">
               {team.logo_url
                 ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
                 : <span className="text-xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
@@ -108,7 +107,7 @@ export default function TeamPage() {
             </div>
             <div className="flex-1">
               <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
-              <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'rgba(245,245,247,0.6)' }}>
+              <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
                 {team.nationality && (
                   <span className="flex items-center gap-1.5">
                     {team.flag_url
@@ -195,7 +194,7 @@ export default function TeamPage() {
                 {drivers.map(d => (
                   <Link key={d.driver_id} to={`/driver/${d.driver_id}`}>
                     <div className="apple-card overflow-hidden">
-                      <div className="h-36 bg-white/4 overflow-hidden relative">
+                      <div className="h-36 bg-muted overflow-hidden relative">
                         {d.image_url
                           ? <img src={d.image_url} alt={d.name} className="w-full h-full object-cover object-top" loading="lazy" />
                           : <div className="w-full h-full flex items-center justify-center text-2xl font-black" style={{ color: 'var(--text-muted)' }}>{d.code || '?'}</div>
@@ -294,9 +293,9 @@ export default function TeamPage() {
                 </thead>
                 <tbody>
                   {filteredResults.map(r => {
-                    const posColor = r.position === 1 ? 'text-yellow-400' : r.position === 2 ? 'text-gray-300' : r.position === 3 ? 'text-amber-600' : ''
+                    const posColor = r.position === 1 ? 'pos-1' : r.position === 2 ? 'pos-2' : r.position === 3 ? 'pos-3' : ''
                     return (
-                      <tr key={r.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                      <tr key={r.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                         <td className="py-1.5 pl-3">
                           <span className={`font-bold text-xs ${posColor}`} style={{ color: posColor ? undefined : 'var(--text-secondary)' }}>
                             {r.position ?? '—'}

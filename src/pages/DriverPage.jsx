@@ -22,7 +22,10 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
     <div className="apple-card overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-white/3 transition-colors"
+        className="w-full px-5 py-3.5 flex items-center gap-3 transition-colors"
+        style={{ background: 'transparent' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
         <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Season {year}</span>
         {isChamp && (
@@ -53,7 +56,7 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
             </thead>
             <tbody>
               {races.map(r => (
-                <tr key={r.id} className="hover:bg-white/3 transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
+                <tr key={r.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="py-2 pl-5">
                     <Link to={`/race/${r.race_id}`} className="text-xs font-medium hover:text-f1red transition-colors">
                       {r.races?.name?.replace('Grand Prix', 'GP') || '—'}
@@ -156,14 +159,12 @@ export default function DriverPage() {
           ? <img src={driver.hero_image_url} alt={driver.name}
               className="absolute inset-0 w-full h-full object-cover object-center"
             />
-          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0008 0%, #0f0010 50%, #0a0a0f 100%)' }} />
+          : <div className="absolute inset-0 bg-surface" />
         }
-        {/* Gradient overlay so text is always readable */}
-        <div className="absolute inset-0" style={{
-          background: driver.hero_image_url
-            ? 'linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.5) 50%, rgba(5,5,8,0.2) 100%)'
-            : 'radial-gradient(ellipse 60% 100% at 80% 50%, rgba(225,6,0,0.12) 0%, transparent 70%)'
-        }} />
+        {driver.hero_image_url
+          ? <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
+          : <div className="absolute inset-0 bg-radial-glow from-accent/10 via-transparent to-transparent" />
+        }
 
         <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 320 }}>
           <div className="flex items-center gap-2 mb-3">
@@ -172,13 +173,13 @@ export default function DriverPage() {
           <h1 className="text-4xl md:text-5xl font-black mb-3" style={{ letterSpacing: '-0.04em' }}>{driver.name}</h1>
           <div className="flex items-center gap-4 flex-wrap">
             {driver.nationality && (
-              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'rgba(245,245,247,0.7)' }}>
+              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 {driver.flag_url ? <img src={driver.flag_url} alt={driver.nationality} className="h-4 w-auto rounded-sm" /> : <Icon settingKey="icon_flag" emoji="🌍" />}
                 {driver.nationality}
               </span>
             )}
             {driver.dob && (
-              <span className="text-sm font-medium" style={{ color: 'rgba(245,245,247,0.7)' }}>
+              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 <Icon settingKey="icon_birthday" emoji="🎂" /> {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             )}

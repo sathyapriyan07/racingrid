@@ -32,7 +32,7 @@ export default function Circuits() {
           {filtered.map(circuit => (
             <Link key={circuit.id} to={`/circuit/${circuit.id}`}>
               <div className="apple-card overflow-hidden group">
-                <div className="h-36 relative flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className="h-36 relative flex items-center justify-center bg-muted">
                   {circuit.layout_image
                     ? <img src={circuit.layout_image} alt={circuit.name} loading="lazy"
                         className="h-full w-full object-contain p-6 opacity-50 group-hover:opacity-90 transition-opacity duration-300" />

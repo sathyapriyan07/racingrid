@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
 function getInitialTheme() {
   const stored = localStorage.getItem('theme')
-  if (stored) return stored
-  // Detect system preference
-  if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
-  return 'dark'
+  if (stored === 'dark' || stored === 'light') return stored
+  return getSystemTheme()
 }
 
 export function useTheme() {
@@ -13,24 +15,35 @@ export function useTheme() {
 
   useEffect(() => {
     const root = document.documentElement
-    root.classList.remove('dark', 'light')
-    root.classList.add(theme)
-    localStorage.setItem('theme', theme)
+    if (theme === 'dark') root.classList.add('dark')
+    else root.classList.remove('dark')
   }, [theme])
 
-  // Listen for system preference changes
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const handler = (e) => {
       if (!localStorage.getItem('theme')) {
-        setTheme(e.matches ? 'light' : 'dark')
+        setTheme(e.matches ? 'dark' : 'light')
       }
     }
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+
+    if (mq.addEventListener) mq.addEventListener('change', handler)
+    else mq.addListener(handler)
+
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', handler)
+      else mq.removeListener(handler)
+    }
   }, [])
 
-  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+  const toggle = () => {
+    setTheme(current => {
+      const next = current === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('theme', next)
+      return next
+    })
+  }
 
   return { theme, toggle }
 }
+

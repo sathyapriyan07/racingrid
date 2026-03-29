@@ -8,11 +8,7 @@ export default function AdminTable({ table, data, columns, onRefresh }) {
   const [editData, setEditData] = useState({})
   const [deleting, setDeleting] = useState(null)
 
-  const startEdit = (row) => {
-    setEditId(row.id)
-    setEditData({ ...row })
-  }
-
+  const startEdit = (row) => { setEditId(row.id); setEditData({ ...row }) }
   const cancelEdit = () => { setEditId(null); setEditData({}) }
 
   const saveEdit = async () => {
@@ -32,31 +28,30 @@ export default function AdminTable({ table, data, columns, onRefresh }) {
     setDeleting(null)
   }
 
-  if (!data?.length) return <p className="text-white/30 text-sm text-center py-8">No records found.</p>
+  if (!data?.length) return <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>No records found.</p>
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-white/30 border-b border-white/5">
+          <tr className="border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
             {columns.map(c => <th key={c.key} className="text-left pb-2 pr-4 font-medium">{c.label}</th>)}
             <th className="text-right pb-2">Actions</th>
           </tr>
         </thead>
         <tbody>
           {data.map(row => (
-            <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+            <tr key={row.id} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}>
               {columns.map(c => (
                 <td key={c.key} className="py-2 pr-4">
                   {editId === row.id && c.editable !== false ? (
-                    <input
-                      value={editData[c.key] ?? ''}
-                      onChange={e => setEditData(d => ({ ...d, [c.key]: e.target.value }))}
-                      className="input py-1 text-xs w-full min-w-20"
-                    />
+                    <input value={editData[c.key] ?? ''} onChange={e => setEditData(d => ({ ...d, [c.key]: e.target.value }))}
+                      className="input py-1 text-xs w-full min-w-20" />
                   ) : (
-                    <span className="text-white/70 truncate block max-w-40">
-                      {row[c.key] ?? <span className="text-white/20">—</span>}
+                    <span className="truncate block max-w-40" style={{ color: 'var(--text-secondary)' }}>
+                      {row[c.key] ?? <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </span>
                   )}
                 </td>
@@ -65,13 +60,13 @@ export default function AdminTable({ table, data, columns, onRefresh }) {
                 <div className="flex items-center justify-end gap-1">
                   {editId === row.id ? (
                     <>
-                      <button onClick={saveEdit} className="p-1.5 rounded hover:bg-green-500/20 text-green-400 transition-colors"><Check size={12} /></button>
-                      <button onClick={cancelEdit} className="p-1.5 rounded hover:bg-white/10 text-white/40 transition-colors"><X size={12} /></button>
+                      <button onClick={saveEdit} className="p-1.5 rounded hover:bg-green-500/20 text-green-500 transition-colors"><Check size={12} /></button>
+                      <button onClick={cancelEdit} className="p-1.5 rounded transition-colors" style={{ color: 'var(--text-muted)' }}><X size={12} /></button>
                     </>
                   ) : (
                     <>
-                      <button onClick={() => startEdit(row)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"><Edit2 size={12} /></button>
-                      <button onClick={() => deleteRow(row.id)} disabled={deleting === row.id} className="p-1.5 rounded hover:bg-f1red/20 text-white/40 hover:text-f1red transition-colors"><Trash2 size={12} /></button>
+                      <button onClick={() => startEdit(row)} className="p-1.5 rounded transition-colors" style={{ color: 'var(--text-muted)' }}><Edit2 size={12} /></button>
+                      <button onClick={() => deleteRow(row.id)} disabled={deleting === row.id} className="p-1.5 rounded hover:bg-f1red/20 hover:text-f1red transition-colors" style={{ color: 'var(--text-muted)' }}><Trash2 size={12} /></button>
                     </>
                   )}
                 </div>

@@ -60,7 +60,7 @@ export default function CircuitPage() {
   }, [id])
 
   if (loading) return <Spinner />
-  if (!circuit) return <div className="text-white/40 text-center py-16">Circuit not found.</div>
+  if (!circuit) return <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>Circuit not found.</div>
 
   return (
     <div className="space-y-6">
@@ -68,13 +68,12 @@ export default function CircuitPage() {
       <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 280 }}>
         {circuit.hero_image_url
           ? <img src={circuit.hero_image_url} alt={circuit.name} className="absolute inset-0 w-full h-full object-cover object-center" />
-          : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0a0a0f 100%)' }} />
+          : <div className="absolute inset-0 bg-surface" />
         }
-        <div className="absolute inset-0" style={{
-          background: circuit.hero_image_url
-            ? 'linear-gradient(to top, rgba(5,5,8,0.95) 0%, rgba(5,5,8,0.5) 50%, rgba(5,5,8,0.15) 100%)'
-            : 'radial-gradient(ellipse 60% 100% at 20% 50%, rgba(225,6,0,0.08) 0%, transparent 70%)'
-        }} />
+        {circuit.hero_image_url
+          ? <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
+          : <div className="absolute inset-0 bg-radial-glow from-accent/10 via-transparent to-transparent" />
+        }
 
         {/* Layout image overlay — bottom right */}
         {circuit.layout_image && (
@@ -88,7 +87,7 @@ export default function CircuitPage() {
 
         <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
           <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{circuit.name}</h1>
-          <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'rgba(245,245,247,0.6)' }}>
+          <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
             {circuit.location && <span className="flex items-center gap-1.5"><Icon settingKey="icon_location" LucideIcon={MapPin} /> {circuit.location}</span>}
             {circuit.country && <span className="flex items-center gap-1.5"><MapPin size={14} /> {circuit.country}</span>}
           </div>
@@ -122,7 +121,9 @@ export default function CircuitPage() {
             </thead>
             <tbody>
               {races.map(race => (
-                <tr key={race.id} className="border-b hover:bg-white/3 transition-colors" style={{ borderColor: 'var(--border)' }}>
+                <tr key={race.id} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
+                  onMouseLeave={e => e.currentTarget.style.background = ''}>
                   <td className="py-2.5 pl-5">
                     <Link to={`/race/${race.id}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
                       {race.name}

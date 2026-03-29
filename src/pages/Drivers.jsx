@@ -8,7 +8,7 @@ function DriverCard({ driver, size = 'md' }) {
   return (
     <Link to={`/driver/${driver.id}`}>
       <div className="apple-card overflow-hidden flex flex-col" style={{ width: isLg ? 160 : 130 }}>
-        <div className={`${isLg ? 'h-44' : 'h-32'} bg-white/4 overflow-hidden relative`}>
+        <div className={`${isLg ? 'h-44' : 'h-32'} bg-muted overflow-hidden relative`}>
           {driver.image_url
             ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover object-top" loading="lazy" />
             : <div className="w-full h-full flex items-center justify-center text-2xl font-black" style={{ color: 'var(--text-muted)' }}>{driver.code || '?'}</div>
@@ -71,7 +71,7 @@ export default function Drivers() {
                 {others.map(driver => (
                   <Link key={driver.id} to={`/driver/${driver.id}`}>
                     <div className="apple-card overflow-hidden">
-                      <div className="h-24 bg-white/4 overflow-hidden relative">
+                      <div className="h-24 bg-muted overflow-hidden relative">
                         {driver.image_url
                           ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover object-top" loading="lazy" />
                           : <div className="w-full h-full flex items-center justify-center font-black text-lg" style={{ color: 'var(--text-muted)' }}>{driver.code || '?'}</div>

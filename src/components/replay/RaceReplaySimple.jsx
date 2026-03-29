@@ -192,7 +192,7 @@ export default function RaceReplaySimple({ raceId }) {
           </thead>
           <tbody>
             {positionsAtLap.map((row, i) => (
-              <tr key={row.driver_id || i} className="border-b hover:bg-white/3 transition-colors"
+              <tr key={row.driver_id || i} className="border-b hover:bg-muted transition-colors"
                 style={{ borderColor: 'var(--border)', background: row.pitted ? 'rgba(234,179,8,0.05)' : undefined }}>
                 <td className="py-1.5 pl-4">
                   <span className="font-bold text-xs" style={{ color: POSITION_COLORS[i] || 'var(--text-secondary)' }}>

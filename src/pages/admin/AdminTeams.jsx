@@ -14,13 +14,13 @@ function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
   const [fullName, setFullName] = useState(row.full_name || '')
   const [founded, setFounded] = useState(row.founded || '')
   return (
-    <tr className="bg-white/3">
+    <tr className="bg-muted">
       <td colSpan={colSpan} className="px-3 py-3">
         <div className="flex items-center gap-4 flex-wrap">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)}
               className="w-4 h-4 accent-f1red" />
-            <span className="text-xs text-white/70">Active (current season)</span>
+            <span className="text-xs text-secondary">Active (current season)</span>
           </label>
           <input value={base} onChange={e => setBase(e.target.value)}
             placeholder="Base location..." className="input text-xs py-1 w-48" />
@@ -102,7 +102,7 @@ export default function AdminTeams() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-white/30 border-b border-white/5">
+                <tr className="text-secondary border-b border-border">
                   <th className="text-left pb-2 pr-3 w-10">Logo</th>
                   <th className="text-left pb-2 pr-3 w-16 hidden sm:table-cell">Car</th>
                   <th className="text-left pb-2 pr-3">Name</th>
@@ -115,17 +115,17 @@ export default function AdminTeams() {
               <tbody>
                 {data.map(row => (
                   <>
-                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+                    <tr key={row.id} className="border-b border-border hover:bg-muted">
                       <td className="py-2 pr-3">
                         {row.logo_url
-                          ? <img src={row.logo_url} alt={row.name} className="w-8 h-8 object-contain rounded bg-white/5 p-0.5" />
-                          : <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-white/20"><ImagePlus size={12} /></div>
+                          ? <img src={row.logo_url} alt={row.name} className="w-8 h-8 object-contain rounded bg-muted p-0.5" />
+                          : <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-secondary"><ImagePlus size={12} /></div>
                         }
                       </td>
                       <td className="py-2 pr-3 hidden sm:table-cell">
                         {row.car_image
-                          ? <img src={row.car_image} alt={`${row.name} car`} className="w-16 h-8 object-contain rounded bg-white/5" />
-                          : <div className="w-16 h-8 rounded bg-white/5 flex items-center justify-center text-white/20"><Car size={12} /></div>
+                          ? <img src={row.car_image} alt={`${row.name} car`} className="w-16 h-8 object-contain rounded bg-muted" />
+                          : <div className="w-16 h-8 rounded bg-muted flex items-center justify-center text-secondary"><Car size={12} /></div>
                         }
                       </td>
                       <td className="py-2 pr-3 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
@@ -137,39 +137,39 @@ export default function AdminTeams() {
                       </td>
                       <td className="py-2 pr-3 hidden md:table-cell text-xs" style={{ color: 'var(--text-muted)' }}>{row.base || '—'}</td>
                       <td className="py-2 pr-3">
-                        <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-white/30'}`}>
+                        <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-secondary'}`}>
                           {row.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => toggle(`${row.id}-flag`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-flag` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-flag` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
                             <Flag size={11} /> Flag
                           </button>
                           <button onClick={() => toggle(`${row.id}-hero`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-hero` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-hero` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
                             <Image size={11} /> Hero
                           </button>
                           <button onClick={() => toggle(`${row.id}-details`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-details` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-details` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-details` ? undefined : 'var(--text-muted)' }}>
                             <Pencil size={11} /> Edit
                           </button>
                           <button onClick={() => toggle(`${row.id}-bio`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-bio` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-bio` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-bio` ? undefined : 'var(--text-muted)' }}>
                             <FileText size={11} /> Bio
                           </button>
                           <button onClick={() => toggle(`${row.id}-logo`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-logo` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-logo` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-logo` ? undefined : 'var(--text-muted)' }}>
                             <ImagePlus size={11} /> Logo
                           </button>
                           <button onClick={() => toggle(`${row.id}-car`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-car` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-car` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-car` ? undefined : 'var(--text-muted)' }}>
                             <Car size={11} /> Car
                           </button>

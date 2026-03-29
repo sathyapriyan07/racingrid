@@ -9,7 +9,7 @@ function TeamCard({ team, featured = false }) {
       <div className="apple-card overflow-hidden" style={{ width: featured ? 200 : '100%' }}>
         {featured ? (
           <>
-            <div className="h-28 flex items-center justify-center p-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
+            <div className="h-28 flex items-center justify-center p-4 bg-muted">
               {team.logo_url
                 ? <img src={team.logo_url} alt={team.name} className="h-16 w-auto object-contain" loading="lazy" />
                 : <span className="text-2xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
@@ -26,7 +26,7 @@ function TeamCard({ team, featured = false }) {
           </>
         ) : (
           <div className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-muted">
               {team.logo_url
                 ? <img src={team.logo_url} alt={team.name} className="w-8 h-8 object-contain" loading="lazy" />
                 : <span className="text-xs font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>

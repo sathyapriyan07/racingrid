@@ -53,7 +53,7 @@ export default function AdminCircuits() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-white/30 border-b border-white/5">
+                <tr className="text-secondary border-b border-border">
                   <th className="text-left pb-2 pr-4 w-16">Layout</th>
                   <th className="text-left pb-2 pr-4">Name</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Location</th>
@@ -64,11 +64,11 @@ export default function AdminCircuits() {
               <tbody>
                 {data.map(row => (
                   <>
-                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+                    <tr key={row.id} className="border-b border-border hover:bg-muted">
                       <td className="py-2 pr-4">
                         {row.layout_image
-                          ? <img src={row.layout_image} alt={row.name} className="w-12 h-8 object-contain bg-white/5 rounded" />
-                          : <div className="w-12 h-8 rounded bg-white/5 flex items-center justify-center text-white/20"><ImagePlus size={12} /></div>
+                          ? <img src={row.layout_image} alt={row.name} className="w-12 h-8 object-contain bg-muted rounded" />
+                          : <div className="w-12 h-8 rounded bg-muted flex items-center justify-center text-secondary"><ImagePlus size={12} /></div>
                         }
                       </td>
                       <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
@@ -77,12 +77,12 @@ export default function AdminCircuits() {
                       <td className="py-2 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => toggle(`${row.id}-layout`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-layout` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-layout` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-layout` ? undefined : 'var(--text-muted)' }}>
                             <ImagePlus size={11} /> Layout
                           </button>
                           <button onClick={() => toggle(`${row.id}-hero`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
                             <Image size={11} /> Hero
                           </button>

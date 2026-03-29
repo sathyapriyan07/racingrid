@@ -143,7 +143,7 @@ export default function AdminRaces() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-white/30 border-b border-white/5">
+                <tr className="text-secondary border-b border-border">
                   <th className="text-left pb-2 pr-4">Name</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Date</th>
                   <th className="text-left pb-2 pr-4 hidden sm:table-cell">Round</th>
@@ -154,14 +154,14 @@ export default function AdminRaces() {
               <tbody>
                 {data.map(row => (
                   <>
-                    <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+                    <tr key={row.id} className="border-b border-border hover:bg-muted">
                       <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
                       <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.date || '—'}</td>
                       <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.round || '—'}</td>
                       <td className="py-2 pr-4 hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>{row.seasons?.year || '—'}</td>
                       <td className="py-2 text-right">
                         <button onClick={() => setExpandedId(expandedId === row.id ? null : row.id)}
-                          className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-white/5 transition-colors text-xs"
+                          className="flex items-center gap-1 ml-auto px-2 py-1 rounded hover:bg-muted transition-colors text-xs"
                           style={{ color: expandedId === row.id ? '#E10600' : 'var(--text-muted)' }}>
                           <PlayCircle size={11} />
                           Highlights

@@ -11,13 +11,13 @@ import TextEditRow from './TextEditRow'
 function ActiveEditRow({ colSpan, row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
   return (
-    <tr className="bg-white/3">
+    <tr className="bg-muted">
       <td colSpan={colSpan} className="px-3 py-3">
         <div className="flex items-center gap-4 flex-wrap">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)}
               className="w-4 h-4 accent-f1red" />
-            <span className="text-xs text-white/70">Active (current season)</span>
+            <span className="text-xs text-secondary">Active (current season)</span>
           </label>
           <div className="flex gap-2 ml-auto">
             <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
@@ -93,7 +93,7 @@ export default function AdminDrivers() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-white/30 border-b border-white/5">
+                  <tr className="text-secondary border-b border-border">
                     <th className="text-left pb-2 pr-4 w-10">Image</th>
                     <th className="text-left pb-2 pr-4">Name</th>
                     <th className="text-left pb-2 pr-4">Code</th>
@@ -106,11 +106,11 @@ export default function AdminDrivers() {
                 <tbody>
                   {data.map(row => (
                     <>
-                      <tr key={row.id} className="border-b border-white/5 hover:bg-white/3">
+                      <tr key={row.id} className="border-b border-border hover:bg-muted">
                         <td className="py-2 pr-4">
                           {row.image_url
-                            ? <img src={row.image_url} alt={row.name} className="w-8 h-8 rounded-full object-cover object-top bg-white/10" />
-                            : <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/20"><ImagePlus size={12} /></div>
+                            ? <img src={row.image_url} alt={row.name} className="w-8 h-8 rounded-full object-cover object-top bg-muted" />
+                            : <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-secondary"><ImagePlus size={12} /></div>
                           }
                         </td>
                         <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
@@ -123,34 +123,34 @@ export default function AdminDrivers() {
                         </td>
                         <td className="py-2 pr-4 hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>{row.dob || '—'}</td>
                         <td className="py-2 pr-4">
-                          <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-white/30'}`}>
+                          <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-secondary'}`}>
                             {row.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button onClick={() => toggle(`${row.id}-active`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-active` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-active` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                               style={{ color: editId === `${row.id}-active` ? undefined : 'var(--text-muted)' }}>
                               <Pencil size={11} /> Edit
                             </button>
                             <button onClick={() => toggle(`${row.id}-bio`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-bio` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-bio` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                               style={{ color: editId === `${row.id}-bio` ? undefined : 'var(--text-muted)' }}>
                               <FileText size={11} /> Bio
                             </button>
                             <button onClick={() => toggle(`${row.id}-image`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-image` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-image` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                               style={{ color: editId === `${row.id}-image` ? undefined : 'var(--text-muted)' }}>
                               <ImagePlus size={11} /> Photo
                             </button>
                             <button onClick={() => toggle(`${row.id}-hero`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                               style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
                               <Image size={11} /> Hero
                             </button>
                             <button onClick={() => toggle(`${row.id}-flag`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-flag` ? 'bg-f1red/20 text-f1red' : 'hover:bg-white/5'}`}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-flag` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                               style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
                               <Flag size={11} /> Flag
                             </button>
