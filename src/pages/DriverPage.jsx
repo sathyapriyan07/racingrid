@@ -151,10 +151,10 @@ export default function DriverPage() {
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 60% 100% at 80% 50%, rgba(225,6,0,0.12) 0%, transparent 70%)' }} />
 
         {driver.image_url && (
-          <div className="absolute right-0 bottom-0 h-full w-1/2 md:w-2/5 pointer-events-none overflow-hidden">
+          <div className="absolute right-0 bottom-0 h-full w-2/3 md:w-2/5 pointer-events-none overflow-hidden">
             <img src={driver.image_url} alt={driver.name}
-              className="absolute bottom-0 right-0 h-[115%] w-full object-contain object-bottom transition-transform duration-700 hover:scale-105"
-              style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 30%, transparent 100%)' }}
+              className="absolute bottom-0 right-0 h-[120%] w-full object-contain object-bottom transition-transform duration-700"
+              style={{ maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 20%, transparent 90%)', WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 20%, transparent 90%)' }}
             />
           </div>
         )}
