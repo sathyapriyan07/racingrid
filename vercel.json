@@ -1,5 +1,8 @@
 {
   "rewrites": [
+    { "source": "/sw.js", "destination": "/sw.js" },
+    { "source": "/manifest.webmanifest", "destination": "/manifest.webmanifest" },
+    { "source": "/f1.svg", "destination": "/f1.svg" },
     { "source": "/api/ergast/(.*)", "destination": "https://api.jolpi.ca/ergast/f1/$1" },
     { "source": "/api/openf1/(.*)", "destination": "https://api.openf1.org/v1/$1" },
     { "source": "/(.*)", "destination": "/index.html" }

@@ -1,0 +1,19 @@
+{
+  "name": "F1Base",
+  "short_name": "F1Base",
+  "description": "Formula 1 database — races, drivers, teams, lap-by-lap replays.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#E10600",
+  "icons": [
+    {
+      "src": "/f1.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
