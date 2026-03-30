@@ -4,7 +4,7 @@ import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { BarChart2, Flag, Trophy, ExternalLink, Camera, AtSign } from 'lucide-react'
+import { BarChart2, Flag, Trophy, ExternalLink } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji }) {
@@ -155,7 +155,8 @@ export default function TeamPage() {
               aria-label="Instagram"
               title="Instagram"
             >
-              <Camera size={12} /> Instagram
+              <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain" />
+              Instagram
             </a>
           )}
           {team.twitter_url && (
@@ -167,7 +168,8 @@ export default function TeamPage() {
               aria-label="Twitter"
               title="Twitter"
             >
-              <AtSign size={12} /> Twitter
+              <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain" />
+              Twitter
             </a>
           )}
           {team.website_url && (

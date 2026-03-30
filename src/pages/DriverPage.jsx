@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { Trophy, ChevronDown, ExternalLink, Camera, AtSign } from 'lucide-react'
+import { Trophy, ChevronDown, ExternalLink } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji, className = '' }) {
@@ -218,7 +218,8 @@ export default function DriverPage() {
               aria-label="Instagram"
               title="Instagram"
             >
-              <Camera size={12} /> Instagram
+              <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain" />
+              Instagram
             </a>
           )}
           {driver.twitter_url && (
@@ -230,7 +231,8 @@ export default function DriverPage() {
               aria-label="Twitter"
               title="Twitter"
             >
-              <AtSign size={12} /> Twitter
+              <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain" />
+              Twitter
             </a>
           )}
           {driver.website_url && (
