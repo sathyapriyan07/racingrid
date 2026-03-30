@@ -85,7 +85,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="scroll-row">
-            {latestRaces.map((race, i) => (
+            {latestRaces.map((race) => (
               <div key={race.id}>
                 <Link to={`/race/${race.id}`}>
                   <div
