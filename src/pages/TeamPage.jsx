@@ -145,17 +145,17 @@ export default function TeamPage() {
             {team.founded && <span className="font-medium">Est. {team.founded}</span>}
           </div>
         </div>
-        <div className="flex gap-2 ml-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:ml-auto sm:justify-end">
           {team.instagram_url && (
             <a
               href={normalizeSocialUrl('instagram', team.instagram_url)}
               target="_blank"
               rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
               aria-label="Instagram"
               title="Instagram"
             >
-              <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain" />
+              <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain shrink-0" />
               Instagram
             </a>
           )}
@@ -164,11 +164,11 @@ export default function TeamPage() {
               href={normalizeSocialUrl('twitter', team.twitter_url)}
               target="_blank"
               rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
               aria-label="Twitter"
               title="Twitter"
             >
-              <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain" />
+              <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain shrink-0" />
               Twitter
             </a>
           )}
@@ -177,7 +177,7 @@ export default function TeamPage() {
               href={normalizeWebsiteUrl(team.website_url)}
               target="_blank"
               rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
             >
               <ExternalLink size={12} /> Visit website
             </a>
