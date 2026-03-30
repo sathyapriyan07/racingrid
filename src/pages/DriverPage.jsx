@@ -146,9 +146,6 @@ export default function DriverPage() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <Spinner />
-  if (!driver) return <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>Driver not found.</div>
-
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
   const poles = results.filter(r => r.grid === 1).length
@@ -210,6 +207,9 @@ export default function DriverPage() {
       )
       .slice(0, 30)
   }, [poleRows, results])
+
+  if (loading) return <Spinner />
+  if (!driver) return <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>Driver not found.</div>
 
   const activeTabs = [
     ...TABS.filter(t => t.id !== 'championships' || champYears.length > 0),

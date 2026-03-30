@@ -73,9 +73,6 @@ export default function TeamPage() {
     load()
   }, [id])
 
-  if (loading) return <Spinner />
-  if (!team) return <div className="text-secondary text-center py-16">Team not found.</div>
-
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
   const totalPoints = results.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
@@ -136,6 +133,9 @@ export default function TeamPage() {
       )
       .slice(0, 30)
   }, [poleRows, results])
+
+  if (loading) return <Spinner />
+  if (!team) return <div className="text-secondary text-center py-16">Team not found.</div>
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
