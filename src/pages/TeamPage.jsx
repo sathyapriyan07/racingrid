@@ -4,7 +4,7 @@ import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { BarChart2, Flag, Trophy } from 'lucide-react'
+import { BarChart2, Flag, Trophy, ExternalLink } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji }) {
@@ -12,6 +12,13 @@ function Icon({ settingKey, emoji }) {
   return url
     ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
     : <span>{emoji}</span>
+}
+
+function normalizeWebsiteUrl(url) {
+  const trimmed = String(url || '').trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
 }
 
 export default function TeamPage() {
@@ -126,6 +133,16 @@ export default function TeamPage() {
             {team.founded && <span className="font-medium">Est. {team.founded}</span>}
           </div>
         </div>
+        {team.website_url && (
+          <a
+            href={normalizeWebsiteUrl(team.website_url)}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 ml-auto"
+          >
+            <ExternalLink size={12} /> Visit website
+          </a>
+        )}
       </div>
 
       {/* ── Metrics ── */}

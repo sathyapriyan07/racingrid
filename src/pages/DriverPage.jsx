@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { Trophy, ChevronDown } from 'lucide-react'
+import { Trophy, ChevronDown, ExternalLink } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji, className = '' }) {
@@ -92,6 +92,13 @@ const TABS = [
   { id: 'biography', label: 'Biography' },
   { id: 'championships', label: 'Championships' },
 ]
+
+function normalizeWebsiteUrl(url) {
+  const trimmed = String(url || '').trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
 
 export default function DriverPage() {
   const { id } = useParams()
@@ -189,7 +196,19 @@ export default function DriverPage() {
             )}
           </div>
         </div>
-        <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3">Compare</Link>
+        <div className="flex gap-2 ml-auto">
+          {driver.website_url && (
+            <a
+              href={normalizeWebsiteUrl(driver.website_url)}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+            >
+              <ExternalLink size={12} /> Visit website
+            </a>
+          )}
+          <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3">Compare</Link>
+        </div>
       </div>
 
       {/* ── Metrics ── */}

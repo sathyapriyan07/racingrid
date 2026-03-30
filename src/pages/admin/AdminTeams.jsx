@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image } from 'lucide-react'
+import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 import TextEditRow from './TextEditRow'
@@ -173,6 +173,11 @@ export default function AdminTeams() {
                             style={{ color: editId === `${row.id}-car` ? undefined : 'var(--text-muted)' }}>
                             <Car size={11} /> Car
                           </button>
+                          <button onClick={() => toggle(`${row.id}-website`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-website` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
+                            style={{ color: editId === `${row.id}-website` ? undefined : 'var(--text-muted)' }}>
+                            <Link2 size={11} /> Website
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -226,6 +231,16 @@ export default function AdminTeams() {
                         folder="teams/cars"
                         currentUrl={row.car_image}
                         onSave={(url) => saveField(row.id, 'car_image', url)}
+                        onCancel={() => setEditId(null)}
+                      />
+                    )}
+                    {editId === `${row.id}-website` && (
+                      <TextEditRow
+                        colSpan={7}
+                        label="Website URL"
+                        currentValue={row.website_url}
+                        rows={2}
+                        onSave={(val) => saveField(row.id, 'website_url', val || null)}
                         onCancel={() => setEditId(null)}
                       />
                     )}
