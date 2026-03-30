@@ -45,36 +45,36 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
 
       {open && (
         <div style={{ borderTop: '1px solid var(--border)' }}>
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead>
               <tr style={{ fontSize: 10, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-                <th className="text-left py-2 pl-5">Race</th>
-                <th className="text-center py-2">Pos</th>
-                <th className="text-center py-2 hidden sm:table-cell">Grid</th>
-                <th className="text-center py-2">Pts</th>
-                <th className="text-left py-2 pr-5">Team</th>
+                <th className="text-left py-2 pl-5 w-[52%]">Race</th>
+                <th className="text-center py-2 w-12 whitespace-nowrap">Pos</th>
+                <th className="text-center py-2 w-14 whitespace-nowrap hidden sm:table-cell">Grid</th>
+                <th className="text-center py-2 w-12 whitespace-nowrap">Pts</th>
+                <th className="text-left py-2 pr-5 w-[36%]">Team</th>
               </tr>
             </thead>
             <tbody>
               {races.map(r => (
                 <tr key={r.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="py-2 pl-5">
-                    <Link to={`/race/${r.race_id}`} className="text-xs font-medium hover:text-f1red transition-colors">
+                    <Link to={`/race/${r.race_id}`} className="text-xs font-medium hover:text-f1red transition-colors block truncate" title={r.races?.name || ''}>
                       {r.races?.name?.replace('Grand Prix', 'GP') || '—'}
                     </Link>
                   </td>
-                  <td className="py-2 text-center">
+                  <td className="py-2 text-center tabular-nums whitespace-nowrap">
                     <span className={`text-xs font-bold ${r.position === 1 ? 'pos-1' : r.position <= 3 ? 'pos-2' : ''}`}
                       style={{ color: r.position > 3 ? 'var(--text-secondary)' : undefined }}>
                       {r.position ?? '—'}
                     </span>
                   </td>
-                  <td className="py-2 text-center text-xs hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
-                  <td className="py-2 text-center text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{r.points ?? 0}</td>
-                  <td className="py-2 pr-5">
-                    <div className="flex items-center gap-1.5">
+                  <td className="py-2 text-center text-xs tabular-nums whitespace-nowrap hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{r.grid ?? '—'}</td>
+                  <td className="py-2 text-center text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{r.points ?? 0}</td>
+                  <td className="py-2 pr-5 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       {r.teams?.logo_url && <img src={r.teams.logo_url} alt={r.teams.name} className="h-4 w-auto object-contain shrink-0" loading="lazy" />}
-                      <span className="text-xs hidden sm:inline" style={{ color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
+                      <span className="text-xs hidden sm:inline truncate min-w-0 flex-1" style={{ color: 'var(--text-muted)' }}>{r.teams?.name || '—'}</span>
                     </div>
                   </td>
                 </tr>
