@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Check, X, Upload, Loader } from 'lucide-react'
 import { uploadImage } from '../../lib/uploadImage'
+import { resolveImageSrc } from '../../lib/resolveImageSrc'
 import toast from 'react-hot-toast'
 
 /**
@@ -54,7 +55,11 @@ export default function ImageEditRow({ colSpan, folder, currentUrl, onSave, onCa
               {uploading ? 'Uploading...' : 'Upload File'}
             </button>
             {url && (
-              <img src={url} alt="preview" className="h-8 w-auto max-w-20 object-contain rounded bg-muted" />
+              <img
+                src={resolveImageSrc(url) || url}
+                alt="preview"
+                className="h-8 w-auto max-w-20 object-contain rounded bg-muted"
+              />
             )}
           </div>
 

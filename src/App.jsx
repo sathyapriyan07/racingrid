@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
-import { useSettingsStore } from './store/settingsStore'
 import Layout from './components/Layout'
 
 import Home from './pages/Home'
@@ -38,9 +37,8 @@ function AdminRoute({ children }) {
 
 export default function App() {
   const { init } = useAuthStore()
-  const { fetchSettings } = useSettingsStore()
 
-  useEffect(() => { init(); fetchSettings() }, [])
+  useEffect(() => { init() }, [])
 
   return (
     <BrowserRouter>

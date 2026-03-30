@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
+import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { BarChart2, Flag, Trophy, ExternalLink, MapPin } from 'lucide-react'
@@ -10,7 +11,7 @@ import { useSettingsStore } from '../store/settingsStore'
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
-    ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
+    ? <img src={resolveImageSrc(url) || url} alt="" className="inline-block w-4 h-4 object-contain" />
     : <span>{emoji}</span>
 }
 

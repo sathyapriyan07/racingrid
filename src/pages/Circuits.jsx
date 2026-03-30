@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
+import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, PageHeader, EmptyState } from '../components/ui'
 
 export default function Circuits() {
@@ -34,7 +35,7 @@ export default function Circuits() {
               <div className="apple-card overflow-hidden group">
                 <div className="h-36 relative flex items-center justify-center bg-muted">
                   {circuit.layout_image
-                    ? <img src={circuit.layout_image} alt={circuit.name} loading="lazy"
+                    ? <img src={resolveImageSrc(circuit.layout_image) || circuit.layout_image} alt={circuit.name} loading="lazy"
                         className="h-full w-full object-contain p-6 opacity-50 group-hover:opacity-90 transition-opacity duration-300" />
                     : <div className="text-4xl font-black" style={{ color: 'var(--text-muted)', opacity: 0.2 }}>
                         {circuit.country?.slice(0, 2).toUpperCase() || '??'}

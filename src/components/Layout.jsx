@@ -1,7 +1,15 @@
+import { useEffect } from 'react'
 import Navbar from './ui/Navbar'
 import { Toaster } from 'react-hot-toast'
+import { useSettingsStore } from '../store/settingsStore'
 
 export default function Layout({ children }) {
+  const { fetchSettings } = useSettingsStore()
+
+  useEffect(() => {
+    fetchSettings()
+  }, [fetchSettings])
+
   return (
     <div className="min-h-screen relative bg-base text-primary">
       <Navbar />

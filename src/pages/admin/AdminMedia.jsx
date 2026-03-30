@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { uploadImage } from '../../lib/uploadImage'
+import { resolveImageSrc } from '../../lib/resolveImageSrc'
 import { useSettingsStore } from '../../store/settingsStore'
 import toast from 'react-hot-toast'
 import { Upload, Loader, X } from 'lucide-react'
@@ -47,7 +48,7 @@ function IconRow({ icon, value, onSave }) {
       <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-2xl"
         style={{ background: 'var(--bg-raised)' }}>
         {url
-          ? <img src={url} alt={icon.label} className="w-8 h-8 object-contain" />
+          ? <img src={resolveImageSrc(url) || url} alt={icon.label} className="w-8 h-8 object-contain" />
           : icon.emoji
         }
       </div>

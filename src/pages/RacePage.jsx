@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
+import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
@@ -8,7 +9,7 @@ import { useSettingsStore } from '../store/settingsStore'
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
   return url
-    ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
+    ? <img src={resolveImageSrc(url) || url} alt="" className="inline-block w-4 h-4 object-contain" />
     : <span>{emoji}</span>
 }
 const POSITION_COLORS = ['pos-1', 'pos-2', 'pos-3']

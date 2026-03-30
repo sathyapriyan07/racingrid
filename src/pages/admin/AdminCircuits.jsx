@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
+import { resolveImageSrc } from '../../lib/resolveImageSrc'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
 import { Plus, ImagePlus, Image, Pencil } from 'lucide-react'
@@ -19,6 +20,28 @@ function toFloatOrNull(v) {
   if (!trimmed) return null
   const n = Number.parseFloat(trimmed)
   return Number.isFinite(n) ? n : null
+}
+
+function LayoutThumb({ name, value }) {
+  const [broken, setBroken] = useState(false)
+  const src = resolveImageSrc(value) || (typeof value === 'string' ? value.trim() : '')
+
+  if (!src || broken) {
+    return (
+      <div className="w-12 h-8 rounded bg-muted flex items-center justify-center text-secondary">
+        <ImagePlus size={12} />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="w-12 h-8 object-contain bg-muted rounded"
+      onError={() => setBroken(true)}
+    />
+  )
 }
 
 export default function AdminCircuits() {
@@ -81,10 +104,7 @@ export default function AdminCircuits() {
                   <>
                     <tr key={row.id} className="border-b border-border hover:bg-muted">
                       <td className="py-2 pr-4">
-                        {row.layout_image
-                          ? <img src={row.layout_image} alt={row.name} className="w-12 h-8 object-contain bg-muted rounded" />
-                          : <div className="w-12 h-8 rounded bg-muted flex items-center justify-center text-secondary"><ImagePlus size={12} /></div>
-                        }
+                        <LayoutThumb name={row.name} value={row.layout_image} />
                       </td>
                       <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
                       <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.location || '—'}</td>
