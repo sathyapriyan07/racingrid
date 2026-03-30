@@ -51,6 +51,16 @@ export default function AdminCircuits() {
   const [editId, setEditId] = useState(null) // `${id}-layout` or `${id}-hero`
   const [detailsDraft, setDetailsDraft] = useState(null)
 
+  const showDbError = (error) => {
+    const code = error?.code
+    const msg = String(error?.message || '')
+    if (code === '42703' || code === 'PGRST204' || msg.toLowerCase().includes('does not exist')) {
+      toast.error('Database schema is missing circuit detail columns. Run the latest SQL from `supabase/schema.sql`.')
+      return true
+    }
+    return false
+  }
+
   const load = async () => {
     setLoading(true)
     try {
@@ -68,7 +78,10 @@ export default function AdminCircuits() {
 
   const saveField = async (id, field, url) => {
     const { error } = await supabase.from('circuits').update({ [field]: url || null }).eq('id', id)
-    if (error) return toast.error(error.message)
+    if (error) {
+      if (!showDbError(error)) toast.error(error.message)
+      return
+    }
     toast.success('Updated')
     setEditId(null)
     invalidateCache()
@@ -269,7 +282,10 @@ export default function AdminCircuits() {
                                   first_gp: toIntOrNull(detailsDraft.first_gp),
                                 }
                                 const { error } = await supabase.from('circuits').update(payload).eq('id', row.id)
-                                if (error) return toast.error(error.message)
+                                if (error) {
+                                  if (!showDbError(error)) toast.error(error.message)
+                                  return
+                                }
                                 toast.success('Updated')
                                 setEditId(null)
                                 setDetailsDraft(null)

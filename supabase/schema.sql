@@ -67,6 +67,16 @@ create table if not exists circuits (
   created_at timestamptz default now()
 );
 
+-- If the table already existed (older deploy), ensure new columns are added.
+alter table if exists circuits add column if not exists track_length_km numeric(6,3);
+alter table if exists circuits add column if not exists lap_count integer;
+alter table if exists circuits add column if not exists turns integer;
+alter table if exists circuits add column if not exists top_speed_kph integer;
+alter table if exists circuits add column if not exists elevation numeric(6,2);
+alter table if exists circuits add column if not exists race_lap_record text;
+alter table if exists circuits add column if not exists opened integer;
+alter table if exists circuits add column if not exists first_gp integer;
+
 create table if not exists seasons (
   id uuid primary key default uuid_generate_v4(),
   year integer not null unique
