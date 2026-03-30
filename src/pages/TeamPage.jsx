@@ -379,32 +379,34 @@ export default function TeamPage() {
           {circuitRecords.length === 0 ? (
             <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No circuit records yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                  <th className="text-left py-2 pl-5">Circuit</th>
-                  <th className="text-right py-2">Wins</th>
-                  <th className="text-right py-2">Podiums</th>
-                  <th className="text-right py-2 pr-5">Poles</th>
-                </tr>
-              </thead>
-              <tbody>
-                {circuitRecords.map(row => (
-                  <tr key={row.circuitId} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}>
-                    <td className="py-2.5 pl-5">
-                      <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
-                        {row.circuitName}
-                      </Link>
-                    </td>
-                    <td className="py-2.5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.wins}</td>
-                    <td className="py-2.5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.podiums}</td>
-                    <td className="py-2.5 pr-5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.poles}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    <th className="text-left py-2 pl-5">Circuit</th>
+                    <th className="text-right py-2 whitespace-nowrap">Wins</th>
+                    <th className="text-right py-2 whitespace-nowrap">Podiums</th>
+                    <th className="text-right py-2 pr-5 whitespace-nowrap">Poles</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {circuitRecords.map(row => (
+                    <tr key={row.circuitId} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}>
+                      <td className="py-2.5 pl-5">
+                        <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
+                          {row.circuitName}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.wins}</td>
+                      <td className="py-2.5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.podiums}</td>
+                      <td className="py-2.5 pr-5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.poles}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
       )}
