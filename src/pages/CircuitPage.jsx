@@ -76,9 +76,6 @@ export default function CircuitPage() {
     load()
   }, [id])
 
-  if (loading) return <Spinner />
-  if (!circuit) return <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>Circuit not found.</div>
-
   const records = useMemo(() => {
     const winsByDriver = new Map()
     const winsByTeam = new Map()
@@ -165,6 +162,9 @@ export default function CircuitPage() {
 
     return { topWinsDrivers, topWinsTeams, topPolesDrivers, topConsecutiveWinsDrivers }
   }, [poleRows, races, winnerRows])
+
+  if (loading) return <Spinner />
+  if (!circuit) return <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>Circuit not found.</div>
 
   return (
     <div className="space-y-6">
