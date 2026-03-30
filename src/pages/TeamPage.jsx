@@ -4,7 +4,7 @@ import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { BarChart2, Flag, Trophy, ExternalLink } from 'lucide-react'
+import { BarChart2, Flag, Trophy, ExternalLink, MapPin } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji }) {
@@ -182,7 +182,7 @@ export default function TeamPage() {
             )}
             {team.base && (
               <span className="flex items-center gap-1.5 font-medium">
-                <Icon settingKey="icon_location" emoji="📍" /> {team.base}
+                <MapPin size={14} style={{ color: 'var(--text-muted)' }} /> {team.base}
               </span>
             )}
             {team.founded && <span className="font-medium">Est. {team.founded}</span>}

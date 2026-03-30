@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
-import { Flag, Activity, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
+import { Flag, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji }) {
@@ -11,8 +11,6 @@ function Icon({ settingKey, emoji }) {
     ? <img src={url} alt="" className="inline-block w-4 h-4 object-contain" />
     : <span>{emoji}</span>
 }
-import RaceReplaySimple from '../components/replay/RaceReplaySimple'
-
 const POSITION_COLORS = ['pos-1', 'pos-2', 'pos-3']
 
 const FLAG_COLOR = {
@@ -99,7 +97,6 @@ export default function RacePage() {
     { id: 'results', label: 'Results', icon: Flag },
     { id: 'qualifying', label: 'Qualifying', icon: Clock },
     ...(sprintResults.length ? [{ id: 'sprint', label: 'Sprint', icon: Flag }] : []),
-    { id: 'replay', label: 'Lap Replay', icon: Activity },
     { id: 'pits', label: 'Pit Stops', icon: Clock },
     { id: 'events', label: 'Events', icon: AlertTriangle },
     ...(highlights.length ? [{ id: 'highlights', label: 'Highlights', icon: PlayCircle }] : []),
@@ -298,9 +295,6 @@ export default function RacePage() {
           </table>
         </Card>
       )}
-
-      {/* Lap Replay — internal, Supabase-driven */}
-      {activeTab === 'replay' && <RaceReplaySimple raceId={id} />}
 
       {/* Pit Stops — OpenF1 */}
       {activeTab === 'pits' && (

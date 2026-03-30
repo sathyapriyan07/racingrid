@@ -249,7 +249,6 @@ export default function DriverPage() {
             )}
             {driver.dob && (
               <span className="flex items-center gap-1.5 font-medium">
-                <Icon settingKey="icon_birthday" emoji="🎂" />
                 {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             )}

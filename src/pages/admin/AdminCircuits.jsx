@@ -3,15 +3,30 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Image } from 'lucide-react'
+import { Plus, ImagePlus, Image, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
+
+function toIntOrNull(v) {
+  const trimmed = String(v ?? '').trim()
+  if (!trimmed) return null
+  const n = Number.parseInt(trimmed, 10)
+  return Number.isFinite(n) ? n : null
+}
+
+function toFloatOrNull(v) {
+  const trimmed = String(v ?? '').trim()
+  if (!trimmed) return null
+  const n = Number.parseFloat(trimmed)
+  return Number.isFinite(n) ? n : null
+}
 
 export default function AdminCircuits() {
   const { invalidateCache } = useDataStore()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState(null) // `${id}-layout` or `${id}-hero`
+  const [detailsDraft, setDetailsDraft] = useState(null)
 
   const load = async () => {
     setLoading(true)
@@ -86,6 +101,32 @@ export default function AdminCircuits() {
                             style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
                             <Image size={11} /> Hero
                           </button>
+                          <button
+                            onClick={() => {
+                              const key = `${row.id}-details`
+                              if (editId === key) {
+                                setEditId(null)
+                                setDetailsDraft(null)
+                                return
+                              }
+                              setEditId(key)
+                              setDetailsDraft({
+                                id: row.id,
+                                track_length_km: row.track_length_km ?? '',
+                                lap_count: row.lap_count ?? '',
+                                turns: row.turns ?? '',
+                                top_speed_kph: row.top_speed_kph ?? '',
+                                elevation: row.elevation ?? '',
+                                race_lap_record: row.race_lap_record ?? '',
+                                opened: row.opened ?? '',
+                                first_gp: row.first_gp ?? '',
+                              })
+                            }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-details` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
+                            style={{ color: editId === `${row.id}-details` ? undefined : 'var(--text-muted)' }}
+                          >
+                            <Pencil size={11} /> Details
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -106,6 +147,121 @@ export default function AdminCircuits() {
                         onSave={(url) => saveField(row.id, 'hero_image_url', url)}
                         onCancel={() => setEditId(null)}
                       />
+                    )}
+                    {editId === `${row.id}-details` && detailsDraft?.id === row.id && (
+                      <tr className="border-b border-border bg-muted/30">
+                        <td colSpan={5} className="p-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Track length (km)</div>
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="input"
+                                value={detailsDraft.track_length_km}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, track_length_km: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Laps</div>
+                              <input
+                                type="number"
+                                className="input"
+                                value={detailsDraft.lap_count}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, lap_count: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Turns</div>
+                              <input
+                                type="number"
+                                className="input"
+                                value={detailsDraft.turns}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, turns: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Top speed (km/h)</div>
+                              <input
+                                type="number"
+                                className="input"
+                                value={detailsDraft.top_speed_kph}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, top_speed_kph: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Elevation</div>
+                              <input
+                                type="number"
+                                step="0.01"
+                                className="input"
+                                value={detailsDraft.elevation}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, elevation: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Lap record</div>
+                              <input
+                                className="input"
+                                value={detailsDraft.race_lap_record}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, race_lap_record: e.target.value }))}
+                                placeholder="1.29.708"
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Opened</div>
+                              <input
+                                type="number"
+                                className="input"
+                                value={detailsDraft.opened}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, opened: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>First GP</div>
+                              <input
+                                type="number"
+                                className="input"
+                                value={detailsDraft.first_gp}
+                                onChange={(e) => setDetailsDraft(d => ({ ...d, first_gp: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 mt-4">
+                            <button
+                              className="btn-ghost text-xs"
+                              onClick={() => { setEditId(null); setDetailsDraft(null) }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="btn-primary text-xs"
+                              onClick={async () => {
+                                const payload = {
+                                  track_length_km: toFloatOrNull(detailsDraft.track_length_km),
+                                  lap_count: toIntOrNull(detailsDraft.lap_count),
+                                  turns: toIntOrNull(detailsDraft.turns),
+                                  top_speed_kph: toIntOrNull(detailsDraft.top_speed_kph),
+                                  elevation: toFloatOrNull(detailsDraft.elevation),
+                                  race_lap_record: String(detailsDraft.race_lap_record || '').trim() || null,
+                                  opened: toIntOrNull(detailsDraft.opened),
+                                  first_gp: toIntOrNull(detailsDraft.first_gp),
+                                }
+                                const { error } = await supabase.from('circuits').update(payload).eq('id', row.id)
+                                if (error) return toast.error(error.message)
+                                toast.success('Updated')
+                                setEditId(null)
+                                setDetailsDraft(null)
+                                invalidateCache()
+                                load()
+                              }}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     )}
                   </>
                 ))}

@@ -56,6 +56,14 @@ create table if not exists circuits (
   country text,
   layout_image text,
   hero_image_url text,
+  track_length_km numeric(6,3),
+  lap_count integer,
+  turns integer,
+  top_speed_kph integer,
+  elevation numeric(6,2),
+  race_lap_record text,
+  opened integer,
+  first_gp integer,
   created_at timestamptz default now()
 );
 

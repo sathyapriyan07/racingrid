@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
-import { Spinner, Card } from '../components/ui'
+import { Spinner, Card, StatCard } from '../components/ui'
 import { MapPin, Trophy } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
@@ -182,6 +182,17 @@ export default function CircuitPage() {
   if (loading) return <Spinner />
   if (!circuit) return <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>Circuit not found.</div>
 
+  const circuitStats = [
+    circuit.track_length_km != null && { label: 'Length (km)', value: Number(circuit.track_length_km).toFixed(2) },
+    circuit.lap_count != null && { label: 'Laps', value: circuit.lap_count },
+    circuit.turns != null && { label: 'Turns', value: circuit.turns },
+    circuit.top_speed_kph != null && { label: 'Top Speed', value: circuit.top_speed_kph, sub: 'km/h' },
+    circuit.elevation != null && { label: 'Elevation', value: Number(circuit.elevation).toFixed(2) },
+    circuit.race_lap_record && { label: 'Lap Record', value: circuit.race_lap_record },
+    circuit.opened != null && { label: 'Opened', value: circuit.opened },
+    circuit.first_gp != null && { label: 'First GP', value: circuit.first_gp },
+  ].filter(Boolean)
+
   return (
     <div className="space-y-6">
       {/* ── Cinematic Banner ── */}
@@ -237,6 +248,14 @@ export default function CircuitPage() {
 
       {tab === 'overview' && (
         <>
+          {circuitStats.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {circuitStats.map(s => (
+                <StatCard key={s.label} label={s.label} value={s.value} sub={s.sub} />
+              ))}
+            </div>
+          )}
+
           {/* Circuit Layout */}
           {circuit.layout_image && (
             <Card>
