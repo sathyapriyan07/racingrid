@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Spinner } from '../../components/ui'
+import { Spinner, Select } from '../../components/ui'
 import { Link } from 'react-router-dom'
 import { Plus, PlayCircle, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -134,10 +134,10 @@ export default function AdminRaces() {
         </Link>
       </div>
       <div className="glass p-4">
-        <select value={seasonId} onChange={e => setSeasonId(e.target.value)} className="input max-w-xs mb-4">
+        <Select value={seasonId} onChange={e => setSeasonId(e.target.value)} className="max-w-xs mb-4">
           <option value="">All Seasons</option>
           {seasons.map(s => <option key={s.id} value={s.id}>{s.year}</option>)}
-        </select>
+        </Select>
 
         {loading ? <Spinner /> : (
           <div className="overflow-x-auto">

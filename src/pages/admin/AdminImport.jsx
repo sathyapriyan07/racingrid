@@ -9,6 +9,7 @@ import {
   normalizePitStops, normalizeEvents
 } from '../../utils/normalizers'
 import { Upload, Eye, Save, X } from 'lucide-react'
+import { Select } from '../../components/ui'
 
 const DATA_TYPES = [
   { value: 'drivers', label: 'Drivers' },
@@ -168,35 +169,35 @@ export default function AdminImport() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Data Type</label>
-            <select value={dataType} onChange={e => { setDataType(e.target.value); setPreview(null) }} className="input">
+            <Select value={dataType} onChange={e => { setDataType(e.target.value); setPreview(null) }}>
               {DATA_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            </Select>
           </div>
           <div>
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Source Format</label>
-            <select value={source} onChange={e => setSource(e.target.value)} className="input">
+            <Select value={source} onChange={e => setSource(e.target.value)}>
               {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
 
         {needsRaceId && (
           <div>
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Race</label>
-            <select value={raceId} onChange={e => setRaceId(e.target.value)} className="input">
+            <Select value={raceId} onChange={e => setRaceId(e.target.value)}>
               <option value="">Select race...</option>
               {races.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+            </Select>
           </div>
         )}
 
         {needsSeasonId && (
           <div>
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Season</label>
-            <select value={seasonId} onChange={e => setSeasonId(e.target.value)} className="input">
+            <Select value={seasonId} onChange={e => setSeasonId(e.target.value)}>
               <option value="">Select season...</option>
               {seasons.map(s => <option key={s.id} value={s.id}>{s.year}</option>)}
-            </select>
+            </Select>
           </div>
         )}
 

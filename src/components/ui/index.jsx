@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { ChevronDown } from 'lucide-react'
 
 export function Card({ children, className = '', hover = false }) {
   return (
@@ -63,6 +64,28 @@ export function EmptyState({ message = 'No data available' }) {
   )
 }
 
+export function Select({ className = '', wrapperClassName = '', children, ...props }) {
+  return (
+    <div className={['relative', wrapperClassName].join(' ')}>
+      <select
+        {...props}
+        className={[
+          'input pr-10 appearance-none cursor-pointer',
+          'disabled:opacity-60 disabled:cursor-not-allowed',
+          className,
+        ].join(' ')}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+        style={{ color: 'var(--text-muted)' }}
+      />
+    </div>
+  )
+}
+
 export function PageHeader({ title, subtitle, children }) {
   return (
     <motion.div
@@ -96,4 +119,3 @@ export function SectionHeader({ title, action, actionLabel = 'See all' }) {
     </div>
   )
 }
-

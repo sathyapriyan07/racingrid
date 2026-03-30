@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
-import { Spinner, Card, PageHeader } from '../components/ui'
+import { Spinner, Card, PageHeader, Select } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { motion } from 'framer-motion'
 
@@ -57,18 +57,18 @@ export default function Compare() {
         <div className="flex gap-4 items-end flex-wrap">
           <div className="flex-1 min-w-40">
             <label className="text-xs font-semibold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Driver A</label>
-            <select value={driverA} onChange={e => setDriverA(e.target.value)} className="input">
+            <Select value={driverA} onChange={e => setDriverA(e.target.value)}>
               <option value="">Select driver...</option>
               {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            </Select>
           </div>
           <div className="text-lg font-black pb-2" style={{ color: 'var(--text-muted)' }}>VS</div>
           <div className="flex-1 min-w-40">
             <label className="text-xs font-semibold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Driver B</label>
-            <select value={driverB} onChange={e => setDriverB(e.target.value)} className="input">
+            <Select value={driverB} onChange={e => setDriverB(e.target.value)}>
               <option value="">Select driver...</option>
               {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+            </Select>
           </div>
           <button onClick={compare} disabled={!driverA || !driverB || loading} className="btn-primary">
             {loading ? 'Loading...' : 'Compare'}
