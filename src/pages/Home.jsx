@@ -1,24 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge } from '../components/ui'
 import { Calendar, Trophy, ChevronRight } from 'lucide-react'
-import { motion } from 'framer-motion'
-
-const stagger = {
-  animate: { transition: { staggerChildren: 0.07 } }
-}
-const fadeUp = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] } }
-}
 
 export default function Home() {
   const { fetchRaces, fetchDrivers, fetchSeasons, fetchStandings, drivers, seasons } = useDataStore()
   const [races, setRaces] = useState([])
   const [standings, setStandings] = useState(null)
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     const load = async () => {
@@ -46,10 +36,7 @@ export default function Home() {
     <div className="space-y-12">
 
       {/* ── Cinematic Hero ── */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+      <div
         className="relative overflow-hidden rounded-3xl noise-overlay bg-surface border border-border shadow-[var(--shadow)]"
         style={{ minHeight: 320 }}
       >
@@ -66,13 +53,9 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
 
         <div className="relative z-10 p-8 md:p-14 flex flex-col justify-end" style={{ minHeight: 320 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
+          <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
               <span className="text-xs font-semibold uppercase tracking-widest text-accent">Formula 1 Database</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black leading-none mb-4" style={{ letterSpacing: '-0.05em' }}>
@@ -86,24 +69,24 @@ export default function Home() {
               <Link to="/races" className="btn-primary text-sm px-6 py-2.5">Browse Races</Link>
               <Link to="/drivers" className="btn-ghost text-sm px-6 py-2.5">All Drivers</Link>
             </div>
-          </motion.div>
+          </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* ── Latest Races carousel ── */}
       {latestRaces.length > 0 && (
-        <motion.section variants={stagger} initial="initial" animate="animate">
-          <motion.div variants={fadeUp} className="flex items-center justify-between mb-5">
+        <section>
+          <div className="flex items-center justify-between mb-5">
             <h2 className="section-title flex items-center gap-2">
               <Calendar size={18} className="text-f1red" /> Latest Races
             </h2>
             <Link to="/races" className="text-xs font-semibold text-f1red hover:text-red-400 transition-colors flex items-center gap-0.5">
               See all <ChevronRight size={13} />
             </Link>
-          </motion.div>
+          </div>
           <div className="scroll-row">
             {latestRaces.map((race, i) => (
-              <motion.div key={race.id} variants={fadeUp}>
+              <div key={race.id}>
                 <Link to={`/race/${race.id}`}>
                   <div
                     className="glass-hover p-5 flex flex-col gap-3"
@@ -126,16 +109,16 @@ export default function Home() {
                     </div>
                   </div>
                 </Link>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.section>
+        </section>
       )}
 
       {/* ── Drivers carousel ── */}
       {displayDrivers.length > 0 && (
-        <motion.section variants={stagger} initial="initial" animate="animate">
-          <motion.div variants={fadeUp} className="flex items-center justify-between mb-5">
+        <section>
+          <div className="flex items-center justify-between mb-5">
             <h2 className="section-title flex items-center gap-2">
               <Trophy size={18} className="text-f1red" />
               {currentDrivers.length ? 'Current Drivers' : 'Drivers'}
@@ -143,10 +126,10 @@ export default function Home() {
             <Link to="/drivers" className="text-xs font-semibold text-f1red hover:text-red-400 transition-colors flex items-center gap-0.5">
               See all <ChevronRight size={13} />
             </Link>
-          </motion.div>
+          </div>
           <div className="scroll-row">
             {displayDrivers.map(driver => (
-              <motion.div key={driver.id} variants={fadeUp}>
+              <div key={driver.id}>
                 <Link to={`/driver/${driver.id}`}>
                   <div className="glass-hover flex flex-col items-center p-4 gap-3 text-center" style={{ width: 120 }}>
                     <div className="w-16 h-16 rounded-2xl overflow-hidden bg-muted shrink-0">
@@ -163,19 +146,15 @@ export default function Home() {
                     </div>
                   </div>
                 </Link>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.section>
+        </section>
       )}
 
       {/* ── Standings preview ── */}
       {standings && (standings.drivers.length > 0 || standings.teams.length > 0) && (
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
+        <section>
           <div className="flex items-center justify-between mb-5">
             <h2 className="section-title flex items-center gap-2">
               <Trophy size={18} className="text-yellow-400" /> {seasons[0]?.year} Standings
@@ -230,7 +209,7 @@ export default function Home() {
               </div>
             </Card>
           </div>
-        </motion.section>
+        </section>
       )}
 
     </div>
