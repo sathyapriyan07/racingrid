@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
-import { Spinner, Card, PageHeader, Select } from '../components/ui'
+import { Spinner, Card, PageHeader, SearchSelect } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { motion } from 'framer-motion'
 
@@ -35,6 +35,15 @@ export default function Compare() {
   const driverAInfo = drivers.find(d => d.id === driverA)
   const driverBInfo = drivers.find(d => d.id === driverB)
 
+  const driverOptions = drivers
+    .map(d => ({
+      value: d.id,
+      label: `${d.code ? `${d.code} — ` : ''}${d.name}`,
+      subLabel: d.nationality || '',
+      keywords: `${d.name} ${d.code || ''} ${d.nationality || ''}`,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
   const calcStats = (results) => ({
     wins: results.filter(r => r.position === 1).length,
     podiums: results.filter(r => r.position <= 3).length,
@@ -57,18 +66,22 @@ export default function Compare() {
         <div className="flex gap-4 items-end flex-wrap">
           <div className="flex-1 min-w-40">
             <label className="text-xs font-semibold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Driver A</label>
-            <Select value={driverA} onChange={e => setDriverA(e.target.value)}>
-              <option value="">Select driver...</option>
-              {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </Select>
+            <SearchSelect
+              value={driverA}
+              onChange={(val) => setDriverA(val)}
+              options={driverOptions}
+              placeholder="Search driver..."
+            />
           </div>
           <div className="text-lg font-black pb-2" style={{ color: 'var(--text-muted)' }}>VS</div>
           <div className="flex-1 min-w-40">
             <label className="text-xs font-semibold uppercase tracking-widest mb-2 block" style={{ color: 'var(--text-muted)' }}>Driver B</label>
-            <Select value={driverB} onChange={e => setDriverB(e.target.value)}>
-              <option value="">Select driver...</option>
-              {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </Select>
+            <SearchSelect
+              value={driverB}
+              onChange={(val) => setDriverB(val)}
+              options={driverOptions}
+              placeholder="Search driver..."
+            />
           </div>
           <button onClick={compare} disabled={!driverA || !driverB || loading} className="btn-primary">
             {loading ? 'Loading...' : 'Compare'}

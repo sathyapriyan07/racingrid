@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 
@@ -82,6 +83,114 @@ export function Select({ className = '', wrapperClassName = '', children, ...pro
         className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
         style={{ color: 'var(--text-muted)' }}
       />
+    </div>
+  )
+}
+
+export function SearchSelect({
+  value,
+  onChange,
+  options = [],
+  placeholder = 'Search...',
+  emptyLabel = 'No results',
+  className = '',
+  disabled = false,
+}) {
+  const containerRef = useRef(null)
+  const inputRef = useRef(null)
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+
+  const selected = useMemo(() => options.find(o => o.value === value) || null, [options, value])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return options
+    return options.filter(o => {
+      const hay = `${o.label || ''} ${o.keywords || ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [options, query])
+
+  useEffect(() => {
+    const onDocMouseDown = (e) => {
+      if (!containerRef.current) return
+      if (!containerRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [])
+
+  const showValue = open ? query : (selected?.label || '')
+
+  return (
+    <div ref={containerRef} className={['relative', className].join(' ')}>
+      <input
+        ref={inputRef}
+        value={showValue}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+        onFocus={() => { setOpen(true); setQuery('') }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur?.() }
+          if (e.key === 'Enter') {
+            const first = filtered[0]
+            if (first) {
+              onChange?.(first.value)
+              setOpen(false)
+              setQuery('')
+            }
+          }
+        }}
+        placeholder={selected?.label ? '' : placeholder}
+        disabled={disabled}
+        className={[
+          'input pr-10',
+          'disabled:opacity-60 disabled:cursor-not-allowed',
+        ].join(' ')}
+        role="combobox"
+        aria-expanded={open}
+        aria-autocomplete="list"
+      />
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+        style={{ color: 'var(--text-muted)' }}
+      />
+
+      {open && (
+        <div
+          className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border shadow-[var(--shadow)]"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+        >
+          <div className="max-h-72 overflow-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-muted)' }}>{emptyLabel}</div>
+            ) : (
+              filtered.slice(0, 40).map((o) => (
+                <button
+                  type="button"
+                  key={o.value}
+                  className="w-full text-left px-3 py-2 text-sm transition-colors"
+                  style={{ color: 'var(--text-primary)' }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    onChange?.(o.value)
+                    setOpen(false)
+                    setQuery('')
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-raised)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div className="font-medium">{o.label}</div>
+                  {o.subLabel && (
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{o.subLabel}</div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
