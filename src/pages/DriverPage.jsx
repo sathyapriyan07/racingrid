@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
+import { supabase } from '../lib/supabase'
 import { Spinner, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { Trophy, ChevronDown, ExternalLink } from 'lucide-react'
@@ -89,6 +90,7 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
 const TABS = [
   { id: 'results', label: 'Results' },
   { id: 'performance', label: 'Performance' },
+  { id: 'records', label: 'Records' },
   { id: 'biography', label: 'Biography' },
   { id: 'championships', label: 'Championships' },
 ]
@@ -118,15 +120,27 @@ export default function DriverPage() {
   const [driver, setDriver] = useState(null)
   const [results, setResults] = useState([])
   const [champYears, setChampYears] = useState([])
+  const [poleRows, setPoleRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('results')
 
   useEffect(() => {
-    Promise.all([fetchDriver(id), fetchDriverStats(id), fetchAllChampionships()])
-      .then(([d, r, champs]) => {
+    Promise.all([
+      fetchDriver(id),
+      fetchDriverStats(id),
+      fetchAllChampionships(),
+      supabase
+        .from('qualifying_results')
+        .select('race_id, races(circuit_id, circuits(id, name))')
+        .eq('driver_id', id)
+        .eq('position', 1)
+        .then(({ data }) => data || []),
+    ])
+      .then(([d, r, champs, p]) => {
         setDriver(d)
         setResults(r || [])
         setChampYears(champs.driverChamps[id] || [])
+        setPoleRows(p || [])
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -163,6 +177,39 @@ export default function DriverPage() {
       races.forEach(r => { if (r.teams?.name) teamMap[r.teams.name] = r.teams })
       return { year, pts, wins: w, podiums: pod, races: races.length, isChamp, teams: Object.values(teamMap) }
     })
+
+  const circuitRecords = useMemo(() => {
+    const map = {}
+
+    for (const r of results) {
+      const circuitId = r?.races?.circuit_id
+      const circuitName = r?.races?.circuits?.name
+      if (!circuitId) continue
+
+      if (!map[circuitId]) map[circuitId] = { circuitId, circuitName: circuitName || '—', wins: 0, podiums: 0, poles: 0, races: 0 }
+      map[circuitId].races += 1
+      if (r.position === 1) map[circuitId].wins += 1
+      if (r.position && r.position <= 3) map[circuitId].podiums += 1
+    }
+
+    for (const p of poleRows) {
+      const circuitId = p?.races?.circuit_id
+      const circuitName = p?.races?.circuits?.name
+      if (!circuitId) continue
+      if (!map[circuitId]) map[circuitId] = { circuitId, circuitName: circuitName || '—', wins: 0, podiums: 0, poles: 0, races: 0 }
+      map[circuitId].poles += 1
+    }
+
+    return Object.values(map)
+      .sort((a, b) =>
+        (b.wins - a.wins) ||
+        (b.podiums - a.podiums) ||
+        (b.poles - a.poles) ||
+        (b.races - a.races) ||
+        String(a.circuitName).localeCompare(String(b.circuitName))
+      )
+      .slice(0, 30)
+  }, [poleRows, results])
 
   const activeTabs = [
     ...TABS.filter(t => t.id !== 'championships' || champYears.length > 0),
@@ -279,6 +326,44 @@ export default function DriverPage() {
         <Card>
           <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Points Per Race</p>
           <PerformanceChart data={chartData} dataKey="points" label="Points" />
+        </Card>
+      )}
+
+      {tab === 'records' && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Circuit Records</span>
+          </div>
+          {circuitRecords.length === 0 ? (
+            <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No circuit records yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th className="text-left py-2 pl-5">Circuit</th>
+                  <th className="text-right py-2">Wins</th>
+                  <th className="text-right py-2">Podiums</th>
+                  <th className="text-right py-2 pr-5">Poles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {circuitRecords.map(row => (
+                  <tr key={row.circuitId} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
+                    <td className="py-2.5 pl-5">
+                      <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
+                        {row.circuitName}
+                      </Link>
+                    </td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.wins}</td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.podiums}</td>
+                    <td className="py-2.5 pr-5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.poles}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </Card>
       )}
 

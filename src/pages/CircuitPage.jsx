@@ -19,6 +19,7 @@ export default function CircuitPage() {
   const [circuit, setCircuit] = useState(null)
   const [races, setRaces] = useState([])
   const [winnerRows, setWinnerRows] = useState([])
+  const [podiumRows, setPodiumRows] = useState([])
   const [poleRows, setPoleRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('overview')
@@ -35,11 +36,12 @@ export default function CircuitPage() {
           .eq('circuit_id', id)
           .order('date', { ascending: false })
 
-        if (!racesData?.length) { setRaces([]); setWinnerRows([]); setPoleRows([]); return }
+        if (!racesData?.length) { setRaces([]); setWinnerRows([]); setPodiumRows([]); setPoleRows([]); return }
 
         const raceIds = racesData.map(r => r.id)
-        const [{ data: winners }, { data: sprintWinners }, { data: poles }] = await Promise.all([
+        const [{ data: winners }, { data: podiums }, { data: sprintWinners }, { data: poles }] = await Promise.all([
           supabase.from('results').select('race_id, driver_id, team_id, drivers(id, name, code, image_url), teams(id, name, logo_url)').in('race_id', raceIds).eq('position', 1),
+          supabase.from('results').select('race_id, driver_id, drivers(id, name, code, image_url)').in('race_id', raceIds).in('position', [1, 2, 3]),
           supabase.from('sprint_results').select('race_id, drivers(id, name, code, image_url)').in('race_id', raceIds).eq('position', 1),
           supabase.from('qualifying_results').select('race_id, driver_id, drivers(id, name, code, image_url)').in('race_id', raceIds).eq('position', 1),
         ])
@@ -60,6 +62,7 @@ export default function CircuitPage() {
         sprintWinners?.forEach(w => { sprintMap[w.race_id] = w.drivers })
 
         setWinnerRows(winners || [])
+        setPodiumRows(podiums || [])
         setPoleRows(polesFinal)
 
         setRaces(racesData.map(r => ({
@@ -100,6 +103,13 @@ export default function CircuitPage() {
       driverInfo.set(row.driver_id, row.drivers)
     }
 
+    const podiumsByDriver = new Map()
+    for (const row of (podiumRows || [])) {
+      if (!row?.driver_id || !row?.drivers) continue
+      podiumsByDriver.set(row.driver_id, (podiumsByDriver.get(row.driver_id) || 0) + 1)
+      driverInfo.set(row.driver_id, row.drivers)
+    }
+
     const topWinsDrivers = [...winsByDriver.entries()]
       .map(([driverId, count]) => ({ driverId, count, driver: driverInfo.get(driverId) }))
       .filter(x => x.driver)
@@ -113,6 +123,12 @@ export default function CircuitPage() {
       .slice(0, 8)
 
     const topPolesDrivers = [...polesByDriver.entries()]
+      .map(([driverId, count]) => ({ driverId, count, driver: driverInfo.get(driverId) }))
+      .filter(x => x.driver)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+
+    const topPodiumsDrivers = [...podiumsByDriver.entries()]
       .map(([driverId, count]) => ({ driverId, count, driver: driverInfo.get(driverId) }))
       .filter(x => x.driver)
       .sort((a, b) => b.count - a.count)
@@ -160,8 +176,8 @@ export default function CircuitPage() {
       .sort((a, b) => b.length - a.length)
       .slice(0, 8)
 
-    return { topWinsDrivers, topWinsTeams, topPolesDrivers, topConsecutiveWinsDrivers }
-  }, [poleRows, races, winnerRows])
+    return { topWinsDrivers, topWinsTeams, topPolesDrivers, topPodiumsDrivers, topConsecutiveWinsDrivers }
+  }, [podiumRows, poleRows, races, winnerRows])
 
   if (loading) return <Spinner />
   if (!circuit) return <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>Circuit not found.</div>
@@ -292,6 +308,29 @@ export default function CircuitPage() {
       {tab === 'records' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="md:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Most Podiums — Drivers</p>
+              {records.topPodiumsDrivers.length ? (
+                <div className="space-y-2">
+                  {records.topPodiumsDrivers.map((row, i) => (
+                    <div key={row.driverId} className="flex items-center gap-3">
+                      <span className="text-xs font-black w-6 text-right tabular-nums" style={{ color: 'var(--text-muted)' }}>{i + 1}</span>
+                      {row.driver.image_url
+                        ? <img src={row.driver.image_url} alt={row.driver.name} className="w-7 h-7 rounded-full object-cover object-top shrink-0" />
+                        : <div className="w-7 h-7 rounded-full bg-muted shrink-0" />
+                      }
+                      <Link to={`/driver/${row.driverId}`} className="text-sm font-medium hover:text-f1red transition-colors flex-1">
+                        {row.driver.name}
+                      </Link>
+                      <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No podium data.</p>
+              )}
+            </Card>
+
             <Card>
               <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Most Wins — Drivers</p>
               {records.topWinsDrivers.length ? (

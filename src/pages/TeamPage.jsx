@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
@@ -38,6 +38,7 @@ export default function TeamPage() {
   const { fetchTeam, fetchAllChampionships } = useDataStore()
   const [team, setTeam] = useState(null)
   const [results, setResults] = useState([])
+  const [poleRows, setPoleRows] = useState([])
   const [champYears, setChampYears] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('overview')
@@ -49,12 +50,20 @@ export default function TeamPage() {
         const [t, champs] = await Promise.all([fetchTeam(id), fetchAllChampionships()])
         setTeam(t)
         setChampYears(champs.teamChamps[id] || [])
-        const { data } = await supabase
-          .from('results')
-          .select('*, drivers(id, name, code, image_url, flag_url, nationality, is_active), races(id, name, date, round, seasons(year))')
-          .eq('team_id', id)
-          .order('races(date)', { ascending: false })
+        const [{ data }, { data: poles }] = await Promise.all([
+          supabase
+            .from('results')
+            .select('*, drivers(id, name, code, image_url, flag_url, nationality, is_active), races(id, name, date, round, circuit_id, circuits(id, name), seasons(year))')
+            .eq('team_id', id)
+            .order('races(date)', { ascending: false }),
+          supabase
+            .from('qualifying_results')
+            .select('race_id, races(circuit_id, circuits(id, name))')
+            .eq('team_id', id)
+            .eq('position', 1),
+        ])
         setResults(data || [])
+        setPoleRows(poles || [])
       } catch (err) {
         console.error(err)
       } finally {
@@ -95,11 +104,45 @@ export default function TeamPage() {
       isChamp: champYears.includes(Number(year)),
     }))
 
+  const circuitRecords = useMemo(() => {
+    const map = {}
+
+    for (const r of results) {
+      const circuitId = r?.races?.circuit_id
+      const circuitName = r?.races?.circuits?.name
+      if (!circuitId) continue
+
+      if (!map[circuitId]) map[circuitId] = { circuitId, circuitName: circuitName || '—', wins: 0, podiums: 0, poles: 0, races: 0 }
+      map[circuitId].races += 1
+      if (r.position === 1) map[circuitId].wins += 1
+      if (r.position && r.position <= 3) map[circuitId].podiums += 1
+    }
+
+    for (const p of poleRows) {
+      const circuitId = p?.races?.circuit_id
+      const circuitName = p?.races?.circuits?.name
+      if (!circuitId) continue
+      if (!map[circuitId]) map[circuitId] = { circuitId, circuitName: circuitName || '—', wins: 0, podiums: 0, poles: 0, races: 0 }
+      map[circuitId].poles += 1
+    }
+
+    return Object.values(map)
+      .sort((a, b) =>
+        (b.wins - a.wins) ||
+        (b.podiums - a.podiums) ||
+        (b.poles - a.poles) ||
+        (b.races - a.races) ||
+        String(a.circuitName).localeCompare(String(b.circuitName))
+      )
+      .slice(0, 30)
+  }, [poleRows, results])
+
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'drivers', label: 'Drivers' },
     { id: 'info', label: 'Info' },
     { id: 'results', label: 'Results' },
+    { id: 'records', label: 'Records' },
     ...(champYears.length > 0 ? [{ id: 'championships', label: 'Championships' }] : []),
   ]
 
@@ -328,6 +371,44 @@ export default function TeamPage() {
       )}
 
       {/* ── Results ── */}
+      {tab === 'records' && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Circuit Records</span>
+          </div>
+          {circuitRecords.length === 0 ? (
+            <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No circuit records yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th className="text-left py-2 pl-5">Circuit</th>
+                  <th className="text-right py-2">Wins</th>
+                  <th className="text-right py-2">Podiums</th>
+                  <th className="text-right py-2 pr-5">Poles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {circuitRecords.map(row => (
+                  <tr key={row.circuitId} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}>
+                    <td className="py-2.5 pl-5">
+                      <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
+                        {row.circuitName}
+                      </Link>
+                    </td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.wins}</td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.podiums}</td>
+                    <td className="py-2.5 pr-5 text-right font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{row.poles}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      )}
+
       {tab === 'results' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
