@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDataStore } from '../store/dataStore'
-import { Spinner, Card } from '../components/ui'
+import { Spinner, Card, SearchSelect } from '../components/ui'
 import { Trophy } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -14,6 +14,7 @@ export default function Standings() {
   const [loading, setLoading] = useState(true)
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [tab, setTab] = useState('drivers')
+  const [query, setQuery] = useState('')
 
   useEffect(() => { fetchSeasons().catch(console.error).finally(() => setLoading(false)) }, [])
   useEffect(() => { if (seasons.length) setSelectedSeason(seasons[0]) }, [seasons])
@@ -32,6 +33,25 @@ export default function Standings() {
 
   if (loading) return <Spinner />
 
+  const seasonOptions = seasons
+    .slice()
+    .sort((a, b) => (b.year || 0) - (a.year || 0))
+    .map(s => ({ value: s.id, label: String(s.year), keywords: String(s.year) }))
+
+  const filteredDriverRows = driverRows.filter(row => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    const hay = `${row.drivers?.name || ''} ${row.drivers?.code || ''} ${row.teams?.name || ''}`.toLowerCase()
+    return hay.includes(q)
+  })
+
+  const filteredTeamRows = teamRows.filter(row => {
+    const q = query.trim().toLowerCase()
+    if (!q) return true
+    const hay = `${row.teams?.name || ''}`.toLowerCase()
+    return hay.includes(q)
+  })
+
   return (
     <div className="space-y-8">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
@@ -39,13 +59,22 @@ export default function Standings() {
         <h1 className="text-3xl font-black flex items-center gap-2" style={{ letterSpacing: '-0.04em' }}>
           <Trophy size={24} className="text-yellow-400" /> Championships
         </h1>
-        <div className="flex gap-2 flex-wrap">
-          {seasons.map(s => (
-            <button key={s.id} onClick={() => setSelectedSeason(s)}
-              className={`tab-pill ${selectedSeason?.id === s.id ? 'active' : ''}`}>
-              {s.year}
-            </button>
-          ))}
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="w-36">
+            <SearchSelect
+              value={selectedSeason?.id || ''}
+              onChange={(val) => setSelectedSeason(seasons.find(s => s.id === val) || null)}
+              options={seasonOptions}
+              placeholder="Season..."
+              disabled={seasons.length === 0}
+            />
+          </div>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={tab === 'drivers' ? 'Search drivers...' : 'Search teams...'}
+            className="input w-48"
+          />
         </div>
       </motion.div>
 
@@ -72,7 +101,7 @@ export default function Standings() {
                     </tr>
                   </thead>
                   <tbody>
-                    {driverRows.map((row, i) => (
+                    {filteredDriverRows.map((row, i) => (
                       <tr key={row.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="py-3 pl-5">
                           <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
@@ -118,7 +147,7 @@ export default function Standings() {
                     </tr>
                   </thead>
                   <tbody>
-                    {teamRows.map((row, i) => (
+                    {filteredTeamRows.map((row, i) => (
                       <tr key={row.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="py-3 pl-5">
                           <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
