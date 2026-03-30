@@ -7,6 +7,7 @@ import { Plus, ImagePlus, Flag, Image, Pencil, FileText, Link2 } from 'lucide-re
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 import TextEditRow from './TextEditRow'
+import SocialLinksEditRow from './SocialLinksEditRow'
 
 function ActiveEditRow({ colSpan, row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
@@ -68,6 +69,18 @@ export default function AdminDrivers() {
 
   const saveActive = async (id, is_active) => {
     const { error } = await supabase.from('drivers').update({ is_active }).eq('id', id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated')
+    setEditId(null)
+    invalidateCache()
+    load()
+  }
+
+  const saveSocial = async (id, instagram_url, twitter_url) => {
+    const { error } = await supabase.from('drivers').update({
+      instagram_url: instagram_url?.trim() || null,
+      twitter_url: twitter_url?.trim() || null,
+    }).eq('id', id)
     if (error) return toast.error(error.message)
     toast.success('Updated')
     setEditId(null)
@@ -159,6 +172,11 @@ export default function AdminDrivers() {
                               style={{ color: editId === `${row.id}-website` ? undefined : 'var(--text-muted)' }}>
                               <Link2 size={11} /> Website
                             </button>
+                            <button onClick={() => toggle(`${row.id}-social`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-social` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
+                              style={{ color: editId === `${row.id}-social` ? undefined : 'var(--text-muted)' }}>
+                              <Link2 size={11} /> Social
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -213,6 +231,14 @@ export default function AdminDrivers() {
                           currentValue={row.website_url}
                           rows={2}
                           onSave={(val) => saveField(row.id, 'website_url', val || null)}
+                          onCancel={() => setEditId(null)}
+                        />
+                      )}
+                      {editId === `${row.id}-social` && (
+                        <SocialLinksEditRow
+                          colSpan={7}
+                          row={row}
+                          onSave={(instagramUrl, twitterUrl) => saveSocial(row.id, instagramUrl, twitterUrl)}
                           onCancel={() => setEditId(null)}
                         />
                       )}

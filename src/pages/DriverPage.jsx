@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { Trophy, ChevronDown, ExternalLink } from 'lucide-react'
+import { Trophy, ChevronDown, ExternalLink, Camera, AtSign } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji, className = '' }) {
@@ -98,6 +98,18 @@ function normalizeWebsiteUrl(url) {
   if (!trimmed) return ''
   if (/^https?:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
+}
+
+function normalizeSocialUrl(platform, value) {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+
+  const v = trimmed.startsWith('@') ? trimmed.slice(1) : trimmed
+  if (v.includes('instagram.com') || v.includes('twitter.com') || v.includes('x.com')) return `https://${v}`
+
+  if (platform === 'instagram') return `https://instagram.com/${v}`
+  return `https://x.com/${v}`
 }
 
 export default function DriverPage() {
@@ -197,6 +209,30 @@ export default function DriverPage() {
           </div>
         </div>
         <div className="flex gap-2 ml-auto">
+          {driver.instagram_url && (
+            <a
+              href={normalizeSocialUrl('instagram', driver.instagram_url)}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+              aria-label="Instagram"
+              title="Instagram"
+            >
+              <Camera size={12} /> Instagram
+            </a>
+          )}
+          {driver.twitter_url && (
+            <a
+              href={normalizeSocialUrl('twitter', driver.twitter_url)}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+              aria-label="Twitter"
+              title="Twitter"
+            >
+              <AtSign size={12} /> Twitter
+            </a>
+          )}
           {driver.website_url && (
             <a
               href={normalizeWebsiteUrl(driver.website_url)}
