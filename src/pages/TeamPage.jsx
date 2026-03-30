@@ -96,31 +96,34 @@ export default function TeamPage() {
           ? <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
           : <div className="absolute inset-0 bg-radial-glow from-accent/10 via-transparent to-transparent" />
         }
+      </div>
 
-        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
-          <div className="flex items-end gap-5 flex-wrap">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center bg-surface border border-border">
-              {team.logo_url
-                ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
-                : <span className="text-xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
-              }
-            </div>
-            <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
-              <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
-                {team.nationality && (
-                  <span className="flex items-center gap-1.5">
-                    {team.flag_url
-                      ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
-                      : <Icon settingKey="icon_flag" emoji="🌍" />
-                    }
-                    {team.nationality}
-                  </span>
-                )}
-                {team.base && <span className="flex items-center gap-1"><Icon settingKey="icon_location" emoji="📍" /> {team.base}</span>}
-                {team.founded && <span>Est. {team.founded}</span>}
-              </div>
-            </div>
+      {/* ── Team Info (below hero) ── */}
+      <div className="apple-card p-6 flex items-start gap-5 flex-wrap">
+        <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center bg-surface border border-border">
+          {team.logo_url
+            ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
+            : <span className="text-xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
+          }
+        </div>
+        <div className="flex-1 min-w-[220px]">
+          <h1 className="text-3xl md:text-4xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
+          <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
+            {team.nationality && (
+              <span className="flex items-center gap-1.5 font-medium">
+                {team.flag_url
+                  ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
+                  : <Icon settingKey="icon_flag" emoji="🌍" />
+                }
+                {team.nationality}
+              </span>
+            )}
+            {team.base && (
+              <span className="flex items-center gap-1.5 font-medium">
+                <Icon settingKey="icon_location" emoji="📍" /> {team.base}
+              </span>
+            )}
+            {team.founded && <span className="font-medium">Est. {team.founded}</span>}
           </div>
         </div>
       </div>

@@ -84,13 +84,22 @@ export default function CircuitPage() {
             />
           </div>
         )}
+      </div>
 
-        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 280 }}>
-          <h1 className="text-4xl md:text-5xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{circuit.name}</h1>
-          <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
-            {circuit.location && <span className="flex items-center gap-1.5"><Icon settingKey="icon_location" LucideIcon={MapPin} /> {circuit.location}</span>}
-            {circuit.country && <span className="flex items-center gap-1.5"><MapPin size={14} /> {circuit.country}</span>}
-          </div>
+      {/* ── Circuit Info (below hero) ── */}
+      <div className="apple-card p-6">
+        <h1 className="text-3xl md:text-4xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{circuit.name}</h1>
+        <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
+          {circuit.location && (
+            <span className="flex items-center gap-1.5 font-medium">
+              <Icon settingKey="icon_location" LucideIcon={MapPin} /> {circuit.location}
+            </span>
+          )}
+          {circuit.country && (
+            <span className="flex items-center gap-1.5 font-medium">
+              <MapPin size={14} /> {circuit.country}
+            </span>
+          )}
         </div>
       </div>
 

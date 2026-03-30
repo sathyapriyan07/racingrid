@@ -165,27 +165,31 @@ export default function DriverPage() {
           ? <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
           : <div className="absolute inset-0 bg-radial-glow from-accent/10 via-transparent to-transparent" />
         }
+      </div>
 
-        <div className="relative z-10 p-8 md:p-10 flex flex-col justify-end" style={{ minHeight: 320 }}>
-          <div className="flex items-center gap-2 mb-3">
+      {/* ── Driver Info (below hero) ── */}
+      <div className="apple-card p-6 flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <div className="flex items-center gap-2 mb-2">
             {driver.code && <Badge color="red">{driver.code}</Badge>}
+            <h1 className="text-3xl md:text-4xl font-black" style={{ letterSpacing: '-0.04em' }}>{driver.name}</h1>
           </div>
-          <h1 className="text-4xl md:text-5xl font-black mb-3" style={{ letterSpacing: '-0.04em' }}>{driver.name}</h1>
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap text-sm" style={{ color: 'var(--text-secondary)' }}>
             {driver.nationality && (
-              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <span className="flex items-center gap-1.5 font-medium">
                 {driver.flag_url ? <img src={driver.flag_url} alt={driver.nationality} className="h-4 w-auto rounded-sm" /> : <Icon settingKey="icon_flag" emoji="🌍" />}
                 {driver.nationality}
               </span>
             )}
             {driver.dob && (
-              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                <Icon settingKey="icon_birthday" emoji="🎂" /> {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+              <span className="flex items-center gap-1.5 font-medium">
+                <Icon settingKey="icon_birthday" emoji="🎂" />
+                {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
               </span>
             )}
-            <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3 ml-auto">Compare</Link>
           </div>
         </div>
+        <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3">Compare</Link>
       </div>
 
       {/* ── Metrics ── */}
