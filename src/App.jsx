@@ -24,6 +24,7 @@ import AdminDrivers from './pages/admin/AdminDrivers'
 import AdminTeams from './pages/admin/AdminTeams'
 import AdminCircuits from './pages/admin/AdminCircuits'
 import AdminRaces from './pages/admin/AdminRaces'
+import AdminPractice from './pages/admin/AdminPractice'
 import AdminSync from './pages/admin/AdminSync'
 import AdminMedia from './pages/admin/AdminMedia'
 
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/admin/teams" element={<AdminRoute><AdminTeams /></AdminRoute>} />
         <Route path="/admin/circuits" element={<AdminRoute><AdminCircuits /></AdminRoute>} />
         <Route path="/admin/races" element={<AdminRoute><AdminRaces /></AdminRoute>} />
+        <Route path="/admin/practice" element={<AdminRoute><AdminPractice /></AdminRoute>} />
         <Route path="/admin/sync" element={<AdminRoute><AdminSync /></AdminRoute>} />
         <Route path="/admin/media" element={<AdminRoute><AdminMedia /></AdminRoute>} />
       </Routes>

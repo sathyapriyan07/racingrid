@@ -5,6 +5,7 @@ import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
+import { useAuthStore } from '../store/authStore'
 
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -37,10 +38,12 @@ function formatSessionDateTime(date, time) {
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchQualifying, fetchSprintResults, fetchHighlights } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights } = useDataStore()
+  const isAdmin = useAuthStore(s => s.isAdmin)
 
   const [race, setRace] = useState(null)
   const [results, setResults] = useState([])
+  const [practiceResults, setPracticeResults] = useState([])
   const [qualifying, setQualifying] = useState([])
   const [sprintResults, setSprintResults] = useState([])
   const [highlights, setHighlights] = useState([])
@@ -55,10 +58,11 @@ export default function RacePage() {
   const [of1Error, setOf1Error] = useState(null)
 
   useEffect(() => {
-    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
-      .then(([r, res, q, sp, hl]) => {
+    Promise.all([fetchRace(id), fetchRaceResults(id), fetchPracticeResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
+      .then(([r, res, pr, q, sp, hl]) => {
         setRace(r)
         setResults(res || [])
+        setPracticeResults(pr || [])
         setQualifying(q || [])
         setSprintResults(sp || [])
         setHighlights(hl || [])
@@ -111,11 +115,6 @@ export default function RacePage() {
     { id: 'events', label: 'Events', icon: AlertTriangle },
     ...(highlights.length ? [{ id: 'highlights', label: 'Highlights', icon: PlayCircle }] : []),
   ]
-
-  // Legacy (was practice results via OpenF1). Kept as no-ops to avoid runtime errors if this block is re-enabled.
-  const practice = []
-  const isAdmin = () => false
-  const syncPractice = () => {}
 
   return (
     <div className="space-y-6">
@@ -264,7 +263,8 @@ export default function RacePage() {
       {/* Practice */}
       {activeTab === 'practice' && (
         <div className="space-y-4">
-          {true ? (
+          {practiceResults.length === 0 ? (
+            <>
             <Card className="p-0 overflow-hidden">
               <table className="w-full">
                 <thead>
@@ -294,13 +294,29 @@ export default function RacePage() {
                 </p>
               )}
             </Card>
+            <Card className="p-4">
+              <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>No FP classifications entered.</p>
+              {isAdmin() && (
+                <div className="flex justify-center mt-3">
+                  <Link to={`/admin/practice?raceId=${race.id}&session=FP1`} className="btn-primary text-xs">Edit FP Classifications</Link>
+                </div>
+              )}
+            </Card>
+            </>
           ) : (
             ['FP1', 'FP2', 'FP3'].map(sess => {
-              const rows = practice.filter(r => r.session === sess)
+              const rows = practiceResults.filter(r => r.session === sess)
               if (!rows.length) return null
               return (
                 <Card key={sess} className="p-0 overflow-hidden">
-                  <div className="px-4 py-2 text-xs font-bold border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>{sess}</div>
+                  <div className="px-4 py-2 text-xs font-bold border-b" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
+                    {sess}
+                    {isAdmin() && (
+                      <Link to={`/admin/practice?raceId=${race.id}&session=${sess}`} className="ml-3 text-f1red hover:opacity-80">
+                        Edit
+                      </Link>
+                    )}
+                  </div>
                   <table className="w-full">
                     <thead>
                       <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>

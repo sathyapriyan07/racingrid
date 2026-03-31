@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { Database, Upload, Users, Car, MapPin, Flag, BarChart2, Home, Menu, X, Image } from 'lucide-react'
+import { Database, Upload, Users, Car, MapPin, Flag, BarChart2, Home, Menu, X, Image, Clock } from 'lucide-react'
 
 const navItems = [
   { to: '/admin', label: 'Dashboard', icon: BarChart2, exact: true },
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/admin/teams', label: 'Teams', icon: Car },
   { to: '/admin/circuits', label: 'Circuits', icon: MapPin },
   { to: '/admin/races', label: 'Races', icon: Flag },
+  { to: '/admin/practice', label: 'Practice', icon: Clock },
   { to: '/admin/media', label: 'Media & Icons', icon: Image },
   { to: '/admin/sync', label: 'Sync Tools', icon: Database },
 ]
@@ -129,4 +130,3 @@ export default function AdminLayout({ children }) {
     </div>
   )
 }
-

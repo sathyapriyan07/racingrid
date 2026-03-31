@@ -169,6 +169,20 @@ create table if not exists sprint_results (
   unique (race_id, driver_id)
 );
 
+create table if not exists practice_results (
+  id uuid primary key default uuid_generate_v4(),
+  race_id uuid references races(id) on delete cascade,
+  session text not null, -- FP1 / FP2 / FP3
+  driver_id uuid references drivers(id) on delete cascade,
+  team_id uuid references teams(id) on delete set null,
+  position integer,
+  time text,
+  gap text,
+  laps integer,
+  created_at timestamptz default now(),
+  unique (race_id, session, driver_id)
+);
+
 create table if not exists race_highlights (
   id uuid primary key default uuid_generate_v4(),
   race_id uuid references races(id) on delete cascade,
@@ -217,6 +231,7 @@ create index if not exists idx_pit_stops_race on pit_stops(race_id);
 create index if not exists idx_race_events_race on race_events(race_id);
 create index if not exists idx_races_season on races(season_id);
 create index if not exists idx_races_date on races(date);
+create index if not exists idx_practice_race_session on practice_results(race_id, session);
 
 -- ROW LEVEL SECURITY
 
@@ -252,10 +267,12 @@ create policy "public_read_race_events" on race_events for select using (true);
 alter table qualifying_results enable row level security;
 alter table driver_standings enable row level security;
 alter table constructor_standings enable row level security;
+alter table practice_results enable row level security;
 
 create policy "public_read_qualifying" on qualifying_results for select using (true);
 create policy "public_read_driver_standings" on driver_standings for select using (true);
 create policy "public_read_constructor_standings" on constructor_standings for select using (true);
+create policy "public_read_practice_results" on practice_results for select using (true);
 
 alter table sprint_results enable row level security;
 create policy "public_read_sprint_results" on sprint_results for select using (true);
@@ -269,6 +286,7 @@ create policy "admin_write_seasons" on seasons for all using (is_admin());
 create policy "admin_write_races" on races for all using (is_admin());
 create policy "admin_write_results" on results for all using (is_admin());
 create policy "admin_write_qualifying" on qualifying_results for all using (is_admin());
+create policy "admin_write_practice_results" on practice_results for all using (is_admin());
 create policy "admin_write_driver_standings" on driver_standings for all using (is_admin());
 create policy "admin_write_constructor_standings" on constructor_standings for all using (is_admin());
 create policy "admin_write_laps" on laps for all using (is_admin());
