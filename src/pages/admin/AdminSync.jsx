@@ -5,9 +5,8 @@ import { RefreshCw, ExternalLink, CheckCircle, XCircle, Loader } from 'lucide-re
 import { Card } from '../../components/ui'
 import {
   normalizeDrivers, normalizeTeams, normalizeCircuits,
-  normalizeRaces, normalizeQualifying,
+  normalizeRaces,
   normalizeDriverStandings, normalizeConstructorStandings,
-  normalizeSprintResults,
 } from '../../utils/normalizers'
 
 async function callEdgeFunction(name, payload) {
@@ -256,33 +255,10 @@ export default function AdminSync() {
     setRun(id, true)
     setResult(id, { status: 'fetching' })
     try {
-      const seasonId = await getSeasonId(yr)
-      const [driverMap, teamMap, raceMap] = await Promise.all([getDriverMap(), getTeamMap(), getRaceMap(seasonId)])
-      const firstPage = await ergastFetch(
-        `https://api.jolpi.ca/ergast/f1/${yr}/qualifying/?limit=100&format=json`,
-        `/api/ergast/${yr}/qualifying/?limit=100&format=json`
-      )
-      const total = parseInt(firstPage?.MRData?.total || 0)
-      const offsets = Array.from({ length: Math.ceil(total / 100) - 1 }, (_, i) => (i + 1) * 100)
-      const rest = await Promise.all(offsets.map(o => ergastFetch(
-        `https://api.jolpi.ca/ergast/f1/${yr}/qualifying/?limit=100&offset=${o}&format=json`,
-        `/api/ergast/${yr}/qualifying/?limit=100&offset=${o}&format=json`
-      )))
-      const allRaces = [firstPage, ...rest].flatMap(p => p?.MRData?.RaceTable?.Races || [])
-      const rows = allRaces.flatMap(race => {
-        const raceId = raceMap[parseInt(race.round)]
-        if (!raceId) return []
-        return (race.QualifyingResults || []).map(r => ({
-          race_id: raceId,
-          driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
-          team_id: teamMap[r.Constructor?.constructorId] || teamMap[r.Constructor?.name] || null,
-          position: parseInt(r.position) || null,
-          q1: r.Q1 || null, q2: r.Q2 || null, q3: r.Q3 || null,
-        }))
-      })
-      if (!rows.length) throw new Error('No qualifying data found')
-      const saved = await upsertChunked(id, 'qualifying_results', rows, 'race_id,driver_id')
-      toast.success(`Qualifying ${yr}: ${saved} upserted`)
+      await getSeasonId(yr) // keep the same precondition + error message
+      const res = await callEdgeFunction('sync-ergast', { action: 'sync_qualifying', year: yr })
+      if (!res?.upserted) throw new Error('No qualifying data upserted')
+      toast.success(`Qualifying ${yr}: ${res.upserted} upserted`)
     } catch (err) {
       setResult(id, { status: 'error', error: err.message })
       toast.error(err.message)
