@@ -1,98 +1,181 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
-import { Spinner, PageHeader, EmptyState } from '../components/ui'
-
-function DriverCard({ driver, size = 'md' }) {
-  const isLg = size === 'lg'
-  return (
-    <Link to={`/driver/${driver.id}`}>
-      <div className="apple-card overflow-hidden flex flex-col" style={{ width: isLg ? 160 : 130 }}>
-        <div className={`${isLg ? 'h-44' : 'h-32'} bg-muted overflow-hidden relative`}>
-          {driver.image_url
-            ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover object-top" loading="lazy" />
-            : <div className="w-full h-full flex items-center justify-center text-2xl font-black" style={{ color: 'var(--text-muted)' }}>{driver.code || '?'}</div>
-          }
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,5,8,0.7) 0%, transparent 50%)' }} />
-          {driver.flag_url && <img src={driver.flag_url} alt="" className="absolute bottom-2 right-2 h-4 w-auto rounded-sm" loading="lazy" />}
-        </div>
-        <div className="p-3">
-          <div className="text-xs font-bold text-f1red">{driver.code || '—'}</div>
-          <div className="text-xs font-semibold mt-0.5 leading-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{driver.name}</div>
-          <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{driver.nationality || '—'}</div>
-        </div>
-      </div>
-    </Link>
-  )
-}
+import { Spinner, PageHeader, EmptyState, Card, Badge } from '../components/ui'
+import { ChevronDown, ExternalLink } from 'lucide-react'
 
 export default function Drivers() {
   const { fetchDrivers, drivers } = useDataStore()
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     fetchDrivers().catch(console.error).finally(() => setLoading(false))
   }, [])
 
-  const filtered = drivers.filter(d =>
-    d.name.toLowerCase().includes(search.toLowerCase()) ||
-    (d.code || '').toLowerCase().includes(search.toLowerCase()) ||
-    (d.nationality || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return drivers
+    return drivers.filter(d =>
+      (d.name || '').toLowerCase().includes(q) ||
+      (d.code || '').toLowerCase().includes(q) ||
+      (d.nationality || '').toLowerCase().includes(q)
+    )
+  }, [drivers, search])
 
-  const current = filtered.filter(d => d.is_active)
-  const others = filtered.filter(d => !d.is_active)
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      if (!!a.is_active !== !!b.is_active) return a.is_active ? -1 : 1
+      return (a.name || '').localeCompare(b.name || '')
+    })
+  }, [filtered])
 
   if (loading) return <Spinner />
 
   return (
     <div className="space-y-10">
       <PageHeader title="Drivers" subtitle={`${drivers.length} drivers in database`}>
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search drivers..." className="input w-48" />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search drivers..."
+          className="input w-48"
+        />
       </PageHeader>
 
-      {filtered.length === 0 ? <EmptyState message="No drivers found." /> : (
-        <>
-          {current.length > 0 && (
-            <section>
-              <h2 className="section-title mb-5">Current Season</h2>
-              <div className="scroll-row pb-4">
-                {current.map(driver => <DriverCard key={driver.id} driver={driver} size="lg" />)}
-              </div>
-            </section>
-          )}
+      {sorted.length === 0 ? <EmptyState message="No drivers found." /> : (
+        <Card className="p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th className="text-left py-2 pl-3 w-9" />
+                  <th className="text-left py-2">Driver</th>
+                  <th className="text-left py-2 hidden sm:table-cell">Nationality</th>
+                  <th className="text-left py-2 hidden md:table-cell">DOB</th>
+                  <th className="text-right py-2 pr-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(d => {
+                  const open = expandedId === d.id
+                  return (
+                    <Fragment key={d.id}>
+                      <tr
+                        className="border-b hover:bg-muted transition-colors"
+                        style={{ borderColor: 'var(--border)' }}
+                      >
+                        <td className="py-2 pl-3 align-middle">
+                          <button
+                            onClick={() => setExpandedId(open ? null : d.id)}
+                            className="btn-icon"
+                            style={{ padding: 6 }}
+                            title={open ? 'Collapse' : 'Expand'}
+                          >
+                            <ChevronDown
+                              size={14}
+                              style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                            />
+                          </button>
+                        </td>
+                        <td className="py-2 align-middle">
+                          <div className="flex items-center gap-2">
+                            <div className="w-9 h-9 rounded-xl overflow-hidden bg-muted shrink-0">
+                              {d.image_url
+                                ? <img src={d.image_url} alt={d.name} className="w-full h-full object-cover object-top" loading="lazy" />
+                                : <div className="w-full h-full flex items-center justify-center text-xs font-black" style={{ color: 'var(--text-muted)' }}>{d.code || '?'}</div>
+                              }
+                            </div>
+                            <div className="min-w-0">
+                              <Link to={`/driver/${d.id}`} className="text-sm font-semibold hover:text-f1red transition-colors truncate block">
+                                {d.name}
+                              </Link>
+                              <div className="text-xs font-bold text-f1red">{d.code || '—'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2 hidden sm:table-cell align-middle" style={{ color: 'var(--text-secondary)' }}>
+                          <div className="flex items-center gap-1.5">
+                            {d.flag_url && <img src={d.flag_url} alt="" className="h-3 w-auto rounded-sm" loading="lazy" />}
+                            <span className="truncate">{d.nationality || '—'}</span>
+                          </div>
+                        </td>
+                        <td className="py-2 hidden md:table-cell align-middle" style={{ color: 'var(--text-secondary)' }}>
+                          {d.dob ? new Date(d.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="py-2 pr-3 text-right align-middle">
+                          {d.is_active
+                            ? <Badge color="green">Active</Badge>
+                            : <Badge color="gray">Inactive</Badge>
+                          }
+                        </td>
+                      </tr>
 
-          {others.length > 0 && (
-            <section>
-              {current.length > 0 && <h2 className="section-title mb-5">All Drivers</h2>}
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
-                {others.map(driver => (
-                  <Link key={driver.id} to={`/driver/${driver.id}`}>
-                    <div className="apple-card overflow-hidden">
-                      <div className="h-24 bg-muted overflow-hidden relative">
-                        {driver.image_url
-                          ? <img src={driver.image_url} alt={driver.name} className="w-full h-full object-cover object-top" loading="lazy" />
-                          : <div className="w-full h-full flex items-center justify-center font-black text-lg" style={{ color: 'var(--text-muted)' }}>{driver.code || '?'}</div>
-                        }
-                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,5,8,0.6) 0%, transparent 50%)' }} />
-                      </div>
-                      <div className="p-2.5">
-                        <div className="text-xs font-bold text-f1red">{driver.code || '—'}</div>
-                        <div className="text-xs font-semibold mt-0.5 truncate" style={{ color: 'var(--text-primary)' }}>{driver.name}</div>
-                        <div className="flex items-center gap-1 mt-1">
-                          {driver.flag_url && <img src={driver.flag_url} alt="" className="h-3 w-auto rounded-sm" loading="lazy" />}
-                          <span className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{driver.nationality || '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
+                      {open && (
+                        <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-raised)' }}>
+                          <td colSpan={5} className="px-4 py-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                              <div className="w-full sm:w-48 shrink-0">
+                                <div className="apple-card overflow-hidden">
+                                  <div className="h-40 bg-muted overflow-hidden">
+                                    {d.hero_image_url || d.image_url
+                                      ? <img src={d.hero_image_url || d.image_url} alt={d.name} className="w-full h-full object-cover object-top" loading="lazy" />
+                                      : <div className="w-full h-full flex items-center justify-center text-3xl font-black" style={{ color: 'var(--text-muted)' }}>{d.code || '?'}</div>
+                                    }
+                                  </div>
+                                  <div className="p-3">
+                                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Nationality</div>
+                                    <div className="text-sm font-semibold">{d.nationality || '—'}</div>
+                                    {d.dob && (
+                                      <div className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                                        Born {new Date(d.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                {d.biography ? (
+                                  <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
+                                    {d.biography}
+                                  </p>
+                                ) : (
+                                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No biography added yet.</p>
+                                )}
+
+                                {(d.website_url || d.instagram_url || d.twitter_url) && (
+                                  <div className="flex items-center gap-3 mt-4 flex-wrap">
+                                    {d.website_url && (
+                                      <a href={d.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-f1red hover:opacity-80 inline-flex items-center gap-1">
+                                        <ExternalLink size={12} /> Website
+                                      </a>
+                                    )}
+                                    {d.instagram_url && (
+                                      <a href={d.instagram_url} target="_blank" rel="noopener noreferrer" className="text-xs text-f1red hover:opacity-80 inline-flex items-center gap-1">
+                                        <ExternalLink size={12} /> Instagram
+                                      </a>
+                                    )}
+                                    {d.twitter_url && (
+                                      <a href={d.twitter_url} target="_blank" rel="noopener noreferrer" className="text-xs text-f1red hover:opacity-80 inline-flex items-center gap-1">
+                                        <ExternalLink size={12} /> X/Twitter
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   )
