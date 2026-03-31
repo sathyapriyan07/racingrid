@@ -27,9 +27,19 @@ export default function AdminPractice() {
 
   const [adding, setAdding] = useState(false)
   const [newRow, setNewRow] = useState({ driver_id: '', team_id: '', position: '', time: '', gap: '', laps: '' })
+  const [driverSearch, setDriverSearch] = useState('')
 
   const driverById = useMemo(() => Object.fromEntries(drivers.map(d => [d.id, d])), [drivers])
   const teamById = useMemo(() => Object.fromEntries(teams.map(t => [t.id, t])), [teams])
+  const filteredDrivers = useMemo(() => {
+    const q = driverSearch.trim().toLowerCase()
+    if (!q) return drivers
+    return drivers.filter(d => {
+      const name = (d.name || '').toLowerCase()
+      const code = (d.code || '').toLowerCase()
+      return name.includes(q) || code.includes(q)
+    })
+  }, [drivers, driverSearch])
 
   const loadSeasons = async () => {
     const { data, error } = await supabase.from('seasons').select('*').order('year', { ascending: false })
@@ -217,9 +227,15 @@ export default function AdminPractice() {
         <div className="flex items-end gap-2 flex-wrap">
           <div className="min-w-56 flex-1">
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Driver</label>
+            <input
+              value={driverSearch}
+              onChange={e => setDriverSearch(e.target.value)}
+              placeholder="Search driver (name/code)..."
+              className="input mb-2"
+            />
             <Select value={newRow.driver_id} onChange={e => setNewRow(r => ({ ...r, driver_id: e.target.value }))}>
               <option value="">Select driver...</option>
-              {drivers.map(d => (
+              {filteredDrivers.map(d => (
                 <option key={d.id} value={d.id}>{d.code ? `${d.code} — ` : ''}{d.name}</option>
               ))}
             </Select>
