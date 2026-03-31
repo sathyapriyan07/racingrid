@@ -108,17 +108,29 @@ export function normalizeResults(raw, raceId, driverMap = {}, teamMap = {}, sour
   }))
 }
 
-export function normalizeQualifying(raw, raceId, driverMap = {}, teamMap = {}) {
-  const races = raw?.MRData?.RaceTable?.Races || []
-  const list = races[0]?.QualifyingResults || []
-  return list.map(r => ({
+export function normalizeQualifying(raw, raceId, driverMap = {}, teamMap = {}, source = 'ergast') {
+  if (source === 'ergast') {
+    const races = raw?.MRData?.RaceTable?.Races || []
+    const list = races[0]?.QualifyingResults || []
+    return list.map(r => ({
+      race_id: raceId,
+      driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
+      team_id: teamMap[r.Constructor?.name] || null,
+      position: parseInt(r.position) || null,
+      q1: r.Q1 || null,
+      q2: r.Q2 || null,
+      q3: r.Q3 || null,
+    }))
+  }
+
+  return (Array.isArray(raw) ? raw : [raw]).map(r => ({
     race_id: raceId,
-    driver_id: driverMap[r.Driver?.code] || driverMap[`${r.Driver?.givenName} ${r.Driver?.familyName}`] || null,
-    team_id: teamMap[r.Constructor?.name] || null,
+    driver_id: r.driver_id || driverMap[r.driver] || null,
+    team_id: r.team_id || teamMap[r.team] || null,
     position: parseInt(r.position) || null,
-    q1: r.Q1 || null,
-    q2: r.Q2 || null,
-    q3: r.Q3 || null,
+    q1: r.q1 || null,
+    q2: r.q2 || null,
+    q3: r.q3 || null,
   }))
 }
 

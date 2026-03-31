@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import Papa from 'papaparse'
 import {
   normalizeDrivers, normalizeTeams, normalizeCircuits,
-  normalizeRaces, normalizeResults, normalizeLaps,
+  normalizeRaces, normalizeResults, normalizeQualifying, normalizeLaps,
   normalizePitStops, normalizeEvents
 } from '../../utils/normalizers'
 import { Upload, Eye, Save, X } from 'lucide-react'
@@ -18,6 +18,7 @@ const DATA_TYPES = [
   { value: 'seasons', label: 'Seasons' },
   { value: 'races', label: 'Races' },
   { value: 'results', label: 'Results' },
+  { value: 'qualifying_results', label: 'Qualifying Results' },
   { value: 'laps', label: 'Laps' },
   { value: 'pit_stops', label: 'Pit Stops' },
   { value: 'race_events', label: 'Race Events' },
@@ -115,6 +116,9 @@ export default function AdminImport() {
         case 'results':
           normalized = normalizeResults(parsed, raceId, maps.driverMap, maps.teamMap, source)
           break
+        case 'qualifying_results':
+          normalized = normalizeQualifying(parsed, raceId, maps.driverMap, maps.teamMap, source)
+          break
         case 'laps':
           normalized = normalizeLaps(parsed, raceId, maps.driverMap)
           break
@@ -155,7 +159,7 @@ export default function AdminImport() {
     }
   }
 
-  const needsRaceId = ['results', 'laps', 'pit_stops', 'race_events'].includes(dataType)
+  const needsRaceId = ['results', 'qualifying_results', 'laps', 'pit_stops', 'race_events'].includes(dataType)
   const needsSeasonId = dataType === 'races'
 
   return (
