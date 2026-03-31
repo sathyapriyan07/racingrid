@@ -53,6 +53,7 @@ export default function AdminPractice() {
 
   const [editId, setEditId] = useState(null)
   const [editData, setEditData] = useState({})
+  const [editAutoTime, setEditAutoTime] = useState(true)
 
   const [adding, setAdding] = useState(false)
   const [newRow, setNewRow] = useState({ driver_id: '', team_id: '', position: '', time: '', gap: '', laps: '' })
@@ -149,17 +150,31 @@ export default function AdminPractice() {
     const gapMs = parseGapToMs(newRow.gap)
     if (gapMs === null) return
 
-    const above =
-      rows.find(r => r.position === pos - 1)
-      || rows.filter(r => (parseInt(r.position) || 0) < pos).sort((a, b) => (parseInt(b.position) || 0) - (parseInt(a.position) || 0))[0]
+    const leader = rows.find(r => r.position === 1)
+    const leaderMs = parseLapTimeToMs(leader?.time)
+    if (leaderMs === null) return
 
-    const aboveMs = parseLapTimeToMs(above?.time)
-    if (aboveMs === null) return
-
-    const nextMs = aboveMs + gapMs
+    const nextMs = leaderMs + gapMs
     const formatted = formatMsToLapTime(nextMs)
     if (formatted && formatted !== newRow.time) setNewRow(r => ({ ...r, time: formatted }))
   }, [autoTime, newRow.position, newRow.gap, rows]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!editId) return
+    if (!editAutoTime) return
+    const pos = parseInt(editData.position)
+    if (!pos || pos <= 1) return
+    const gapMs = parseGapToMs(editData.gap)
+    if (gapMs === null) return
+
+    const leader = rows.find(r => r.position === 1)
+    const leaderMs = parseLapTimeToMs(leader?.time)
+    if (leaderMs === null) return
+
+    const nextMs = leaderMs + gapMs
+    const formatted = formatMsToLapTime(nextMs)
+    if (formatted && formatted !== editData.time) setEditData(x => ({ ...x, time: formatted }))
+  }, [editId, editAutoTime, editData.position, editData.gap, rows]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams)
@@ -173,6 +188,7 @@ export default function AdminPractice() {
 
   const startEdit = (row) => {
     setEditId(row.id)
+    setEditAutoTime(true)
     setEditData({
       id: row.id,
       race_id: row.race_id,
@@ -186,7 +202,7 @@ export default function AdminPractice() {
     })
   }
 
-  const cancelEdit = () => { setEditId(null); setEditData({}) }
+  const cancelEdit = () => { setEditId(null); setEditData({}); setEditAutoTime(true) }
 
   const saveEdit = async () => {
     try {
@@ -225,11 +241,9 @@ export default function AdminPractice() {
       let time = newRow.time || null
       if (!time && pos && pos > 1 && newRow.gap) {
         const gapMs = parseGapToMs(newRow.gap)
-        const above =
-          rows.find(r => r.position === pos - 1)
-          || rows.filter(r => (parseInt(r.position) || 0) < pos).sort((a, b) => (parseInt(b.position) || 0) - (parseInt(a.position) || 0))[0]
-        const aboveMs = parseLapTimeToMs(above?.time)
-        if (gapMs !== null && aboveMs !== null) time = formatMsToLapTime(aboveMs + gapMs) || null
+        const leader = rows.find(r => r.position === 1)
+        const leaderMs = parseLapTimeToMs(leader?.time)
+        if (gapMs !== null && leaderMs !== null) time = formatMsToLapTime(leaderMs + gapMs) || null
       }
 
       if (pos === 1 && !time) throw new Error('Position 1 requires a time')
@@ -386,7 +400,7 @@ export default function AdminPractice() {
                       <tr key={r.id} className="border-b" style={{ borderColor: 'var(--border)' }}>
                         <td className="py-2 pr-4 w-16">
                           {isEditing ? (
-                            <input value={editData.position ?? ''} onChange={e => setEditData(x => ({ ...x, position: e.target.value }))} className="input py-1 text-xs w-16" />
+                            <input value={editData.position ?? ''} onChange={e => { setEditData(x => ({ ...x, position: e.target.value })); setEditAutoTime(true) }} className="input py-1 text-xs w-16" />
                           ) : (
                             <span style={{ color: 'var(--text-secondary)' }}>{r.position ?? '—'}</span>
                           )}
@@ -415,14 +429,14 @@ export default function AdminPractice() {
                         </td>
                         <td className="py-2 pr-4 min-w-24">
                           {isEditing ? (
-                            <input value={editData.time ?? ''} onChange={e => setEditData(x => ({ ...x, time: e.target.value }))} className="input py-1 text-xs w-24" />
+                            <input value={editData.time ?? ''} onChange={e => { setEditData(x => ({ ...x, time: e.target.value })); setEditAutoTime(false) }} className="input py-1 text-xs w-24" />
                           ) : (
                             <span style={{ color: 'var(--text-secondary)' }}>{r.time || '—'}</span>
                           )}
                         </td>
                         <td className="py-2 pr-4 min-w-20">
                           {isEditing ? (
-                            <input value={editData.gap ?? ''} onChange={e => setEditData(x => ({ ...x, gap: e.target.value }))} className="input py-1 text-xs w-20" />
+                            <input value={editData.gap ?? ''} onChange={e => { setEditData(x => ({ ...x, gap: e.target.value })); setEditAutoTime(true) }} className="input py-1 text-xs w-20" />
                           ) : (
                             <span style={{ color: 'var(--text-secondary)' }}>{r.gap || '—'}</span>
                           )}
