@@ -32,26 +32,6 @@ async function ergastFetch(endpoint, devPath) {
   }
 }
 
-function canonicalizeName(name) {
-  return String(name || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .replace(/\b(f1|team|racing|scuderia|formula|one)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function fmtLap(seconds) {
-  if (!seconds || seconds <= 0) return null
-  const totalMs = Math.round(seconds * 1000)
-  const ms = totalMs % 1000
-  const totalSeconds = Math.floor(totalMs / 1000)
-  const s = totalSeconds % 60
-  const m = Math.floor(totalSeconds / 60)
-  return `${m}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
-}
-
 function SyncStatus({ result }) {
   if (result.status === 'fetching') return (
     <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
@@ -437,138 +417,6 @@ export default function AdminSync() {
     }
   }
 
-  const syncPracticeResults = async (yr) => {
-    const id = `practice-${yr}`
-    setRun(id, true)
-    setResult(id, { status: 'fetching' })
-    try {
-      const seasonId = await getSeasonId(yr)
-      const [driverMap, teamsRes, racesRes, sessionsRes] = await Promise.all([
-        getDriverMap(),
-        supabase.from('teams').select('id, name, ergast_id'),
-        supabase.from('races').select('id, date').eq('season_id', seasonId),
-        fetch(`https://api.openf1.org/v1/sessions?year=${yr}`).then(r => {
-          if (!r.ok) throw new Error(`OpenF1 fetch failed: ${r.status}`)
-          return r.json()
-        }),
-      ])
-
-      const teamMap = {}
-      teamsRes.data?.forEach(t => {
-        teamMap[canonicalizeName(t.name)] = t.id
-        if (t.ergast_id) teamMap[canonicalizeName(t.ergast_id)] = t.id
-      })
-
-      const races = racesRes.data || []
-      if (!races.length) throw new Error('No races found — sync races first')
-      if (!sessionsRes.length) throw new Error('No OpenF1 sessions returned')
-
-      const wanted = [
-        { openf1: 'Practice 1', session: 'FP1' },
-        { openf1: 'Practice 2', session: 'FP2' },
-        { openf1: 'Practice 3', session: 'FP3' },
-      ]
-
-      const pickSessionKey = (raceDateMs, openf1Name) => {
-        const candidates = sessionsRes
-          .filter(s => s?.session_name === openf1Name && s?.date_start)
-          .map(s => ({ session_key: s.session_key, ms: new Date(s.date_start).getTime() }))
-          .filter(s => s.session_key && !Number.isNaN(s.ms))
-          .filter(s => (raceDateMs - s.ms) >= -86400000 && (raceDateMs - s.ms) <= 86400000 * 7)
-          .sort((a, b) => Math.abs(raceDateMs - a.ms) - Math.abs(raceDateMs - b.ms))
-        return candidates[0]?.session_key ?? null
-      }
-
-      let totalSaved = 0
-      for (const race of races) {
-        if (!race.date) continue
-        const raceDateMs = new Date(race.date).getTime()
-        for (const w of wanted) {
-          const sk = pickSessionKey(raceDateMs, w.openf1)
-          if (!sk) continue
-
-          const [of1Drivers, laps] = await Promise.all([
-            fetch(`https://api.openf1.org/v1/drivers?session_key=${sk}`).then(r => {
-              if (!r.ok) throw new Error(`OpenF1 drivers fetch failed: ${r.status}`)
-              return r.json()
-            }),
-            fetch(`https://api.openf1.org/v1/laps?session_key=${sk}`).then(r => {
-              if (!r.ok) throw new Error(`OpenF1 laps fetch failed: ${r.status}`)
-              return r.json()
-            }),
-          ])
-
-          const byNumber = {}
-          of1Drivers.forEach(d => {
-            const num = String(d.driver_number ?? '')
-            if (!num) return
-            byNumber[num] = {
-              code: d.name_acronym || null,
-              fullName: d.full_name || d.name || null,
-              teamName: d.team_name || null,
-            }
-          })
-
-          const best = {}
-          const lapCount = {}
-          laps.forEach(l => {
-            const num = String(l.driver_number ?? '')
-            const dur = typeof l.lap_duration === 'number' ? l.lap_duration : null
-            if (!num || !dur || dur <= 0) return
-            if (l.is_pit_out_lap || l.is_pit_in_lap) return
-            lapCount[num] = (lapCount[num] || 0) + 1
-            if (best[num] === undefined || dur < best[num]) best[num] = dur
-          })
-
-          const rows = Object.entries(byNumber).map(([num, d]) => {
-            const driverId = driverMap[d.code] || (d.fullName ? driverMap[d.fullName] : null) || null
-            const teamId = d.teamName ? (teamMap[canonicalizeName(d.teamName)] || null) : null
-            return {
-              race_id: race.id,
-              session: w.session,
-              driver_id: driverId,
-              team_id: teamId,
-              _best: best[num] ?? null,
-              time: best[num] ? fmtLap(best[num]) : null,
-              laps: lapCount[num] || 0,
-            }
-          }).filter(r => r.driver_id)
-
-          rows.sort((a, b) => {
-            if (a._best === null && b._best === null) return 0
-            if (a._best === null) return 1
-            if (b._best === null) return -1
-            return a._best - b._best
-          })
-
-          const leader = rows.find(r => r._best !== null)?._best ?? null
-          const upsertRows = rows.map((r, i) => ({
-            race_id: r.race_id,
-            session: r.session,
-            driver_id: r.driver_id,
-            team_id: r.team_id,
-            position: r._best !== null ? i + 1 : null,
-            time: r.time,
-            gap: leader !== null && r._best !== null && r._best > leader ? `+${(r._best - leader).toFixed(3)}` : null,
-            laps: r.laps,
-          }))
-
-          const { error } = await supabase.from('practice_results').upsert(upsertRows, { onConflict: 'race_id,session,driver_id' })
-          if (error) throw error
-          totalSaved += upsertRows.length
-        }
-      }
-
-      setResult(id, { status: 'done', total: races.length, saved: totalSaved })
-      toast.success(`Practice results ${yr}: ${totalSaved} upserted`)
-    } catch (err) {
-      setResult(id, { status: 'error', error: err.message })
-      toast.error(err.message)
-    } finally {
-      setRun(id, false)
-    }
-  }
-
   const syncSeason = async () => {
     setRun('season', true)
     setSeasonResult(null)
@@ -594,7 +442,6 @@ export default function AdminSync() {
     { key: 'results', label: 'Race Results', description: 'Final positions, points, status', fn: syncRaceResults },
     { key: 'sprint', label: 'Sprint Results', description: 'Sprint race results + points (2021+)', fn: syncSprintResults },
     { key: 'qualifying', label: 'Qualifying Results', description: 'Q1/Q2/Q3 times per driver', fn: syncQualifying },
-    { key: 'practice', label: 'Practice Results (OpenF1)', description: 'FP1/FP2/FP3 classification via best lap time', fn: syncPracticeResults },
     { key: 'driver-standings', label: 'Driver Standings', description: 'Championship standings (includes sprint points)', fn: syncDriverStandings },
     { key: 'constructor-standings', label: 'Constructor Standings', description: 'Team championship standings (includes sprint points)', fn: syncConstructorStandings },
   ]

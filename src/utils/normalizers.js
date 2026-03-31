@@ -68,6 +68,12 @@ export function normalizeRaces(raw, seasonId, circuitMap = {}, source = 'ergast'
       name: r.raceName,
       date: r.date || null,
       round: parseInt(r.round) || null,
+      fp1_date: r.FirstPractice?.date || null,
+      fp1_time: r.FirstPractice?.time || null,
+      fp2_date: r.SecondPractice?.date || null,
+      fp2_time: r.SecondPractice?.time || null,
+      fp3_date: r.ThirdPractice?.date || null,
+      fp3_time: r.ThirdPractice?.time || null,
     }))
   }
   return (Array.isArray(raw) ? raw : [raw]).map(r => ({
@@ -76,6 +82,12 @@ export function normalizeRaces(raw, seasonId, circuitMap = {}, source = 'ergast'
     name: r.name || r.raceName,
     date: r.date || null,
     round: parseInt(r.round) || null,
+    fp1_date: r.fp1_date || null,
+    fp1_time: r.fp1_time || null,
+    fp2_date: r.fp2_date || null,
+    fp2_time: r.fp2_time || null,
+    fp3_date: r.fp3_date || null,
+    fp3_time: r.fp3_time || null,
   }))
 }
 

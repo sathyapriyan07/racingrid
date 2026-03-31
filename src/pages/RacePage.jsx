@@ -5,9 +5,6 @@ import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
-import { useAuthStore } from '../store/authStore'
-import { supabase } from '../lib/supabase'
-import toast from 'react-hot-toast'
 
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -30,34 +27,20 @@ async function openf1Fetch(path) {
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
-function canonicalizeName(name) {
-  return String(name || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-    .replace(/\b(f1|team|racing|scuderia|formula|one)\b/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function fmtLap(seconds) {
-  if (!seconds || seconds <= 0) return null
-  const totalMs = Math.round(seconds * 1000)
-  const ms = totalMs % 1000
-  const totalSeconds = Math.floor(totalMs / 1000)
-  const s = totalSeconds % 60
-  const m = Math.floor(totalSeconds / 60)
-  return `${m}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`
+function formatSessionDateTime(date, time) {
+  if (!date) return '—'
+  if (!time) return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  const d = new Date(`${date}T${time}`)
+  if (Number.isNaN(d.getTime())) return `${date} ${time}`
+  return d.toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchQualifying, fetchSprintResults, fetchPracticeResults, fetchHighlights } = useDataStore()
-  const isAdmin = useAuthStore(s => s.isAdmin)
+  const { fetchRace, fetchRaceResults, fetchQualifying, fetchSprintResults, fetchHighlights } = useDataStore()
 
   const [race, setRace] = useState(null)
   const [results, setResults] = useState([])
-  const [practice, setPractice] = useState([])
   const [qualifying, setQualifying] = useState([])
   const [sprintResults, setSprintResults] = useState([])
   const [highlights, setHighlights] = useState([])
@@ -72,11 +55,10 @@ export default function RacePage() {
   const [of1Error, setOf1Error] = useState(null)
 
   useEffect(() => {
-    Promise.all([fetchRace(id), fetchRaceResults(id), fetchPracticeResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
-      .then(([r, res, pr, q, sp, hl]) => {
+    Promise.all([fetchRace(id), fetchRaceResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
+      .then(([r, res, q, sp, hl]) => {
         setRace(r)
         setResults(res || [])
-        setPractice(pr || [])
         setQualifying(q || [])
         setSprintResults(sp || [])
         setHighlights(hl || [])
@@ -130,118 +112,10 @@ export default function RacePage() {
     ...(highlights.length ? [{ id: 'highlights', label: 'Highlights', icon: PlayCircle }] : []),
   ]
 
-  const syncPractice = async () => {
-    try {
-      if (!race?.date) throw new Error('Race has no date')
-      if (!race?.seasons?.year) throw new Error('Season year missing')
-      toast.loading('Syncing practice (OpenF1)...', { id: 'sync-practice' })
-
-      const yr = race.seasons.year
-      const raceDate = new Date(race.date).getTime()
-      const sessions = await openf1Fetch(`/sessions?year=${yr}`)
-      const wanted = [
-        { openf1: 'Practice 1', session: 'FP1' },
-        { openf1: 'Practice 2', session: 'FP2' },
-        { openf1: 'Practice 3', session: 'FP3' },
-      ]
-
-      const { data: dbDrivers } = await supabase.from('drivers').select('id, name, code')
-      const { data: dbTeams } = await supabase.from('teams').select('id, name, ergast_id')
-      const driverMap = {}
-      dbDrivers?.forEach(d => { if (d.code) driverMap[d.code] = d.id; driverMap[d.name] = d.id })
-      const teamMap = {}
-      dbTeams?.forEach(t => {
-        teamMap[canonicalizeName(t.name)] = t.id
-        if (t.ergast_id) teamMap[canonicalizeName(t.ergast_id)] = t.id
-      })
-
-      const pickSessionKey = (openf1Name) => {
-        const candidates = (Array.isArray(sessions) ? sessions : [])
-          .filter(s => s?.session_name === openf1Name && s?.date_start)
-          .map(s => ({ session_key: s.session_key, ms: new Date(s.date_start).getTime() }))
-          .filter(s => s.session_key && !Number.isNaN(s.ms))
-          .filter(s => (raceDate - s.ms) >= -86400000 && (raceDate - s.ms) <= 86400000 * 7)
-          .sort((a, b) => Math.abs(raceDate - a.ms) - Math.abs(raceDate - b.ms))
-        return candidates[0]?.session_key ?? null
-      }
-
-      let upserted = 0
-      for (const w of wanted) {
-        const sk = pickSessionKey(w.openf1)
-        if (!sk) continue
-
-        const [of1Drivers, laps] = await Promise.all([
-          openf1Fetch(`/drivers?session_key=${sk}`),
-          openf1Fetch(`/laps?session_key=${sk}`),
-        ])
-
-        const byNumber = {}
-        of1Drivers.forEach(d => {
-          const num = String(d.driver_number ?? '')
-          if (!num) return
-          byNumber[num] = {
-            code: d.name_acronym || null,
-            fullName: d.full_name || d.name || null,
-            teamName: d.team_name || null,
-          }
-        })
-
-        const best = {}
-        const lapCount = {}
-        laps.forEach(l => {
-          const num = String(l.driver_number ?? '')
-          const dur = typeof l.lap_duration === 'number' ? l.lap_duration : null
-          if (!num || !dur || dur <= 0) return
-          if (l.is_pit_out_lap || l.is_pit_in_lap) return
-          lapCount[num] = (lapCount[num] || 0) + 1
-          if (best[num] === undefined || dur < best[num]) best[num] = dur
-        })
-
-        const rows = Object.entries(byNumber).map(([num, d]) => {
-          const driverId = driverMap[d.code] || (d.fullName ? driverMap[d.fullName] : null) || null
-          const teamId = d.teamName ? (teamMap[canonicalizeName(d.teamName)] || null) : null
-          return {
-            race_id: race.id,
-            session: w.session,
-            driver_id: driverId,
-            team_id: teamId,
-            _best: best[num] ?? null,
-            time: best[num] ? fmtLap(best[num]) : null,
-            laps: lapCount[num] || 0,
-          }
-        }).filter(r => r.driver_id)
-
-        rows.sort((a, b) => {
-          if (a._best === null && b._best === null) return 0
-          if (a._best === null) return 1
-          if (b._best === null) return -1
-          return a._best - b._best
-        })
-
-        const leader = rows.find(r => r._best !== null)?._best ?? null
-        const upsertRows = rows.map((r, i) => ({
-          race_id: r.race_id,
-          session: r.session,
-          driver_id: r.driver_id,
-          team_id: r.team_id,
-          position: r._best !== null ? i + 1 : null,
-          time: r.time,
-          gap: leader !== null && r._best !== null && r._best > leader ? `+${(r._best - leader).toFixed(3)}` : null,
-          laps: r.laps,
-        }))
-
-        const { error } = await supabase.from('practice_results').upsert(upsertRows, { onConflict: 'race_id,session,driver_id' })
-        if (error) throw error
-        upserted += upsertRows.length
-      }
-
-      const pr = await fetchPracticeResults(race.id)
-      setPractice(pr || [])
-      toast.success(`Practice synced: ${upserted} upserted`, { id: 'sync-practice' })
-    } catch (err) {
-      toast.error(err.message || 'Practice sync failed', { id: 'sync-practice' })
-    }
-  }
+  // Legacy (was practice results via OpenF1). Kept as no-ops to avoid runtime errors if this block is re-enabled.
+  const practice = []
+  const isAdmin = () => false
+  const syncPractice = () => {}
 
   return (
     <div className="space-y-6">
@@ -390,13 +264,34 @@ export default function RacePage() {
       {/* Practice */}
       {activeTab === 'practice' && (
         <div className="space-y-4">
-          {practice.length === 0 ? (
-            <Card className="p-4">
-              <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>No practice data imported.</p>
-              {isAdmin() && (
-                <div className="flex justify-center mt-3">
-                  <button onClick={syncPractice} className="btn-primary text-xs">Sync Practice (OpenF1)</button>
-                </div>
+          {true ? (
+            <Card className="p-0 overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    <th className="text-left py-2 pl-3">Session</th>
+                    <th className="text-right py-2 pr-3">Start</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { key: 'FP1', date: race.fp1_date, time: race.fp1_time },
+                    { key: 'FP2', date: race.fp2_date, time: race.fp2_time },
+                    { key: 'FP3', date: race.fp3_date, time: race.fp3_time },
+                  ].map(s => (
+                    <tr key={s.key} className="border-b" style={{ borderColor: 'var(--border)' }}>
+                      <td className="py-2 pl-3 font-semibold">{s.key}</td>
+                      <td className="py-2 pr-3 text-right" style={{ color: 'var(--text-secondary)' }}>
+                        {formatSessionDateTime(s.date, s.time)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!race.fp1_date && !race.fp2_date && !race.fp3_date && (
+                <p className="text-xs text-center py-3" style={{ color: 'var(--text-muted)' }}>
+                  Practice schedule not available. Run "Sync Races" in Admin.
+                </p>
               )}
             </Card>
           ) : (
