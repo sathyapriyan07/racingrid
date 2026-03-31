@@ -90,6 +90,7 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
 
 const TABS = [
   { id: 'results', label: 'Results' },
+  { id: 'teams', label: 'Teams' },
   { id: 'performance', label: 'Performance' },
   { id: 'records', label: 'Records' },
   { id: 'biography', label: 'Biography' },
@@ -175,6 +176,55 @@ export default function DriverPage() {
       races.forEach(r => { if (r.teams?.name) teamMap[r.teams.name] = r.teams })
       return { year, pts, wins: w, podiums: pod, races: races.length, isChamp, teams: Object.values(teamMap) }
     })
+
+  const teamStints = useMemo(() => {
+    const map = {}
+    let latestYear = null
+    let currentTeamId = null
+
+    for (const r of results) {
+      const teamId = r.team_id
+      const year = r.races?.seasons?.year
+      if (typeof year === 'number') latestYear = latestYear === null ? year : Math.max(latestYear, year)
+      if (teamId) currentTeamId = teamId
+      if (!teamId) continue
+
+      if (!map[teamId]) {
+        map[teamId] = { teamId, team: r.teams || null, minYear: null, maxYear: null, races: 0, wins: 0 }
+      }
+
+      const row = map[teamId]
+      row.races += 1
+      if (r.position === 1) row.wins += 1
+      if (typeof year === 'number') {
+        row.minYear = row.minYear === null ? year : Math.min(row.minYear, year)
+        row.maxYear = row.maxYear === null ? year : Math.max(row.maxYear, year)
+      }
+      if (!row.team?.name && r.teams?.name) row.team = r.teams
+    }
+
+    const formatPeriod = (minYear, maxYear, isCurrent) => {
+      if (!minYear) return 'â€”'
+      if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}â€“Present`
+      if (!maxYear || minYear === maxYear) return String(minYear)
+      return `${minYear}â€“${maxYear}`
+    }
+
+    const list = Object.values(map)
+      .map(s => ({
+        ...s,
+        isCurrent: !!currentTeamId && s.teamId === currentTeamId,
+        period: formatPeriod(s.minYear, s.maxYear, !!currentTeamId && s.teamId === currentTeamId),
+      }))
+      .sort((a, b) =>
+        (b.isCurrent - a.isCurrent) ||
+        ((b.maxYear || 0) - (a.maxYear || 0)) ||
+        (b.races - a.races) ||
+        String(a.team?.name || '').localeCompare(String(b.team?.name || ''))
+      )
+
+    return { list, currentTeamId }
+  }, [results])
 
   const circuitRecords = useMemo(() => {
     const map = {}
@@ -327,6 +377,74 @@ export default function DriverPage() {
           <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Points Per Race</p>
           <PerformanceChart data={chartData} dataKey="points" label="Points" />
         </Card>
+      )}
+
+      {/* â”€â”€ Teams â”€â”€ */}
+      {tab === 'teams' && (
+        <div className="space-y-3">
+          <Card>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Current Team</p>
+            {teamStints.list.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No team data available for this driver.</p>
+            ) : (
+              (() => {
+                const current = teamStints.list.find(s => s.isCurrent) || teamStints.list[0]
+                return (
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                      {current.team?.logo_url
+                        ? <img src={current.team.logo_url} alt={current.team?.name || 'Team'} className="w-10 h-10 object-contain" loading="lazy" />
+                        : <span className="text-sm font-black" style={{ color: 'var(--text-muted)' }}>{(current.team?.name || '?').slice(0, 2).toUpperCase()}</span>
+                      }
+                    </div>
+                    <div className="min-w-0">
+                      <Link to={`/team/${current.teamId}`} className="text-sm font-bold hover:text-f1red transition-colors block truncate">
+                        {current.team?.name || 'â€”'}
+                      </Link>
+                      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        {current.period} Â· {current.races} race{current.races !== 1 ? 's' : ''}{current.wins ? ` Â· ${current.wins} win${current.wins !== 1 ? 's' : ''}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()
+            )}
+          </Card>
+
+          <Card className="p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+              <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Teams</span>
+            </div>
+            {teamStints.list.length === 0 ? (
+              <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No teams found.</p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    <th className="text-left py-2 pl-5">Team</th>
+                    <th className="text-right py-2">Period</th>
+                    <th className="text-right py-2 pr-5">Races</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamStints.list.map(s => (
+                    <tr key={s.teamId} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
+                      <td className="py-2.5 pl-5">
+                        <Link to={`/team/${s.teamId}`} className="flex items-center gap-2 min-w-0 hover:text-f1red transition-colors">
+                          {s.team?.logo_url && <img src={s.team.logo_url} alt={s.team?.name || 'Team'} className="h-4 w-auto object-contain shrink-0" loading="lazy" />}
+                          <span className="text-sm font-medium truncate">{s.team?.name || 'â€”'}</span>
+                          {s.isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full border" style={{ borderColor: 'rgba(34,197,94,0.25)', color: 'rgb(34,197,94)', background: 'rgba(34,197,94,0.08)' }}>Current</span>}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 text-right text-sm tabular-nums" style={{ color: 'var(--text-secondary)' }}>{s.period}</td>
+                      <td className="py-2.5 pr-5 text-right text-sm font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{s.races}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </div>
       )}
 
       {tab === 'records' && (

@@ -243,6 +243,46 @@ export default function RacePage() {
         </div>
       </div>
 
+      {/* Circuit */}
+      {race.circuits && (
+        <Card className="p-0 overflow-hidden">
+          <Link to={`/circuit/${race.circuit_id}`} className="block">
+            <div className="flex flex-col sm:flex-row">
+              <div className="sm:w-80 h-44 bg-muted shrink-0 overflow-hidden">
+                {race.circuits.layout_image || race.circuits.hero_image_url ? (
+                  <img
+                    src={resolveImageSrc(race.circuits.layout_image || race.circuits.hero_image_url) || (race.circuits.layout_image || race.circuits.hero_image_url)}
+                    alt={race.circuits.name}
+                    className="w-full h-full object-cover object-center"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>
+                    Circuit image not available
+                  </div>
+                )}
+              </div>
+              <div className="p-4 flex-1 min-w-0">
+                <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Circuit</div>
+                <div className="text-lg font-black mt-1 truncate">{race.circuits.name}</div>
+                {(race.circuits.location || race.circuits.country) && (
+                  <div className="text-sm mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>
+                    {race.circuits.location || 'â€”'}{race.circuits.country ? `, ${race.circuits.country}` : ''}
+                  </div>
+                )}
+                {(race.circuits.track_length_km || race.circuits.turns || race.circuits.first_gp) && (
+                  <div className="flex gap-2 mt-3 flex-wrap text-xs" style={{ color: 'var(--text-muted)' }}>
+                    {race.circuits.track_length_km && <span className="px-2 py-1 rounded-full" style={{ background: 'var(--bg-raised)' }}>{race.circuits.track_length_km} km</span>}
+                    {race.circuits.turns && <span className="px-2 py-1 rounded-full" style={{ background: 'var(--bg-raised)' }}>{race.circuits.turns} turns</span>}
+                    {race.circuits.first_gp && <span className="px-2 py-1 rounded-full" style={{ background: 'var(--bg-raised)' }}>First GP {race.circuits.first_gp}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Link>
+        </Card>
+      )}
+
       {/* Tabs */}
       <div className="tab-bar">
         {tabs.map(tab => (
