@@ -113,7 +113,8 @@ export default function Drivers() {
 
                       {open && (
                         <tr className="border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-raised)' }}>
-                          <td colSpan={5} className="px-4 py-4">
+                          <td className="pl-3 py-0 align-top" />
+                          <td colSpan={4} className="py-4 pr-3">
                             <div className="flex flex-col sm:flex-row gap-4">
                               <div className="w-full sm:w-48 shrink-0">
                                 <div className="apple-card overflow-hidden">
