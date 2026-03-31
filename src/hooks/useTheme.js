@@ -15,8 +15,14 @@ export function useTheme() {
 
   useEffect(() => {
     const root = document.documentElement
+    root.classList.add('no-theme-transition')
+    // Force style recalculation so the class takes effect before toggling theme.
+    void root.offsetHeight
     if (theme === 'dark') root.classList.add('dark')
     else root.classList.remove('dark')
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => root.classList.remove('no-theme-transition'))
+    })
   }, [theme])
 
   useEffect(() => {
@@ -46,4 +52,3 @@ export function useTheme() {
 
   return { theme, toggle }
 }
-

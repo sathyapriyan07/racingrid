@@ -106,6 +106,9 @@
       color 0.25s ease,
       border-color 0.25s ease;
   }
+  html.no-theme-transition *, html.no-theme-transition *::before, html.no-theme-transition *::after {
+    transition: none !important;
+  }
 
   body {
     background-color: var(--bg-base);

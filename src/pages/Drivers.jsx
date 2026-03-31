@@ -46,15 +46,14 @@ export default function Drivers() {
 
       {sorted.length === 0 ? <EmptyState message="No drivers found." /> : (
         <Card className="p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <table className="w-full table-fixed">
               <thead>
                 <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                   <th className="text-left py-2 pl-3 w-9" />
                   <th className="text-left py-2">Driver</th>
                   <th className="text-left py-2 hidden sm:table-cell">Nationality</th>
                   <th className="text-left py-2 hidden md:table-cell">DOB</th>
-                  <th className="text-right py-2 pr-3">Status</th>
+                  <th className="text-right py-2 pr-3 w-24">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -75,7 +74,7 @@ export default function Drivers() {
                           >
                             <ChevronDown
                               size={14}
-                              style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                              style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
                             />
                           </button>
                         </td>
@@ -97,7 +96,7 @@ export default function Drivers() {
                         </td>
                         <td className="py-2 hidden sm:table-cell align-middle" style={{ color: 'var(--text-secondary)' }}>
                           <div className="flex items-center gap-1.5">
-                            {d.flag_url && <img src={d.flag_url} alt="" className="h-3 w-auto rounded-sm" loading="lazy" />}
+                            {d.flag_url && <img src={d.flag_url} alt="" className="h-3 w-4 object-cover rounded-sm" loading="lazy" />}
                             <span className="truncate">{d.nationality || '—'}</span>
                           </div>
                         </td>
@@ -173,8 +172,7 @@ export default function Drivers() {
                   )
                 })}
               </tbody>
-            </table>
-          </div>
+          </table>
         </Card>
       )}
     </div>
