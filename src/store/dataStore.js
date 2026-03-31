@@ -140,6 +140,24 @@ export const useDataStore = create((set, get) => ({
     return data
   },
 
+  fetchPracticeResults: async (raceId) => {
+    const key = `practice_${raceId}`
+    if (get().cache[key]) return get().cache[key]
+    const { data, error } = await supabase
+      .from('practice_results')
+      .select('*, drivers(*), teams(*)')
+      .eq('race_id', raceId)
+      .order('session')
+      .order('position')
+    if (error) {
+      // If the table isn't deployed yet, don't break the race page.
+      if (error.code === '42P01') return []
+      throw error
+    }
+    set(s => ({ cache: { ...s.cache, [key]: data } }))
+    return data
+  },
+
   fetchHighlights: async (raceId) => {
     const key = `highlights_${raceId}`
     if (get().cache[key]) return get().cache[key]
