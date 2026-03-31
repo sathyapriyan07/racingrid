@@ -7,6 +7,35 @@ import { Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 
 const SESSIONS = ['FP1', 'FP2', 'FP3']
 
+function parseLapTimeToMs(value) {
+  const s = String(value || '').trim()
+  if (!s) return null
+  const m = s.match(/^(\d+):(\d{1,2})(?:\.(\d{1,3}))?$/)
+  if (!m) return null
+  const minutes = parseInt(m[1])
+  const seconds = parseInt(m[2])
+  const millis = m[3] ? parseInt(m[3].padEnd(3, '0')) : 0
+  if (Number.isNaN(minutes) || Number.isNaN(seconds) || Number.isNaN(millis)) return null
+  return ((minutes * 60) + seconds) * 1000 + millis
+}
+
+function formatMsToLapTime(ms) {
+  if (ms === null || ms === undefined) return ''
+  const total = Math.max(0, Math.round(ms))
+  const minutes = Math.floor(total / 60000)
+  const seconds = Math.floor((total % 60000) / 1000)
+  const millis = total % 1000
+  return `${minutes}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`
+}
+
+function parseGapToMs(value) {
+  const s = String(value || '').trim()
+  if (!s) return null
+  const n = parseFloat(s.replace(/^\+/, ''))
+  if (Number.isNaN(n)) return null
+  return Math.round(n * 1000)
+}
+
 export default function AdminPractice() {
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -28,6 +57,8 @@ export default function AdminPractice() {
   const [adding, setAdding] = useState(false)
   const [newRow, setNewRow] = useState({ driver_id: '', team_id: '', position: '', time: '', gap: '', laps: '' })
   const [driverSearch, setDriverSearch] = useState('')
+  const [teamSearch, setTeamSearch] = useState('')
+  const [autoTime, setAutoTime] = useState(true)
 
   const driverById = useMemo(() => Object.fromEntries(drivers.map(d => [d.id, d])), [drivers])
   const teamById = useMemo(() => Object.fromEntries(teams.map(t => [t.id, t])), [teams])
@@ -40,6 +71,12 @@ export default function AdminPractice() {
       return name.includes(q) || code.includes(q)
     })
   }, [drivers, driverSearch])
+
+  const filteredTeams = useMemo(() => {
+    const q = teamSearch.trim().toLowerCase()
+    if (!q) return teams
+    return teams.filter(t => (t.name || '').toLowerCase().includes(q))
+  }, [teams, teamSearch])
 
   const loadSeasons = async () => {
     const { data, error } = await supabase.from('seasons').select('*').order('year', { ascending: false })
@@ -106,6 +143,25 @@ export default function AdminPractice() {
   useEffect(() => { loadRaces(seasonId).catch(e => toast.error(e.message)) }, [seasonId])
 
   useEffect(() => {
+    if (!autoTime) return
+    const pos = parseInt(newRow.position)
+    if (!pos || pos <= 1) return
+    const gapMs = parseGapToMs(newRow.gap)
+    if (gapMs === null) return
+
+    const above =
+      rows.find(r => r.position === pos - 1)
+      || rows.filter(r => (parseInt(r.position) || 0) < pos).sort((a, b) => (parseInt(b.position) || 0) - (parseInt(a.position) || 0))[0]
+
+    const aboveMs = parseLapTimeToMs(above?.time)
+    if (aboveMs === null) return
+
+    const nextMs = aboveMs + gapMs
+    const formatted = formatMsToLapTime(nextMs)
+    if (formatted && formatted !== newRow.time) setNewRow(r => ({ ...r, time: formatted }))
+  }, [autoTime, newRow.position, newRow.gap, rows]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const next = new URLSearchParams(searchParams)
     if (raceId) next.set('raceId', raceId)
     else next.delete('raceId')
@@ -165,13 +221,26 @@ export default function AdminPractice() {
     if (!newRow.driver_id) return toast.error('Select a driver')
     setAdding(true)
     try {
+      const pos = newRow.position === '' ? null : parseInt(newRow.position)
+      let time = newRow.time || null
+      if (!time && pos && pos > 1 && newRow.gap) {
+        const gapMs = parseGapToMs(newRow.gap)
+        const above =
+          rows.find(r => r.position === pos - 1)
+          || rows.filter(r => (parseInt(r.position) || 0) < pos).sort((a, b) => (parseInt(b.position) || 0) - (parseInt(a.position) || 0))[0]
+        const aboveMs = parseLapTimeToMs(above?.time)
+        if (gapMs !== null && aboveMs !== null) time = formatMsToLapTime(aboveMs + gapMs) || null
+      }
+
+      if (pos === 1 && !time) throw new Error('Position 1 requires a time')
+
       const payload = {
         race_id: raceId,
         session,
         driver_id: newRow.driver_id,
         team_id: newRow.team_id || null,
-        position: newRow.position === '' ? null : parseInt(newRow.position),
-        time: newRow.time || null,
+        position: pos,
+        time,
         gap: newRow.gap || null,
         laps: newRow.laps === '' ? null : parseInt(newRow.laps),
       }
@@ -181,6 +250,7 @@ export default function AdminPractice() {
       if (error) throw error
       toast.success('Saved')
       setNewRow({ driver_id: '', team_id: '', position: '', time: '', gap: '', laps: '' })
+      setAutoTime(true)
       await loadRows(raceId, session)
     } catch (err) {
       toast.error(err.message)
@@ -242,22 +312,42 @@ export default function AdminPractice() {
           </div>
           <div className="min-w-48">
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Team (optional)</label>
+            <input
+              value={teamSearch}
+              onChange={e => setTeamSearch(e.target.value)}
+              placeholder="Search team..."
+              className="input mb-2"
+            />
             <Select value={newRow.team_id} onChange={e => setNewRow(r => ({ ...r, team_id: e.target.value }))}>
               <option value="">—</option>
-              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {filteredTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </Select>
           </div>
           <div className="w-20">
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Pos</label>
-            <input value={newRow.position} onChange={e => setNewRow(r => ({ ...r, position: e.target.value }))} className="input" />
+            <input
+              value={newRow.position}
+              onChange={e => { setNewRow(r => ({ ...r, position: e.target.value })); setAutoTime(true) }}
+              className="input"
+            />
           </div>
           <div className="w-28">
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Time</label>
-            <input value={newRow.time} onChange={e => setNewRow(r => ({ ...r, time: e.target.value }))} className="input" placeholder="1:18.123" />
+            <input
+              value={newRow.time}
+              onChange={e => { setNewRow(r => ({ ...r, time: e.target.value })); setAutoTime(false) }}
+              className="input"
+              placeholder="1:18.123"
+            />
           </div>
           <div className="w-24">
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Gap</label>
-            <input value={newRow.gap} onChange={e => setNewRow(r => ({ ...r, gap: e.target.value }))} className="input" placeholder="+0.123" />
+            <input
+              value={newRow.gap}
+              onChange={e => { setNewRow(r => ({ ...r, gap: e.target.value })); setAutoTime(true) }}
+              className="input"
+              placeholder="+0.123"
+            />
           </div>
           <div className="w-20">
             <label className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Laps</label>
