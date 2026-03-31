@@ -9,11 +9,9 @@ export default {
         display: ['Bricolage Grotesque', 'Zabal', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        // Semantic tokens mapped to CSS variables (MANDATORY structure)
-        base: 'var(--bg-base)',
-        surface: 'var(--bg-surface)',
-        card: 'var(--bg-card)',
-        muted: 'var(--bg-muted)',
+        // Text/border/accent tokens mapped to CSS variables.
+        // Background tokens are defined in `backgroundColor` to avoid clashing with Tailwind's
+        // built-in font-size utility `text-base` (which would otherwise also become a color class).
         primary: 'var(--text-primary)',
         secondary: 'var(--text-secondary)',
         border: 'var(--border)',
@@ -21,6 +19,12 @@ export default {
 
         // Back-compat literal red used across existing components
         f1red: '#E10600',
+      },
+      backgroundColor: {
+        base: 'var(--bg-base)',
+        surface: 'var(--bg-surface)',
+        card: 'var(--bg-card)',
+        muted: 'var(--bg-muted)',
       },
       backgroundImage: {
         'radial-glow': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
