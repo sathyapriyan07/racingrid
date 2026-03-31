@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
+import { supabase } from '../lib/supabase'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
 import { Flag, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
@@ -49,6 +50,7 @@ export default function RacePage() {
   const [highlights, setHighlights] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('results')
+  const [previousEdition, setPreviousEdition] = useState(null)
 
   // OpenF1 — only for pit stops + events (not replay)
   const [of1Drivers, setOf1Drivers] = useState({})
@@ -70,6 +72,80 @@ export default function RacePage() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!race?.date) { setPreviousEdition(null); return }
+    let cancelled = false
+
+    const load = async () => {
+      setPreviousEdition(null)
+      const baseSelect = 'id, name, date, round, season_id, seasons(year)'
+
+      const byName = await supabase
+        .from('races')
+        .select(baseSelect)
+        .eq('name', race.name)
+        .lt('date', race.date)
+        .order('date', { ascending: false })
+        .limit(1)
+      if (byName.error) throw byName.error
+
+      let prevRace = byName.data?.[0] || null
+      if (!prevRace && race.circuit_id) {
+        const byCircuit = await supabase
+          .from('races')
+          .select(baseSelect)
+          .eq('circuit_id', race.circuit_id)
+          .lt('date', race.date)
+          .order('date', { ascending: false })
+          .limit(1)
+        if (byCircuit.error) throw byCircuit.error
+        prevRace = byCircuit.data?.[0] || null
+      }
+
+      if (!prevRace) {
+        if (!cancelled) setPreviousEdition(null)
+        return
+      }
+
+      const [winnerRes, poleRes] = await Promise.all([
+        supabase
+          .from('results')
+          .select('race_id, driver_id, team_id, drivers(id, name, code), teams(id, name, logo_url)')
+          .eq('race_id', prevRace.id)
+          .eq('position', 1)
+          .maybeSingle(),
+        supabase
+          .from('qualifying_results')
+          .select('race_id, driver_id, team_id, drivers(id, name, code), teams(id, name, logo_url)')
+          .eq('race_id', prevRace.id)
+          .eq('position', 1)
+          .maybeSingle(),
+      ])
+
+      if (winnerRes.error) throw winnerRes.error
+      if (poleRes.error) throw poleRes.error
+
+      if (!cancelled) {
+        setPreviousEdition({
+          race: prevRace,
+          winner: winnerRes.data || null,
+          pole: poleRes.data || null,
+        })
+      }
+    }
+
+    load().catch(console.error)
+    return () => { cancelled = true }
+  }, [race?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const shortName = (d) => {
+    if (!d) return '—'
+    if (d.code) return d.code
+    const name = d.name || ''
+    const parts = name.trim().split(' ').filter(Boolean)
+    return parts.length ? parts[parts.length - 1] : '—'
+  }
 
   // Load OpenF1 pit stops + events only when those tabs are opened
   useEffect(() => {
@@ -135,9 +211,36 @@ export default function RacePage() {
               )}
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap justify-end">
             <StatCard label="Laps" value={totalLaps || '—'} />
             <StatCard label="Drivers" value={results.length || '—'} />
+            {previousEdition?.race && (
+              <>
+                {previousEdition.winner ? (
+                  <Link to={`/driver/${previousEdition.winner.driver_id}`} className="block">
+                    <StatCard
+                      label="Prev Winner"
+                      value={shortName(previousEdition.winner.drivers)}
+                      sub={`${previousEdition.race.seasons?.year || '—'}${previousEdition.winner.teams?.name ? ` • ${previousEdition.winner.teams.name}` : ''}`}
+                    />
+                  </Link>
+                ) : (
+                  <StatCard label="Prev Winner" value="—" sub={previousEdition.race.seasons?.year || '—'} />
+                )}
+
+                {previousEdition.pole ? (
+                  <Link to={`/driver/${previousEdition.pole.driver_id}`} className="block">
+                    <StatCard
+                      label="Prev Pole"
+                      value={shortName(previousEdition.pole.drivers)}
+                      sub={`${previousEdition.race.seasons?.year || '—'}${previousEdition.pole.teams?.name ? ` • ${previousEdition.pole.teams.name}` : ''}`}
+                    />
+                  </Link>
+                ) : (
+                  <StatCard label="Prev Pole" value="—" sub={previousEdition.race.seasons?.year || '—'} />
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
