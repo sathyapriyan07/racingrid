@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, SearchSelect } from '../components/ui'
-import { Trophy } from 'lucide-react'
+import { Trophy, ArrowUp, ArrowDown } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function Standings() {
@@ -11,6 +11,8 @@ export default function Standings() {
   const [selectedSeason, setSelectedSeason] = useState(null)
   const [driverRows, setDriverRows] = useState([])
   const [teamRows, setTeamRows] = useState([])
+  const [driverDeltaById, setDriverDeltaById] = useState({})
+  const [teamDeltaById, setTeamDeltaById] = useState({})
   const [loading, setLoading] = useState(true)
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [tab, setTab] = useState('drivers')
@@ -22,13 +24,65 @@ export default function Standings() {
   useEffect(() => {
     if (!selectedSeason) return
     setStandingsLoading(true)
-    Promise.all([
-      supabase.from('driver_standings').select('*, drivers(id, name, code, image_url), teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
-      supabase.from('constructor_standings').select('*, teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
-    ]).then(([d, t]) => {
+    const load = async () => {
+      setDriverDeltaById({})
+      setTeamDeltaById({})
+
+      const [d, t] = await Promise.all([
+        supabase.from('driver_standings').select('*, drivers(id, name, code, image_url), teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
+        supabase.from('constructor_standings').select('*, teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
+      ])
       setDriverRows(d.data || [])
       setTeamRows(t.data || [])
-    }).catch(console.error).finally(() => setStandingsLoading(false))
+
+      // Progress vs previous round (based on results up to last round and last-1 round).
+      const { data: seasonResults, error } = await supabase
+        .from('results')
+        .select('driver_id, team_id, points, position, races!inner(round, season_id)')
+        .eq('races.season_id', selectedSeason.id)
+      if (error || !seasonResults?.length) return
+
+      const rounds = seasonResults.map(r => r?.races?.round).filter(n => typeof n === 'number')
+      const maxRound = rounds.length ? Math.max(...rounds) : null
+      if (!maxRound || maxRound <= 1) return
+
+      const buildPosMap = (key, roundLimit) => {
+        const map = {}
+        for (const r of seasonResults) {
+          const round = r?.races?.round
+          if (typeof round !== 'number' || round > roundLimit) continue
+          const id = r[key]
+          if (!id) continue
+          if (!map[id]) map[id] = { points: 0, wins: 0 }
+          map[id].points += Number(r.points) || 0
+          if (r.position === 1) map[id].wins += 1
+        }
+        const ordered = Object.entries(map)
+          .sort(([, a], [, b]) => (b.points - a.points) || (b.wins - a.wins))
+          .map(([id], idx) => [id, idx + 1])
+        return Object.fromEntries(ordered)
+      }
+
+      const prevDriverPos = buildPosMap('driver_id', maxRound - 1)
+      const prevTeamPos = buildPosMap('team_id', maxRound - 1)
+
+      const driverDelta = {}
+      for (const row of (d.data || [])) {
+        const prev = prevDriverPos[row.driver_id]
+        const cur = row.position
+        if (typeof prev === 'number' && typeof cur === 'number') driverDelta[row.driver_id] = prev - cur
+      }
+      const teamDelta = {}
+      for (const row of (t.data || [])) {
+        const prev = prevTeamPos[row.team_id]
+        const cur = row.position
+        if (typeof prev === 'number' && typeof cur === 'number') teamDelta[row.team_id] = prev - cur
+      }
+      setDriverDeltaById(driverDelta)
+      setTeamDeltaById(teamDelta)
+    }
+
+    load().catch(console.error).finally(() => setStandingsLoading(false))
   }, [selectedSeason])
 
   if (loading) return <Spinner />
@@ -104,10 +158,22 @@ export default function Standings() {
                     {filteredDriverRows.map((row, i) => (
                       <tr key={row.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="py-3 pl-5">
-                          <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
-                            style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>
-                            {i === 0 ? '🏆' : row.position}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
+                              style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>
+                              {i === 0 ? '🏆' : row.position}
+                            </span>
+                            {driverDeltaById[row.driver_id] > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-400">
+                                <ArrowUp size={10} /> {driverDeltaById[row.driver_id]}
+                              </span>
+                            )}
+                            {driverDeltaById[row.driver_id] < 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-400">
+                                <ArrowDown size={10} /> {Math.abs(driverDeltaById[row.driver_id])}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3">
                           <Link to={`/driver/${row.driver_id}`} className="flex items-center gap-3 group">
@@ -150,10 +216,22 @@ export default function Standings() {
                     {filteredTeamRows.map((row, i) => (
                       <tr key={row.id} className="hover:bg-muted transition-colors" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td className="py-3 pl-5">
-                          <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
-                            style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>
-                            {i === 0 ? '🏆' : row.position}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`font-black text-sm ${i === 0 ? 'pos-1' : i === 1 ? 'pos-2' : i === 2 ? 'pos-3' : ''}`}
+                              style={{ color: i > 2 ? 'var(--text-muted)' : undefined }}>
+                              {i === 0 ? '🏆' : row.position}
+                            </span>
+                            {teamDeltaById[row.team_id] > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-400">
+                                <ArrowUp size={10} /> {teamDeltaById[row.team_id]}
+                              </span>
+                            )}
+                            {teamDeltaById[row.team_id] < 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-400">
+                                <ArrowDown size={10} /> {Math.abs(teamDeltaById[row.team_id])}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3">
                           <Link to={`/team/${row.team_id}`} className="flex items-center gap-3 group">

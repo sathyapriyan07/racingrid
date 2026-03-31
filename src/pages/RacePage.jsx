@@ -4,7 +4,7 @@ import { useDataStore } from '../store/dataStore'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { supabase } from '../lib/supabase'
 import { Spinner, Card, Badge, StatCard } from '../components/ui'
-import { Flag, AlertTriangle, Clock, PlayCircle } from 'lucide-react'
+import { Flag, AlertTriangle, Clock, PlayCircle, ArrowUp, ArrowDown } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 import { useAuthStore } from '../store/authStore'
 
@@ -111,13 +111,13 @@ export default function RacePage() {
       const [winnerRes, poleRes] = await Promise.all([
         supabase
           .from('results')
-          .select('race_id, driver_id, team_id, drivers(id, name, code), teams(id, name, logo_url)')
+          .select('race_id, driver_id, team_id, drivers(id, name, code, image_url), teams(id, name, logo_url)')
           .eq('race_id', prevRace.id)
           .eq('position', 1)
           .maybeSingle(),
         supabase
           .from('qualifying_results')
-          .select('race_id, driver_id, team_id, drivers(id, name, code), teams(id, name, logo_url)')
+          .select('race_id, driver_id, team_id, drivers(id, name, code, image_url), teams(id, name, logo_url)')
           .eq('race_id', prevRace.id)
           .eq('position', 1)
           .maybeSingle(),
@@ -219,8 +219,23 @@ export default function RacePage() {
               <Link to={`/driver/${previousEdition.winner.driver_id}`} className="block">
                 <StatCard
                   label="Prev Winner"
-                  value={shortName(previousEdition.winner.drivers)}
-                  sub={`${previousEdition.race?.seasons?.year || '—'}${previousEdition.winner.teams?.name ? ` • ${previousEdition.winner.teams.name}` : ''}`}
+                  value={(
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0">
+                        {previousEdition.winner.drivers?.image_url
+                          ? <img src={previousEdition.winner.drivers.image_url} alt={previousEdition.winner.drivers?.name || 'Driver'} className="w-full h-full object-cover object-top" loading="lazy" />
+                          : <div className="w-full h-full flex items-center justify-center text-[10px] font-black" style={{ color: 'var(--text-muted)' }}>{previousEdition.winner.drivers?.code || '?'}</div>
+                        }
+                      </div>
+                      <div className="w-9 h-8 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                        {previousEdition.winner.teams?.logo_url
+                          ? <img src={previousEdition.winner.teams.logo_url} alt={previousEdition.winner.teams?.name || 'Team'} className="w-7 h-7 object-contain" loading="lazy" />
+                          : <div className="w-full h-full" />
+                        }
+                      </div>
+                    </div>
+                  )}
+                  sub={`${previousEdition.race?.seasons?.year || '--'} | ${previousEdition.winner.drivers?.name || '--'}`}
                 />
               </Link>
             ) : (
@@ -231,8 +246,23 @@ export default function RacePage() {
               <Link to={`/driver/${previousEdition.pole.driver_id}`} className="block">
                 <StatCard
                   label="Prev Pole"
-                  value={shortName(previousEdition.pole.drivers)}
-                  sub={`${previousEdition.race?.seasons?.year || '—'}${previousEdition.pole.teams?.name ? ` • ${previousEdition.pole.teams.name}` : ''}`}
+                  value={(
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0">
+                        {previousEdition.pole.drivers?.image_url
+                          ? <img src={previousEdition.pole.drivers.image_url} alt={previousEdition.pole.drivers?.name || 'Driver'} className="w-full h-full object-cover object-top" loading="lazy" />
+                          : <div className="w-full h-full flex items-center justify-center text-[10px] font-black" style={{ color: 'var(--text-muted)' }}>{previousEdition.pole.drivers?.code || '?'}</div>
+                        }
+                      </div>
+                      <div className="w-9 h-8 rounded-xl overflow-hidden bg-muted shrink-0 flex items-center justify-center">
+                        {previousEdition.pole.teams?.logo_url
+                          ? <img src={previousEdition.pole.teams.logo_url} alt={previousEdition.pole.teams?.name || 'Team'} className="w-7 h-7 object-contain" loading="lazy" />
+                          : <div className="w-full h-full" />
+                        }
+                      </div>
+                    </div>
+                  )}
+                  sub={`${previousEdition.race?.seasons?.year || '--'} | ${previousEdition.pole.drivers?.name || '--'}`}
                 />
               </Link>
             ) : (
@@ -314,7 +344,26 @@ export default function RacePage() {
                 {results.map((r, i) => (
                   <tr key={r.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                     <td className="py-1.5 pl-3">
-                      <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{r.position ?? '—'}</span>
+                      {(() => {
+                        const grid = Number(r.grid)
+                        const pos = Number(r.position)
+                        const delta = (Number.isFinite(grid) && Number.isFinite(pos)) ? (grid - pos) : 0
+                        return (
+                          <div className="flex items-center gap-1">
+                            <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{r.position ?? '—'}</span>
+                            {delta > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-400">
+                                <ArrowUp size={10} /> {delta}
+                              </span>
+                            )}
+                            {delta < 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-400">
+                                <ArrowDown size={10} /> {Math.abs(delta)}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="py-1.5">
                       <div className="flex items-center gap-1.5">
@@ -525,7 +574,26 @@ export default function RacePage() {
               {sprintResults.map((r, i) => (
                 <tr key={r.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                   <td className="py-1.5 pl-3">
-                    <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{r.position ?? '—'}</span>
+                    {(() => {
+                      const grid = Number(r.grid)
+                      const pos = Number(r.position)
+                      const delta = (Number.isFinite(grid) && Number.isFinite(pos)) ? (grid - pos) : 0
+                      return (
+                        <div className="flex items-center gap-1">
+                          <span className={`font-bold text-xs ${POSITION_COLORS[i] || 'text-secondary'}`}>{r.position ?? '—'}</span>
+                          {delta > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-400">
+                              <ArrowUp size={10} /> {delta}
+                            </span>
+                          )}
+                          {delta < 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-400">
+                              <ArrowDown size={10} /> {Math.abs(delta)}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </td>
                   <td className="py-1.5">
                     <div className="flex items-center gap-1.5">
