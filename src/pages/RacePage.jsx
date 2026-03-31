@@ -196,8 +196,8 @@ export default function RacePage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="glass p-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="min-w-0">
             <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{race.seasons?.year} · Round {race.round}</div>
             <h1 className="text-3xl font-black">{race.name}</h1>
             <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
@@ -211,36 +211,34 @@ export default function RacePage() {
               )}
             </div>
           </div>
-          <div className="flex gap-3 flex-wrap justify-end">
+          <div className="w-full md:w-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:justify-items-end">
             <StatCard label="Laps" value={totalLaps || '—'} />
             <StatCard label="Drivers" value={results.length || '—'} />
-            {previousEdition?.race && (
-              <>
-                {previousEdition.winner ? (
-                  <Link to={`/driver/${previousEdition.winner.driver_id}`} className="block">
-                    <StatCard
-                      label="Prev Winner"
-                      value={shortName(previousEdition.winner.drivers)}
-                      sub={`${previousEdition.race.seasons?.year || '—'}${previousEdition.winner.teams?.name ? ` • ${previousEdition.winner.teams.name}` : ''}`}
-                    />
-                  </Link>
-                ) : (
-                  <StatCard label="Prev Winner" value="—" sub={previousEdition.race.seasons?.year || '—'} />
-                )}
-
-                {previousEdition.pole ? (
-                  <Link to={`/driver/${previousEdition.pole.driver_id}`} className="block">
-                    <StatCard
-                      label="Prev Pole"
-                      value={shortName(previousEdition.pole.drivers)}
-                      sub={`${previousEdition.race.seasons?.year || '—'}${previousEdition.pole.teams?.name ? ` • ${previousEdition.pole.teams.name}` : ''}`}
-                    />
-                  </Link>
-                ) : (
-                  <StatCard label="Prev Pole" value="—" sub={previousEdition.race.seasons?.year || '—'} />
-                )}
-              </>
+            {previousEdition?.winner ? (
+              <Link to={`/driver/${previousEdition.winner.driver_id}`} className="block">
+                <StatCard
+                  label="Prev Winner"
+                  value={shortName(previousEdition.winner.drivers)}
+                  sub={`${previousEdition.race?.seasons?.year || '—'}${previousEdition.winner.teams?.name ? ` • ${previousEdition.winner.teams.name}` : ''}`}
+                />
+              </Link>
+            ) : (
+              <StatCard label="Prev Winner" value="—" sub={previousEdition?.race?.seasons?.year || '—'} />
             )}
+
+            {previousEdition?.pole ? (
+              <Link to={`/driver/${previousEdition.pole.driver_id}`} className="block">
+                <StatCard
+                  label="Prev Pole"
+                  value={shortName(previousEdition.pole.drivers)}
+                  sub={`${previousEdition.race?.seasons?.year || '—'}${previousEdition.pole.teams?.name ? ` • ${previousEdition.pole.teams.name}` : ''}`}
+                />
+              </Link>
+            ) : (
+              <StatCard label="Prev Pole" value="—" sub={previousEdition?.race?.seasons?.year || '—'} />
+            )}
+            </div>
           </div>
         </div>
       </div>
