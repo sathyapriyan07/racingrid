@@ -324,7 +324,7 @@ export default function RacePage() {
                         <th className="text-left py-2">Driver</th>
                         <th className="text-left py-2 hidden sm:table-cell">Team</th>
                         <th className="text-right py-2">Time</th>
-                        <th className="text-right py-2 hidden sm:table-cell">Gap</th>
+                        <th className="text-right py-2">Gap</th>
                         <th className="text-right py-2 pr-3">Laps</th>
                       </tr>
                     </thead>
@@ -353,7 +353,7 @@ export default function RacePage() {
                             </div>
                           </td>
                           <td className="py-1.5 text-right font-mono" style={{ fontSize: 11 }}>{p.time || '—'}</td>
-                          <td className="py-1.5 text-right font-mono hidden sm:table-cell" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.gap || (p.position === 1 ? '—' : '—')}</td>
+                          <td className="py-1.5 text-right font-mono" style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.position === 1 ? '—' : (p.gap || '—')}</td>
                           <td className="py-1.5 text-right pr-3 font-semibold" style={{ fontSize: 11 }}>{p.laps ?? '—'}</td>
                         </tr>
                       ))}
