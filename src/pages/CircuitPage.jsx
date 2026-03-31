@@ -239,6 +239,7 @@ export default function CircuitPage() {
       <div className="tab-bar">
         {[
           { id: 'overview', label: 'Overview' },
+          { id: 'races', label: 'Races' },
           { id: 'records', label: 'Records' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`tab-pill ${tab === t.id ? 'active' : ''}`}>
@@ -265,64 +266,64 @@ export default function CircuitPage() {
             </Card>
           )}
 
-          {/* Races table */}
-          <Card className="p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
-          <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Races Hosted ({races.length})</span>
-        </div>
-        {races.length === 0 ? (
-          <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No races recorded.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                <th className="text-left py-2 pl-5">Race</th>
-                <th className="text-left py-2 hidden sm:table-cell">Winner</th>
-                <th className="text-left py-2 hidden md:table-cell">Sprint Winner</th>
-                <th className="text-right py-2 pr-5">Season</th>
-              </tr>
-            </thead>
-            <tbody>
-              {races.map(race => (
-                <tr key={race.id} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
-                  onMouseLeave={e => e.currentTarget.style.background = ''}>
-                  <td className="py-2.5 pl-5">
-                    <Link to={`/race/${race.id}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
-                      {race.name}
-                    </Link>
-                    <div className="flex items-center gap-3 mt-1 sm:hidden">
-                      {race.winner && (
-                        <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors">
-                          <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                            <Trophy size={10} /> {race.winner.name}
-                          </span>
-                        </Link>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-2.5 hidden sm:table-cell">
-                    {race.winner
-                      ? <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>{race.winner.name}</Link>
-                      : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                    }
-                  </td>
-                  <td className="py-2.5 hidden md:table-cell">
-                    {race.sprintWinner
-                      ? <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors" style={{ fontSize: 12 }}>{race.sprintWinner.name}</Link>
-                      : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                    }
-                  </td>
-                  <td className="py-2.5 pr-5 text-right" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {race.seasons?.year} · R{race.round}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-          </Card>
         </>
+      )}
+
+      {tab === 'races' && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Races Hosted ({races.length})</span>
+          </div>
+          {races.length === 0 ? (
+            <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No races recorded.</p>
+          ) : (
+            <table className="w-full text-sm table-fixed">
+              <thead>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th className="text-left py-2 pl-5">Race</th>
+                  <th className="text-left py-2 hidden sm:table-cell">Winner</th>
+                  <th className="text-left py-2 hidden md:table-cell">Sprint Winner</th>
+                  <th className="text-right py-2 pr-5 whitespace-nowrap">Season</th>
+                </tr>
+              </thead>
+              <tbody>
+                {races.map(race => (
+                  <tr key={race.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
+                    <td className="py-2.5 pl-5 min-w-0">
+                      <Link to={`/race/${race.id}`} className="hover:text-f1red transition-colors font-medium truncate block" style={{ fontSize: 13 }}>
+                        {race.name}
+                      </Link>
+                      <div className="flex items-center gap-3 mt-1 sm:hidden">
+                        {race.winner && (
+                          <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors">
+                            <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              <Trophy size={10} /> {race.winner.name}
+                            </span>
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2.5 hidden sm:table-cell min-w-0">
+                      {race.winner
+                        ? <Link to={`/driver/${race.winner.id}`} className="hover:text-f1red transition-colors truncate block" style={{ fontSize: 12 }}>{race.winner.name}</Link>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                      }
+                    </td>
+                    <td className="py-2.5 hidden md:table-cell min-w-0">
+                      {race.sprintWinner
+                        ? <Link to={`/driver/${race.sprintWinner.id}`} className="hover:text-f1red transition-colors truncate block" style={{ fontSize: 12 }}>{race.sprintWinner.name}</Link>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                      }
+                    </td>
+                    <td className="py-2.5 pr-5 text-right whitespace-nowrap" style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      {race.seasons?.year} · R{race.round}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
       )}
 
       {tab === 'records' && (

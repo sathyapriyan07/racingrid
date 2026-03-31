@@ -479,8 +479,7 @@ export default function TeamPage() {
           {circuitRecords.length === 0 ? (
             <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No circuit records yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-sm">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                     <th className="text-left py-2 pl-5">Circuit</th>
@@ -491,11 +490,9 @@ export default function TeamPage() {
                 </thead>
                 <tbody>
                   {circuitRecords.map(row => (
-                    <tr key={row.circuitId} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}>
-                      <td className="py-2.5 pl-5">
-                        <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
+                    <tr key={row.circuitId} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
+                      <td className="py-2.5 pl-5 min-w-0">
+                        <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium truncate block" style={{ fontSize: 13 }}>
                           {row.circuitName}
                         </Link>
                       </td>
@@ -506,7 +503,6 @@ export default function TeamPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
           )}
         </Card>
       )}
