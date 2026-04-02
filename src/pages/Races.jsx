@@ -97,15 +97,15 @@ export default function Races() {
                     <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{race.circuits?.name}</div>
                   </div>
                   {top3.length > 0 ? (
-                    <div className="flex gap-3 mt-auto pt-2 border-t justify-around" style={{ borderColor: 'var(--border)' }}>
+                    <div className="flex mt-auto pt-2 border-t justify-around w-full" style={{ borderColor: 'var(--border)' }}>
                       {top3.map((r, i) => (
-                        <div key={r.drivers?.id || i} className="flex flex-col items-center gap-1">
-                          <span className="text-xs">{medals[i]}</span>
+                        <div key={r.drivers?.id || i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
+                          <span style={{ fontSize: 10 }}>{medals[i]}</span>
                           {r.drivers?.image_url
-                            ? <img src={r.drivers.image_url} alt={r.drivers.name} className="w-10 h-10 rounded-full object-cover object-top" />
-                            : <div className="w-10 h-10 rounded-full bg-muted" />
+                            ? <img src={r.drivers.image_url} alt={r.drivers.name} className="w-8 h-8 rounded-full object-cover object-top" />
+                            : <div className="w-8 h-8 rounded-full bg-muted" />
                           }
-                          <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>
+                          <span className="text-xs font-bold truncate w-full text-center" style={{ color: 'var(--text-primary)', fontSize: 11 }}>
                             {r.drivers?.code || r.drivers?.name?.split(' ').pop() || '—'}
                           </span>
                         </div>
