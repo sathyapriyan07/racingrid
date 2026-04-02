@@ -743,7 +743,7 @@ export default function RacePage() {
                   <div className="absolute inset-0 flex items-center justify-center"
                     style={{ background: 'rgba(0,0,0,0.3)' }}>
                     <div className="w-14 h-14 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(229,57,53,0.9)' }}>
+                      style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)' }}>
                       <PlayCircle size={28} color="#fff" />
                     </div>
                   </div>
