@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
-import { Spinner, Card, Badge } from '../components/ui'
+import { Spinner, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { Trophy, ChevronDown, ExternalLink } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
@@ -347,80 +347,59 @@ export default function DriverPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── Banner ── */}
-      <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 320 }}>
-        {/* Hero image full-bleed */}
+      {/* ── Driver Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl flex flex-col items-center justify-end text-center" style={{ minHeight: 380 }}>
         {driver.hero_image_url
-          ? <img src={driver.hero_image_url} alt={driver.name}
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
-          : <div className="absolute inset-0 bg-surface" />
+          ? <img src={driver.hero_image_url} alt={driver.name} className="absolute inset-0 w-full h-full object-cover object-center" />
+          : driver.image_url
+            ? <img src={driver.image_url} alt={driver.name} className="absolute inset-0 w-full h-full object-cover object-top" />
+            : <div className="absolute inset-0" style={{ background: 'var(--bg-surface)' }} />
         }
-        {driver.hero_image_url
-          ? <div className="absolute inset-0 bg-gradient-to-t from-base/90 to-transparent" />
-          : <div className="absolute inset-0 bg-radial-glow from-accent/10 via-transparent to-transparent" />
-        }
-      </div>
-
-      {/* ── Driver Info (below hero) ── */}
-      <div className="apple-card p-6 flex items-start gap-4 flex-wrap">
-        <div className="flex-1 min-w-[220px]">
-          <div className="flex items-center gap-2 mb-2">
-            {driver.code && <Badge color="red">{driver.code}</Badge>}
-            <h1 className="text-3xl md:text-4xl font-black" style={{ letterSpacing: '-0.04em' }}>{driver.name}</h1>
-          </div>
-          <div className="flex items-center gap-4 flex-wrap text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {driver.nationality && (
-              <span className="flex items-center gap-1.5 font-medium">
-                {driver.flag_url ? <img src={driver.flag_url} alt={driver.nationality} className="h-4 w-auto rounded-sm" /> : <Icon settingKey="icon_flag" emoji="🌍" />}
-                {driver.nationality}
-              </span>
+        {/* fade overlay */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' }} />
+        {/* content */}
+        <div className="relative z-10 pb-6 px-4 w-full flex flex-col items-center gap-2">
+          {driver.code && (
+            <span className="text-xs font-black tracking-widest px-3 py-1 rounded-full" style={{ background: 'rgba(229,57,53,0.85)', color: '#fff', letterSpacing: '0.15em' }}>{driver.code}</span>
+          )}
+          <h1 className="text-3xl md:text-4xl font-black text-white" style={{ letterSpacing: '-0.04em', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>{driver.name}</h1>
+          {driver.nationality && (
+            <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              {driver.flag_url && <img src={driver.flag_url} alt={driver.nationality} className="h-4 w-auto rounded-sm" />}
+              {driver.nationality}
+            </span>
+          )}
+          {driver.dob && (
+            <span className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </span>
+          )}
+          <div className="flex gap-2 flex-wrap justify-center mt-1">
+            {driver.instagram_url && (
+              <a href={normalizeSocialUrl('instagram', driver.instagram_url)} target="_blank" rel="noreferrer"
+                className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain shrink-0" />
+                Instagram
+              </a>
             )}
-            {driver.dob && (
-              <span className="flex items-center gap-1.5 font-medium">
-                {new Date(driver.dob).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
+            {driver.twitter_url && (
+              <a href={normalizeSocialUrl('twitter', driver.twitter_url)} target="_blank" rel="noreferrer"
+                className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain shrink-0" />
+                Twitter
+              </a>
             )}
+            {driver.website_url && (
+              <a href={normalizeWebsiteUrl(driver.website_url)} target="_blank" rel="noreferrer"
+                className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+                <ExternalLink size={12} /> Visit website
+              </a>
+            )}
+            <Link to={`/compare?a=${id}`}
+              className="btn-ghost text-xs py-1.5 px-3 whitespace-nowrap" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>
+              Compare
+            </Link>
           </div>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:ml-auto sm:justify-end">
-          {driver.instagram_url && (
-            <a
-              href={normalizeSocialUrl('instagram', driver.instagram_url)}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
-              aria-label="Instagram"
-              title="Instagram"
-            >
-              <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain shrink-0" />
-              Instagram
-            </a>
-          )}
-          {driver.twitter_url && (
-            <a
-              href={normalizeSocialUrl('twitter', driver.twitter_url)}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
-              aria-label="Twitter"
-              title="Twitter"
-            >
-              <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain shrink-0" />
-              Twitter
-            </a>
-          )}
-          {driver.website_url && (
-            <a
-              href={normalizeWebsiteUrl(driver.website_url)}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
-            >
-              <ExternalLink size={12} /> Visit website
-            </a>
-          )}
-          <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3">Compare</Link>
         </div>
       </div>
 
