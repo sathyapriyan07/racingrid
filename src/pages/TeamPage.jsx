@@ -42,6 +42,7 @@ export default function TeamPage() {
   const [results, setResults] = useState([])
   const [poleRows, setPoleRows] = useState([])
   const [champYears, setChampYears] = useState([])
+  const [allDriverChamps, setAllDriverChamps] = useState({})
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('overview')
   const [seasonFilter, setSeasonFilter] = useState('all')
@@ -55,6 +56,7 @@ export default function TeamPage() {
         if (cancelled) return
         setTeam(t)
         setChampYears(champs.teamChamps[id] || [])
+        setAllDriverChamps(champs.driverChamps || {})
         const [{ data }, { data: poles }] = await Promise.all([
           supabase
             .from('results')
@@ -85,6 +87,27 @@ export default function TeamPage() {
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
   const totalPoints = results.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
+
+  // Drivers who won the WDC while racing for this team
+  const driverChampions = useMemo(() => {
+    const map = {} // driverId -> { driver, years[] }
+    for (const r of results) {
+      const year = r.races?.seasons?.year
+      const driverId = r.driver_id
+      if (!driverId || !year) continue
+      if (!map[driverId]) map[driverId] = { driverId, driver: r.drivers, years: new Set() }
+      map[driverId].years.add(year)
+    }
+    // filter to only drivers whose championship year overlaps with their time at this team
+    return Object.values(map)
+      .map(entry => {
+        const champYearsForDriver = (allDriverChamps[entry.driverId] || [])
+          .filter(y => entry.years.has(y))
+        return { ...entry, champYears: champYearsForDriver.sort((a, b) => a - b) }
+      })
+      .filter(entry => entry.champYears.length > 0)
+      .sort((a, b) => a.champYears[0] - b.champYears[0])
+  }, [results, allDriverChamps])
 
   const seasonData = results.reduce((acc, r) => {
     const year = r.races?.seasons?.year || 'Unknown'
@@ -198,6 +221,7 @@ export default function TeamPage() {
     { id: 'results', label: 'Results' },
     { id: 'records', label: 'Records' },
     ...(partners.length > 0 ? [{ id: 'partners', label: 'Partners' }] : []),
+    ...(driverChampions.length > 0 ? [{ id: 'driver-champs', label: "Drivers' Champions" }] : []),
     ...(champYears.length > 0 ? [{ id: 'championships', label: 'Championships' }] : []),
   ]
 
@@ -576,6 +600,48 @@ export default function TeamPage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {tab === 'driver-champs' && (
+        <div className="space-y-3">
+          <div className="apple-card p-6 flex items-center gap-4"
+            style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(5,5,8,0) 100%)', borderColor: 'rgba(234,179,8,0.2)' }}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(234,179,8,0.12)' }}>
+              <Trophy size={22} style={{ color: 'rgba(234,179,8,0.9)' }} />
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'rgba(234,179,8,0.7)' }}>Drivers' World Champions</div>
+              <div className="text-2xl font-black" style={{ letterSpacing: '-0.04em' }}>{driverChampions.length} Champion{driverChampions.length !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {driverChampions.map(entry => (
+              <Link key={entry.driverId} to={`/driver/${entry.driverId}`}>
+                <div className="apple-card p-4 flex items-center gap-4 hover:border-accent/40 transition-colors"
+                  style={{ borderColor: 'rgba(234,179,8,0.2)', background: 'rgba(234,179,8,0.03)' }}>
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-muted shrink-0">
+                    {entry.driver?.image_url
+                      ? <img src={entry.driver.image_url} alt={entry.driver?.name || ''} className="w-full h-full object-cover object-top" />
+                      : <div className="w-full h-full flex items-center justify-center text-sm font-black" style={{ color: 'var(--text-muted)' }}>{entry.driver?.code || '?'}</div>
+                    }
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-sm truncate">{entry.driver?.name || '—'}</div>
+                    {entry.driver?.code && <div className="text-xs font-bold text-f1red">{entry.driver.code}</div>}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {entry.champYears.map(y => (
+                        <span key={y} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={{ background: 'rgba(234,179,8,0.12)', color: 'rgba(234,179,8,0.9)', border: '1px solid rgba(234,179,8,0.25)' }}>
+                          🏆 {y}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ── Championships ── */}
