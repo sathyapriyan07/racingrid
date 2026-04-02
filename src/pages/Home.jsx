@@ -1,12 +1,78 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
+import { supabase } from '../lib/supabase'
 import { Spinner, Card, Badge } from '../components/ui'
-import { Calendar, Trophy, ChevronRight } from 'lucide-react'
+import { Calendar, Trophy, ChevronRight, ChevronLeft } from 'lucide-react'
+
+function NextRaceBar({ races }) {
+  const [idx, setIdx] = useState(0)
+  if (!races.length) return null
+  const race = races[idx]
+  const fp1 = race.fp1_date
+  const raceDate = race.date
+  const startDate = fp1 || raceDate
+  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase() : null
+  const dateRange = startDate && raceDate && startDate !== raceDate
+    ? `${fmtDate(startDate)} - ${fmtDate(raceDate)}`
+    : fmtDate(raceDate) || '—'
+  const city = race.circuits?.location || race.circuits?.name?.split(' ')[0] || race.name?.replace(' Grand Prix', '').replace(' GP', '')
+
+  return (
+    <div className="apple-card px-5 py-4 flex items-center gap-4" style={{ background: 'var(--bg-surface)' }}>
+      {/* Left: flag + label */}
+      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          {race.circuits?.country
+            ? <span className="text-base" title={race.circuits.country}>🏁</span>
+            : <span className="text-base">🏁</span>
+          }
+          <span className="text-xs font-black uppercase tracking-widest" style={{ letterSpacing: '0.12em' }}>
+            Next: <span style={{ color: 'var(--text-primary)' }}>{city?.toUpperCase()}</span>
+          </span>
+        </div>
+        <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+          Round {race.round}: {race.name}
+        </div>
+      </div>
+
+      {/* Center: date range */}
+      <div className="hidden sm:block text-sm font-black uppercase tracking-widest shrink-0" style={{ letterSpacing: '0.1em' }}>
+        {dateRange}
+      </div>
+
+      {/* Right: circuit layout + nav */}
+      <div className="flex items-center gap-3 shrink-0">
+        {race.circuits?.layout_image && (
+          <img src={race.circuits.layout_image} alt={race.circuits.name} className="h-10 w-auto object-contain opacity-80" />
+        )}
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setIdx(i => Math.max(0, i - 1))}
+            disabled={idx === 0}
+            className="w-8 h-8 rounded-full border flex items-center justify-center transition-colors"
+            style={{ borderColor: 'var(--border)', color: idx === 0 ? 'var(--text-muted)' : 'var(--text-primary)', background: 'var(--bg-raised)' }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            onClick={() => setIdx(i => Math.min(races.length - 1, i + 1))}
+            disabled={idx === races.length - 1}
+            className="w-8 h-8 rounded-full border flex items-center justify-center transition-colors"
+            style={{ borderColor: 'var(--border)', color: idx === races.length - 1 ? 'var(--text-muted)' : 'var(--text-primary)', background: 'var(--bg-raised)' }}
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Home() {
   const { fetchRaces, fetchDrivers, fetchSeasons, fetchStandings, drivers, seasons } = useDataStore()
   const [races, setRaces] = useState([])
+  const [upcomingRaces, setUpcomingRaces] = useState([])
   const [standings, setStandings] = useState(null)
   const [loading, setLoading] = useState(() => {
     const s = useDataStore.getState()
@@ -20,6 +86,15 @@ export default function Home() {
         const [racesData] = await Promise.all([fetchRaces(), fetchDrivers(), fetchSeasons()])
         if (cancelled) return
         setRaces(racesData)
+        // fetch upcoming races (future dates)
+        const today = new Date().toISOString().slice(0, 10)
+        const { data: upcoming } = await supabase
+          .from('races')
+          .select('*, circuits(name, location, country, layout_image), seasons(year)')
+          .gte('date', today)
+          .order('date', { ascending: true })
+          .limit(5)
+        if (!cancelled) setUpcomingRaces(upcoming || [])
         const allSeasons = useDataStore.getState().seasons
         if (allSeasons.length) {
           const s = await fetchStandings(allSeasons[0].id).catch(() => null)
@@ -78,6 +153,9 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* ── Next Race Bar ── */}
+      {upcomingRaces.length > 0 && <NextRaceBar races={upcomingRaces} />}
 
       {/* ── Latest Races carousel ── */}
       {latestRaces.length > 0 && (
