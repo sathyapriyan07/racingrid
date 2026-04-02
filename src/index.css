@@ -94,7 +94,7 @@
   }
 
   html {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -298,14 +298,14 @@
   .metric { display: flex; flex-direction: column; gap: 0.125rem; }
   .metric-value {
     font-size: 1.75rem;
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -0.04em;
     color: var(--text-primary);
     line-height: 1;
   }
   .metric-label {
     font-size: 0.7rem;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--text-secondary);

@@ -744,7 +744,7 @@ export default function RacePage() {
                     style={{ background: 'rgba(0,0,0,0.3)' }}>
                     <div className="w-14 h-14 rounded-full flex items-center justify-center"
                       style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)' }}>
-                      <PlayCircle size={28} color="#fff" />
+                      <svg viewBox="0 0 24 24" width="26" height="26" fill="white"><path d="M8 5v14l11-7z"/></svg>
                     </div>
                   </div>
                 </div>

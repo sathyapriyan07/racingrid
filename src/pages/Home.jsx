@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { Spinner, Card, Badge } from '../components/ui'
-import { Calendar, Trophy, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Calendar, Trophy, ChevronRight, ChevronLeft, PlayCircle } from 'lucide-react'
 
 function NextRaceBar({ races }) {
   const [idx, setIdx] = useState(0)
@@ -73,6 +73,7 @@ export default function Home() {
   const { fetchRaces, fetchDrivers, fetchSeasons, fetchStandings, drivers, seasons } = useDataStore()
   const [races, setRaces] = useState([])
   const [upcomingRaces, setUpcomingRaces] = useState([])
+  const [highlights, setHighlights] = useState([])
   const [standings, setStandings] = useState(null)
   const [loading, setLoading] = useState(() => {
     const s = useDataStore.getState()
@@ -95,6 +96,13 @@ export default function Home() {
           .order('date', { ascending: true })
           .limit(5)
         if (!cancelled) setUpcomingRaces(upcoming || [])
+        // fetch latest highlights
+        const { data: hl } = await supabase
+          .from('race_highlights')
+          .select('*, races(id, name, seasons(year))')
+          .order('created_at', { ascending: false })
+          .limit(12)
+        if (!cancelled) setHighlights(hl || [])
         const allSeasons = useDataStore.getState().seasons
         if (allSeasons.length) {
           const s = await fetchStandings(allSeasons[0].id).catch(() => null)
@@ -156,6 +164,46 @@ export default function Home() {
 
       {/* ── Next Race Bar ── */}
       {upcomingRaces.length > 0 && <NextRaceBar races={upcomingRaces} />}
+
+      {/* ── Latest Highlights ── */}
+      {highlights.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="section-title flex items-center gap-2">
+              <PlayCircle size={18} className="text-f1red" /> Latest Highlights
+            </h2>
+          </div>
+          <div className="scroll-row">
+            {highlights.map(h => {
+              const vid = h.youtube_url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
+              if (!vid) return null
+              return (
+                <a key={h.id} href={`https://www.youtube.com/watch?v=${vid}`} target="_blank" rel="noopener noreferrer"
+                  style={{ width: 260, flexShrink: 0 }}>
+                  <div className="glass-hover overflow-hidden flex flex-col" style={{ borderRadius: '1.25rem' }}>
+                    <div className="relative">
+                      <img src={`https://img.youtube.com/vi/${vid}/hqdefault.jpg`} alt={h.title || 'Highlight'}
+                        className="w-full object-cover" style={{ aspectRatio: '16/9' }} />
+                      <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.25)' }}>
+                        <div className="w-11 h-11 rounded-full flex items-center justify-center"
+                          style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)' }}>
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      {h.title && <div className="text-xs font-semibold leading-snug truncate">{h.title}</div>}
+                      <div className="text-[10px] mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>
+                        {h.races?.name?.replace(' Grand Prix', ' GP')} {h.races?.seasons?.year ? `· ${h.races.seasons.year}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Latest Races carousel ── */}
       {latestRaces.length > 0 && (
