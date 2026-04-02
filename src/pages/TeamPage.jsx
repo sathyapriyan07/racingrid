@@ -45,6 +45,7 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('overview')
   const [seasonFilter, setSeasonFilter] = useState('all')
+  const [partners, setPartners] = useState([])
 
   useEffect(() => {
     let cancelled = false
@@ -69,6 +70,8 @@ export default function TeamPage() {
         if (cancelled) return
         setResults(data || [])
         setPoleRows(poles || [])
+        supabase.from('team_partners').select('*').eq('team_id', id).order('sort_order').order('created_at')
+          .then(({ data: p }) => { if (!cancelled) setPartners(p || []) })
       } catch (err) {
         console.error(err)
       } finally {
@@ -194,6 +197,7 @@ export default function TeamPage() {
     { id: 'info', label: 'Info' },
     { id: 'results', label: 'Results' },
     { id: 'records', label: 'Records' },
+    ...(partners.length > 0 ? [{ id: 'partners', label: 'Partners' }] : []),
     ...(champYears.length > 0 ? [{ id: 'championships', label: 'Championships' }] : []),
   ]
 
@@ -558,6 +562,20 @@ export default function TeamPage() {
             )}
           </Card>
         </div>
+      )}
+
+      {tab === 'partners' && (
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Partners</p>
+          <div className="flex flex-wrap gap-6 items-center">
+            {partners.map(p => (
+              <div key={p.id} className="flex flex-col items-center gap-2">
+                <img src={p.logo_url} alt={p.name || 'Partner'} className="h-12 w-auto max-w-[120px] object-contain" />
+                {p.name && <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{p.name}</span>}
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       {/* ── Championships ── */}

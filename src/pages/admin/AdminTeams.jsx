@@ -3,11 +3,103 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image, Link2 } from 'lucide-react'
+import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image, Link2, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 import TextEditRow from './TextEditRow'
 import SocialLinksEditRow from './SocialLinksEditRow'
+import { uploadImage } from '../../lib/uploadImage'
+
+// Run in Supabase SQL Editor:
+// create table if not exists team_partners (
+//   id uuid primary key default uuid_generate_v4(),
+//   team_id uuid references teams(id) on delete cascade,
+//   name text,
+//   logo_url text not null,
+//   sort_order integer default 0,
+//   created_at timestamptz default now()
+// );
+// alter table team_partners enable row level security;
+// create policy "public_read_team_partners" on team_partners for select using (true);
+// create policy "admin_write_team_partners" on team_partners for all using (is_admin());
+
+function PartnersEditPanel({ teamId, onClose }) {
+  const [partners, setPartners] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [newName, setNewName] = useState('')
+  const fileRef = useState(() => { const r = { current: null }; return r })[0]
+
+  const load = async () => {
+    const { data } = await supabase.from('team_partners').select('*').eq('team_id', teamId).order('sort_order').order('created_at')
+    setPartners(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [teamId])
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file, 'teams/partners')
+      const { error } = await supabase.from('team_partners').insert({ team_id: teamId, logo_url: url, name: newName.trim() || null, sort_order: partners.length })
+      if (error) throw new Error(error.message)
+      setNewName('')
+      toast.success('Partner added')
+      load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const remove = async (id) => {
+    const { error } = await supabase.from('team_partners').delete().eq('id', id)
+    if (error) return toast.error(error.message)
+    toast.success('Removed')
+    load()
+  }
+
+  return (
+    <tr className="bg-muted">
+      <td colSpan={7} className="px-3 py-3">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Partners</span>
+            <button onClick={onClose} className="btn-ghost text-xs py-1">Close</button>
+          </div>
+          {loading ? <Spinner /> : (
+            <div className="flex flex-wrap gap-3">
+              {partners.map(p => (
+                <div key={p.id} className="flex flex-col items-center gap-1 relative group">
+                  <img src={p.logo_url} alt={p.name || ''} className="h-10 w-auto max-w-[80px] object-contain rounded bg-surface p-1" />
+                  {p.name && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{p.name}</span>}
+                  <button onClick={() => remove(p.id)}
+                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500/80 text-white text-[10px] hidden group-hover:flex items-center justify-center">
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <input value={newName} onChange={e => setNewName(e.target.value)}
+              placeholder="Partner name (optional)" className="input text-xs py-1 w-44" />
+            <input ref={r => fileRef.current = r} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            <button onClick={() => fileRef.current?.click()} disabled={uploading}
+              className="btn-primary text-xs py-1 flex items-center gap-1.5">
+              {uploading ? 'Uploading...' : <><Plus size={11} /> Add Logo</>}
+            </button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
@@ -220,6 +312,11 @@ export default function AdminTeams() {
                             style={{ color: editId === `${row.id}-social` ? undefined : 'var(--text-muted)' }}>
                             <Link2 size={11} /> Social
                           </button>
+                          <button onClick={() => toggle(`${row.id}-partners`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-partners` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
+                            style={{ color: editId === `${row.id}-partners` ? undefined : 'var(--text-muted)' }}>
+                            <Users size={11} /> Partners
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -302,6 +399,9 @@ export default function AdminTeams() {
                         onSave={(instagramUrl, twitterUrl) => saveSocial(row.id, instagramUrl, twitterUrl)}
                         onCancel={() => setEditId(null)}
                       />
+                    )}
+                    {editId === `${row.id}-partners` && (
+                      <PartnersEditPanel teamId={row.id} onClose={() => setEditId(null)} />
                     )}
                   </>
                 ))}
