@@ -95,6 +95,7 @@ const TABS = [
   { id: 'performance', label: 'Performance' },
   { id: 'records', label: 'Records' },
   { id: 'biography', label: 'Biography' },
+  { id: 'team-champs', label: "Team's Champion" },
   { id: 'championships', label: 'Championships' },
 ]
 
@@ -123,6 +124,7 @@ export default function DriverPage() {
   const [driver, setDriver] = useState(null)
   const [results, setResults] = useState([])
   const [champYears, setChampYears] = useState([])
+  const [allTeamChamps, setAllTeamChamps] = useState({})
   const [poleRows, setPoleRows] = useState([])
   const [driverLaps, setDriverLaps] = useState([])
   const [allTeamResults, setAllTeamResults] = useState([])
@@ -154,6 +156,7 @@ export default function DriverPage() {
         setDriver(d)
         setResults(r || [])
         setChampYears(champs.driverChamps[id] || [])
+        setAllTeamChamps(champs.teamChamps || {})
         setPoleRows(p || [])
         setDriverLaps(driverLaps || [])
         // fetch all results for teams this driver raced with, to compute teammates
@@ -311,8 +314,27 @@ export default function DriverPage() {
       .slice(0, 30)
   }, [poleRows, results])
 
+  // Teams that won the WCC in a year this driver raced for them
+  const teamChampions = useMemo(() => {
+    const map = {} // teamId -> { team, years[] }
+    for (const r of results) {
+      const year = r.races?.seasons?.year
+      const teamId = r.team_id
+      if (!teamId || !year) continue
+      if (!map[teamId]) map[teamId] = { teamId, team: r.teams, years: new Set() }
+      map[teamId].years.add(year)
+    }
+    return Object.values(map)
+      .map(entry => {
+        const champYearsForTeam = (allTeamChamps[entry.teamId] || [])
+          .filter(y => entry.years.has(y))
+        return { ...entry, champYears: champYearsForTeam.sort((a, b) => a - b) }
+      })
+      .filter(entry => entry.champYears.length > 0)
+      .sort((a, b) => a.champYears[0] - b.champYears[0])
+  }, [results, allTeamChamps])
+
   const teammates = useMemo(() => {
-    // Build a set of (teamId, year) pairs this driver raced in
     const myStints = new Set(results.map(r => `${r.team_id}__${r.races?.seasons?.year}`))
 
     const map = {}
@@ -341,8 +363,12 @@ export default function DriverPage() {
   if (!driver) return <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>Driver not found.</div>
 
   const activeTabs = [
-    ...TABS.filter(t => t.id !== 'championships' || champYears.length > 0),
-    ...(!driver.biography ? TABS.filter(t => t.id === 'biography') : []),
+    ...TABS.filter(t => {
+      if (t.id === 'championships') return champYears.length > 0
+      if (t.id === 'team-champs') return teamChampions.length > 0
+      return true
+    }),
+    ...(!driver.biography ? [] : []),
   ].filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i)
 
   return (
@@ -615,6 +641,49 @@ export default function DriverPage() {
               />
             ))
           }
+        </div>
+      )}
+
+      {tab === 'team-champs' && (
+        <div className="space-y-3">
+          <div className="apple-card p-6 flex items-center gap-4"
+            style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(5,5,8,0) 100%)', borderColor: 'rgba(234,179,8,0.2)' }}>
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(234,179,8,0.12)' }}>
+              <Trophy size={22} style={{ color: 'rgba(234,179,8,0.9)' }} />
+            </div>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-widest mb-0.5" style={{ color: 'rgba(234,179,8,0.7)' }}>Constructors' Champion</div>
+              <div className="text-2xl font-black" style={{ letterSpacing: '-0.04em' }}>
+                {teamChampions.reduce((s, t) => s + t.champYears.length, 0)} Title{teamChampions.reduce((s, t) => s + t.champYears.length, 0) !== 1 ? 's' : ''}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {teamChampions.map(entry => (
+              <Link key={entry.teamId} to={`/team/${entry.teamId}`}>
+                <div className="apple-card p-4 flex items-center gap-4 hover:border-accent/40 transition-colors"
+                  style={{ borderColor: 'rgba(234,179,8,0.2)', background: 'rgba(234,179,8,0.03)' }}>
+                  <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center overflow-hidden shrink-0 p-1">
+                    {entry.team?.logo_url
+                      ? <img src={entry.team.logo_url} alt={entry.team?.name || ''} className="w-full h-full object-contain" />
+                      : <span className="text-sm font-black" style={{ color: 'var(--text-muted)' }}>{entry.team?.name?.slice(0, 2).toUpperCase() || '?'}</span>
+                    }
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-sm truncate">{entry.team?.name || '—'}</div>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {entry.champYears.map(y => (
+                        <span key={y} className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={{ background: 'rgba(234,179,8,0.12)', color: 'rgba(234,179,8,0.9)', border: '1px solid rgba(234,179,8,0.25)' }}>
+                          🏆 {y}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
