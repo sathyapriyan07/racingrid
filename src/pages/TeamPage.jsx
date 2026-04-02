@@ -218,7 +218,7 @@ export default function TeamPage() {
       {/* ── Team Header ── */}
       <div className="flex flex-col items-center text-center gap-3 py-2">
         {(team.detail_logo_url || team.logo_url) && (
-          <img src={team.detail_logo_url || team.logo_url} alt={team.name} className="w-20 h-20 object-contain" />
+          <img src={team.detail_logo_url || team.logo_url} alt={team.name} className="w-32 h-32 object-contain" />
         )}
         <h1 className="text-3xl md:text-4xl font-black" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
         {team.nationality && (
