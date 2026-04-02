@@ -211,68 +211,44 @@ export default function TeamPage() {
         }
       </div>
 
-      {/* ── Team Info (below hero) ── */}
-      <div className="apple-card p-6 flex items-start gap-5 flex-wrap">
-        <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center bg-surface border border-border">
-          {(team.detail_logo_url || team.logo_url)
-            ? <img src={team.detail_logo_url || team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
-            : <span className="text-xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
-          }
-        </div>
-        <div className="flex-1 min-w-[220px]">
-          <h1 className="text-3xl md:text-4xl font-black mb-2" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
-          <div className="flex gap-4 text-sm flex-wrap items-center" style={{ color: 'var(--text-secondary)' }}>
-            {team.nationality && (
-              <span className="flex items-center gap-1.5 font-medium">
-                {team.flag_url
-                  ? <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />
-                  : <Icon settingKey="icon_flag" emoji="🌍" />
-                }
-                {team.nationality}
-              </span>
-            )}
-            {team.base && (
-              <span className="flex items-center gap-1.5 font-medium">
-                <MapPin size={14} style={{ color: 'var(--text-muted)' }} /> {team.base}
-              </span>
-            )}
-            {team.founded && <span className="font-medium">Est. {team.founded}</span>}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:ml-auto sm:justify-end">
+      {/* ── Team Header ── */}
+      <div className="flex flex-col items-center text-center gap-3 py-2">
+        {(team.detail_logo_url || team.logo_url) && (
+          <img src={team.detail_logo_url || team.logo_url} alt={team.name} className="w-20 h-20 object-contain" />
+        )}
+        <h1 className="text-3xl md:text-4xl font-black" style={{ letterSpacing: '-0.04em' }}>{team.name}</h1>
+        {team.nationality && (
+          <span className="flex items-center justify-center gap-1.5 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            {team.flag_url && <img src={team.flag_url} alt={team.nationality} className="h-4 w-auto rounded-sm" />}
+            {team.nationality}
+          </span>
+        )}
+        {team.base && (
+          <span className="flex items-center justify-center gap-1.5 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+            <MapPin size={13} /> {team.base}
+          </span>
+        )}
+        {team.founded && (
+          <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Est. {team.founded}</span>
+        )}
+        <div className="flex gap-2 flex-wrap justify-center mt-1">
           {team.instagram_url && (
-            <a
-              href={normalizeSocialUrl('instagram', team.instagram_url)}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
-              aria-label="Instagram"
-              title="Instagram"
-            >
+            <a href={normalizeSocialUrl('instagram', team.instagram_url)} target="_blank" rel="noreferrer"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap">
               <img src="/Instagram_icon.png" alt="" className="w-4 h-4 object-contain shrink-0" />
               Instagram
             </a>
           )}
           {team.twitter_url && (
-            <a
-              href={normalizeSocialUrl('twitter', team.twitter_url)}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
-              aria-label="Twitter"
-              title="Twitter"
-            >
+            <a href={normalizeSocialUrl('twitter', team.twitter_url)} target="_blank" rel="noreferrer"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap">
               <img src="/twitter%20logo.png" alt="" className="w-4 h-4 object-contain shrink-0" />
               Twitter
             </a>
           )}
           {team.website_url && (
-            <a
-              href={normalizeWebsiteUrl(team.website_url)}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap"
-            >
+            <a href={normalizeWebsiteUrl(team.website_url)} target="_blank" rel="noreferrer"
+              className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-2 whitespace-nowrap">
               <ExternalLink size={12} /> Visit website
             </a>
           )}
