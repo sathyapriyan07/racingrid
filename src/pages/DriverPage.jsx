@@ -91,6 +91,7 @@ function SeasonCard({ year, races, isChamp, defaultOpen = false }) {
 const TABS = [
   { id: 'results', label: 'Results' },
   { id: 'teams', label: 'Teams' },
+  { id: 'teammates', label: 'Teammates' },
   { id: 'performance', label: 'Performance' },
   { id: 'records', label: 'Records' },
   { id: 'biography', label: 'Biography' },
@@ -124,6 +125,7 @@ export default function DriverPage() {
   const [champYears, setChampYears] = useState([])
   const [poleRows, setPoleRows] = useState([])
   const [driverLaps, setDriverLaps] = useState([])
+  const [allTeamResults, setAllTeamResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('results')
 
@@ -154,6 +156,16 @@ export default function DriverPage() {
         setChampYears(champs.driverChamps[id] || [])
         setPoleRows(p || [])
         setDriverLaps(driverLaps || [])
+        // fetch all results for teams this driver raced with, to compute teammates
+        const teamIds = [...new Set((r || []).map(x => x.team_id).filter(Boolean))]
+        if (!teamIds.length) return
+        supabase
+          .from('results')
+          .select('driver_id, team_id, position, points, races(season_id, seasons(year)), drivers(id, name, code, image_url)')
+          .in('team_id', teamIds)
+          .neq('driver_id', id)
+          .then(({ data }) => { if (!cancelled) setAllTeamResults(data || []) })
+      })
       })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -191,10 +203,10 @@ export default function DriverPage() {
     { label: 'Poles', value: poles },
     { label: 'Points', value: totalPoints.toFixed(0) },
     { label: 'Fastest Laps', value: fastestLaps },
-    { label: 'First Entry', value: racesByDate.length ? fmtRace(racesByDate[0]) : '—' },
-    { label: 'First Win', value: winsByDate.length ? fmtRace(winsByDate[0]) : '—' },
-    { label: 'Last Win', value: winsByDate.length ? fmtRace(winsByDate[winsByDate.length - 1]) : '—' },
-    { label: 'Last Entry', value: racesByDate.length ? fmtRace(racesByDate[racesByDate.length - 1]) : '—' },
+    { label: 'First Entry', value: racesByDate.length ? fmtRace(racesByDate[0]) : '—', raceId: racesByDate[0]?.race_id },
+    { label: 'First Win', value: winsByDate.length ? fmtRace(winsByDate[0]) : '—', raceId: winsByDate[0]?.race_id },
+    { label: 'Last Win', value: winsByDate.length ? fmtRace(winsByDate[winsByDate.length - 1]) : '—', raceId: winsByDate[winsByDate.length - 1]?.race_id },
+    { label: 'Last Entry', value: racesByDate.length ? fmtRace(racesByDate[racesByDate.length - 1]) : '—', raceId: racesByDate[racesByDate.length - 1]?.race_id },
   ]
 
   const chartData = results.map(r => ({
@@ -303,6 +315,32 @@ export default function DriverPage() {
       .slice(0, 30)
   }, [poleRows, results])
 
+  const teammates = useMemo(() => {
+    // Build a set of (teamId, year) pairs this driver raced in
+    const myStints = new Set(results.map(r => `${r.team_id}__${r.races?.seasons?.year}`))
+
+    const map = {}
+    for (const r of allTeamResults) {
+      const key = `${r.team_id}__${r.races?.seasons?.year}`
+      if (!myStints.has(key)) continue // only same team + same season
+      const driverId = r.driver_id
+      if (!driverId) continue
+      if (!map[driverId]) {
+        map[driverId] = { driverId, driver: r.drivers || null, seasons: new Set(), races: 0, wins: 0, podiums: 0, points: 0 }
+      }
+      const row = map[driverId]
+      if (r.races?.seasons?.year) row.seasons.add(r.races.seasons.year)
+      row.races += 1
+      if (r.position === 1) row.wins += 1
+      if (r.position && r.position <= 3) row.podiums += 1
+      row.points += parseFloat(r.points) || 0
+    }
+
+    return Object.values(map)
+      .map(t => ({ ...t, seasons: [...t.seasons].sort((a, b) => b - a) }))
+      .sort((a, b) => b.seasons.length - a.seasons.length || b.races - a.races)
+  }, [allTeamResults, results])
+
   if (loading) return <Spinner />
   if (!driver) return <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>Driver not found.</div>
 
@@ -390,7 +428,26 @@ export default function DriverPage() {
         </div>
       </div>
 
-{/* ── Tabs ── */}
+      {/* ── Milestones ── */}
+      <Card className="p-0 overflow-hidden">
+        <table className="w-full">
+          <tbody>
+            {milestones.map((m, i) => (
+              <tr key={m.label} style={{ borderBottom: i < milestones.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <td className="py-2.5 pl-5 text-xs font-semibold uppercase tracking-widest w-32 shrink-0" style={{ color: 'var(--text-muted)' }}>{m.label}</td>
+                <td className="py-2.5 pr-5 text-sm font-semibold text-right" style={{ color: 'var(--text-primary)' }}>
+                  {m.raceId
+                    ? <Link to={`/race/${m.raceId}`} className="hover:text-f1red transition-colors">{m.value}</Link>
+                    : m.value
+                  }
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {/* ── Tabs ── */}
       <div className="tab-bar">
         {activeTabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`tab-pill ${tab === t.id ? 'active' : ''}`}>
@@ -399,20 +456,6 @@ export default function DriverPage() {
           </button>
         ))}
       </div>
-
-      {/* ── Milestones ── */}
-      <Card className="p-0 overflow-hidden">
-        <table className="w-full">
-          <tbody>
-            {milestones.map((m, i) => (
-              <tr key={m.label} style={{ borderBottom: i < milestones.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <td className="py-2.5 pl-5 text-xs font-semibold uppercase tracking-widest w-32 shrink-0" style={{ color: 'var(--text-muted)' }}>{m.label}</td>
-                <td className="py-2.5 pr-5 text-sm font-semibold text-right" style={{ color: 'var(--text-primary)' }}>{m.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
 
       {/* ── Performance ── */}
       {tab === 'performance' && (
@@ -488,6 +531,55 @@ export default function DriverPage() {
             )}
           </Card>
         </div>
+      )}
+
+      {tab === 'teammates' && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+            <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Teammates</span>
+          </div>
+          {teammates.length === 0 ? (
+            <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No teammates found.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th className="text-left py-2 pl-5">Driver</th>
+                  <th className="text-right py-2 whitespace-nowrap">Seasons</th>
+                  <th className="text-right py-2 whitespace-nowrap hidden sm:table-cell">Races</th>
+                  <th className="text-right py-2 whitespace-nowrap hidden sm:table-cell">Wins</th>
+                  <th className="text-right py-2 pr-5 whitespace-nowrap">Pts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teammates.map(t => (
+                  <tr key={t.driverId} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
+                    <td className="py-2.5 pl-5">
+                      <Link to={`/driver/${t.driverId}`} className="flex items-center gap-2 min-w-0 hover:text-f1red transition-colors">
+                        <div className="w-7 h-7 rounded-full overflow-hidden bg-muted shrink-0">
+                          {t.driver?.image_url
+                            ? <img src={t.driver.image_url} alt={t.driver?.name || ''} className="w-full h-full object-cover object-top" loading="lazy" />
+                            : <div className="w-full h-full flex items-center justify-center text-[10px] font-black" style={{ color: 'var(--text-muted)' }}>{t.driver?.code || '?'}</div>
+                          }
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold truncate">{t.driver?.name || '—'}</div>
+                          <div className="text-xs font-bold text-f1red">{t.driver?.code || '—'}</div>
+                        </div>
+                      </Link>
+                    </td>
+                    <td className="py-2.5 text-right text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+                      {t.seasons.length === 1 ? t.seasons[0] : `${t.seasons[t.seasons.length - 1]}–${t.seasons[0]}`}
+                    </td>
+                    <td className="py-2.5 text-right text-sm font-semibold tabular-nums hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>{t.races}</td>
+                    <td className="py-2.5 text-right text-sm font-semibold tabular-nums hidden sm:table-cell" style={{ color: 'var(--text-secondary)' }}>{t.wins}</td>
+                    <td className="py-2.5 pr-5 text-right text-sm font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{t.points.toFixed(0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
       )}
 
       {tab === 'records' && (
