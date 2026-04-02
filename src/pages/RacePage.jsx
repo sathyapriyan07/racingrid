@@ -179,6 +179,29 @@ export default function RacePage() {
   const totalLaps = results[0]?.laps || 0
   const hasOf1 = !!race?.openf1_session_key
 
+  const hlBySession = highlights.reduce((acc, h) => {
+    const s = h.session || 'race'
+    if (!acc[s]) acc[s] = []
+    acc[s].push(h)
+    return acc
+  }, {})
+
+  const WatchBtn = ({ session }) => {
+    const items = hlBySession[session] || []
+    if (!items.length) return null
+    return (
+      <div className="flex gap-2 flex-wrap mb-3">
+        {items.map(h => (
+          <a key={h.id} href={h.youtube_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+            style={{ background: 'rgba(229,57,53,0.12)', color: '#E10600', border: '1px solid rgba(229,57,53,0.25)' }}>
+            <PlayCircle size={13} /> {h.title || 'Watch Highlights'}
+          </a>
+        ))}
+      </div>
+    )
+  }
+
   if (loading) return <Spinner />
   if (!race) return <div className="text-secondary text-center py-16">Race not found.</div>
 
@@ -325,7 +348,9 @@ export default function RacePage() {
 
       {/* Results */}
       {activeTab === 'results' && (
-        <Card className="p-0 overflow-hidden">
+        <div className="space-y-3">
+          <WatchBtn session="race" />
+          <Card className="p-0 overflow-hidden">
           {results.length === 0 ? (
             <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>No results imported.</p>
           ) : (
@@ -394,11 +419,14 @@ export default function RacePage() {
             </table>
           )}
         </Card>
+        </div>
       )}
 
       {/* Qualifying */}
       {activeTab === 'qualifying' && (
-        <Card className="p-0 overflow-hidden">
+        <div className="space-y-3">
+          <WatchBtn session="qualifying" />
+          <Card className="p-0 overflow-hidden">
           {qualifying.length === 0 ? (
             <p className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>No qualifying data imported.</p>
           ) : (
@@ -448,11 +476,15 @@ export default function RacePage() {
             </table>
           )}
         </Card>
+        </div>
       )}
 
       {/* Practice */}
       {activeTab === 'practice' && (
         <div className="space-y-4">
+          <WatchBtn session="fp1" />
+          <WatchBtn session="fp2" />
+          <WatchBtn session="fp3" />
           {practiceResults.length === 0 ? (
             <>
             <Card className="p-0 overflow-hidden">
@@ -559,6 +591,7 @@ export default function RacePage() {
       {/* Sprint */}
       {activeTab === 'sprint' && (
         <Card className="p-0 overflow-hidden">
+          <WatchBtn session="race" />
           <table className="w-full">
             <thead>
               <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
