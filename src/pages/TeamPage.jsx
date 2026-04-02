@@ -120,9 +120,9 @@ export default function TeamPage() {
 
     const formatPeriod = (minYear, maxYear, isCurrent) => { // fixed
       if (!minYear) return 'â€”'
-      if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}â€“Present`
+      if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}-Present`
       if (!maxYear || minYear === maxYear) return String(minYear)
-      return `${minYear}â€“${maxYear}`
+      return `${minYear}-${maxYear}`
     }
 
     const list = Object.values(map)
@@ -214,8 +214,8 @@ export default function TeamPage() {
       {/* ── Team Info (below hero) ── */}
       <div className="apple-card p-6 flex items-start gap-5 flex-wrap">
         <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center bg-surface border border-border">
-          {team.logo_url
-            ? <img src={team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
+          {(team.detail_logo_url || team.logo_url)
+            ? <img src={team.detail_logo_url || team.logo_url} alt={team.name} className="w-full h-full object-contain p-2" />
             : <span className="text-xl font-black" style={{ color: 'var(--text-muted)' }}>{team.name.slice(0, 2).toUpperCase()}</span>
           }
         </div>

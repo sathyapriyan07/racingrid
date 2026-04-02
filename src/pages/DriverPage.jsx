@@ -176,18 +176,15 @@ export default function DriverPage() {
   const poles = results.filter(r => r.grid === 1).length
   const totalPoints = results.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
   const fastestLaps = useMemo(() => {
-    // Group all laps by race, find min lap_time per race, count races where this driver has the min
+    if (driver?.fastest_laps != null) return driver.fastest_laps
     const byRace = {}
     for (const lap of driverLaps) {
       if (!lap.race_id || !lap.lap_time) continue
-      if (!byRace[lap.race_id] || lap.lap_time < byRace[lap.race_id]) {
-        byRace[lap.race_id] = lap.lap_time
-      }
+      if (!byRace[lap.race_id] || lap.lap_time < byRace[lap.race_id]) byRace[lap.race_id] = lap.lap_time
     }
-    // fallback: also count status-based if no lap data
     const fromStatus = results.filter(r => /fastest.?lap/i.test(r.status || '')).length
     return Object.keys(byRace).length > 0 ? Object.keys(byRace).length : fromStatus
-  }, [driverLaps, results])
+  }, [driver, driverLaps, results])
 
   const racesByDate = results
     .filter(r => r.races?.date)
@@ -260,9 +257,9 @@ export default function DriverPage() {
 
     const formatPeriod = (minYear, maxYear, isCurrent) => {
       if (!minYear) return 'â€”'
-      if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}â€“Present`
+      if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}-Present`
       if (!maxYear || minYear === maxYear) return String(minYear)
-      return `${minYear}â€“${maxYear}`
+      return `${minYear}-${maxYear}`
     }
 
     const list = Object.values(map)

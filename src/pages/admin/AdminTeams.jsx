@@ -200,6 +200,11 @@ export default function AdminTeams() {
                             style={{ color: editId === `${row.id}-logo` ? undefined : 'var(--text-muted)' }}>
                             <ImagePlus size={11} /> Logo
                           </button>
+                          <button onClick={() => toggle(`${row.id}-detail-logo`)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-detail-logo` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
+                            style={{ color: editId === `${row.id}-detail-logo` ? undefined : 'var(--text-muted)' }}>
+                            <ImagePlus size={11} /> Detail Logo
+                          </button>
                           <button onClick={() => toggle(`${row.id}-car`)}
                             className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-car` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
                             style={{ color: editId === `${row.id}-car` ? undefined : 'var(--text-muted)' }}>
@@ -259,6 +264,15 @@ export default function AdminTeams() {
                         folder="teams"
                         currentUrl={row.logo_url}
                         onSave={(url) => saveField(row.id, 'logo_url', url)}
+                        onCancel={() => setEditId(null)}
+                      />
+                    )}
+                    {editId === `${row.id}-detail-logo` && (
+                      <ImageEditRow
+                        colSpan={7}
+                        folder="teams/detail"
+                        currentUrl={row.detail_logo_url}
+                        onSave={(url) => saveField(row.id, 'detail_logo_url', url)}
                         onCancel={() => setEditId(null)}
                       />
                     )}

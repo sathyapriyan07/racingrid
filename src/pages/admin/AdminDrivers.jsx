@@ -3,11 +3,39 @@ import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Flag, Image, Pencil, FileText, Link2 } from 'lucide-react'
+import { Plus, ImagePlus, Flag, Image, Pencil, FileText, Link2, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ImageEditRow from './ImageEditRow'
 import TextEditRow from './TextEditRow'
 import SocialLinksEditRow from './SocialLinksEditRow'
+
+// Run in Supabase SQL Editor if not already added:
+// ALTER TABLE drivers ADD COLUMN IF NOT EXISTS fastest_laps integer DEFAULT 0;
+
+function FastestLapsEditRow({ colSpan, row, onSave, onCancel }) {
+  const [value, setValue] = useState(row.fastest_laps ?? 0)
+  return (
+    <tr className="bg-muted">
+      <td colSpan={colSpan} className="px-3 py-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Fastest Laps</span>
+          <input
+            type="number"
+            min={0}
+            value={value}
+            onChange={e => setValue(Number(e.target.value))}
+            className="input text-xs py-1 w-24"
+            autoFocus
+          />
+          <div className="flex gap-2 ml-auto">
+            <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+            <button onClick={() => onSave(value)} className="btn-primary text-xs py-1">Save</button>
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 function ActiveEditRow({ colSpan, row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
@@ -99,6 +127,15 @@ export default function AdminDrivers() {
     load()
   }
 
+  const saveFastestLaps = async (id, fastest_laps) => {
+    const { error } = await supabase.from('drivers').update({ fastest_laps }).eq('id', id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated')
+    setEditId(null)
+    invalidateCache()
+    load()
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -124,6 +161,7 @@ export default function AdminDrivers() {
                     <th className="text-left pb-2 pr-4 hidden sm:table-cell">Nationality</th>
                     <th className="text-left pb-2 pr-4 hidden md:table-cell">DOB</th>
                     <th className="text-left pb-2 pr-4">Active</th>
+                    <th className="text-left pb-2 pr-4">FL</th>
                     <th className="text-right pb-2">Actions</th>
                   </tr>
                 </thead>
@@ -150,6 +188,9 @@ export default function AdminDrivers() {
                           <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-secondary'}`}>
                             {row.is_active ? 'Active' : 'Inactive'}
                           </span>
+                        </td>
+                        <td className="py-2 pr-4 font-semibold tabular-nums" style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+                          {row.fastest_laps ?? 0}
                         </td>
                         <td className="py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -188,12 +229,17 @@ export default function AdminDrivers() {
                               style={{ color: editId === `${row.id}-social` ? undefined : 'var(--text-muted)' }}>
                               <Link2 size={11} /> Social
                             </button>
+                            <button onClick={() => toggle(`${row.id}-fl`)}
+                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-fl` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
+                              style={{ color: editId === `${row.id}-fl` ? undefined : 'var(--text-muted)' }}>
+                              <Zap size={11} /> FL
+                            </button>
                           </div>
                         </td>
                       </tr>
                       {editId === `${row.id}-active` && (
                         <ActiveEditRow
-                          colSpan={7}
+                          colSpan={8}
                           row={row}
                           onSave={(active) => saveActive(row.id, active)}
                           onCancel={() => setEditId(null)}
@@ -201,7 +247,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-bio` && (
                         <TextEditRow
-                          colSpan={7}
+                          colSpan={8}
                           label="Biography"
                           currentValue={row.biography}
                           onSave={(val) => saveField(row.id, 'biography', val || null)}
@@ -210,7 +256,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-image` && (
                         <ImageEditRow
-                          colSpan={7}
+                          colSpan={8}
                           folder="drivers"
                           currentUrl={row.image_url}
                           onSave={(url) => saveField(row.id, 'image_url', url)}
@@ -219,7 +265,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-hero` && (
                         <ImageEditRow
-                          colSpan={7}
+                          colSpan={8}
                           folder="drivers/heroes"
                           currentUrl={row.hero_image_url}
                           onSave={(url) => saveField(row.id, 'hero_image_url', url)}
@@ -228,7 +274,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-flag` && (
                         <ImageEditRow
-                          colSpan={7}
+                          colSpan={8}
                           folder="drivers/flags"
                           currentUrl={row.flag_url}
                           onSave={(url) => saveField(row.id, 'flag_url', url)}
@@ -237,7 +283,7 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-website` && (
                         <TextEditRow
-                          colSpan={7}
+                          colSpan={8}
                           label="Website URL"
                           currentValue={row.website_url}
                           rows={2}
@@ -247,9 +293,17 @@ export default function AdminDrivers() {
                       )}
                       {editId === `${row.id}-social` && (
                         <SocialLinksEditRow
-                          colSpan={7}
+                          colSpan={8}
                           row={row}
                           onSave={(instagramUrl, twitterUrl) => saveSocial(row.id, instagramUrl, twitterUrl)}
+                          onCancel={() => setEditId(null)}
+                        />
+                      )}
+                      {editId === `${row.id}-fl` && (
+                        <FastestLapsEditRow
+                          colSpan={8}
+                          row={row}
+                          onSave={(val) => saveFastestLaps(row.id, val)}
                           onCancel={() => setEditId(null)}
                         />
                       )}
