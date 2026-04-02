@@ -123,6 +123,7 @@ export default function DriverPage() {
   const [results, setResults] = useState([])
   const [champYears, setChampYears] = useState([])
   const [poleRows, setPoleRows] = useState([])
+  const [driverLaps, setDriverLaps] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('results')
 
@@ -139,13 +140,20 @@ export default function DriverPage() {
         .eq('driver_id', id)
         .eq('position', 1)
         .then(({ data }) => data || []),
+      supabase
+        .from('laps')
+        .select('race_id, lap_time')
+        .eq('driver_id', id)
+        .not('lap_time', 'is', null)
+        .then(({ data }) => data || []),
     ])
-      .then(([d, r, champs, p]) => {
+      .then(([d, r, champs, p, driverLaps]) => {
         if (cancelled) return
         setDriver(d)
         setResults(r || [])
         setChampYears(champs.driverChamps[id] || [])
         setPoleRows(p || [])
+        setDriverLaps(driverLaps || [])
       })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -156,7 +164,19 @@ export default function DriverPage() {
   const podiums = results.filter(r => r.position <= 3).length
   const poles = results.filter(r => r.grid === 1).length
   const totalPoints = results.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
-  const fastestLaps = results.filter(r => /fastest.?lap/i.test(r.status || '')).length
+  const fastestLaps = useMemo(() => {
+    // Group all laps by race, find min lap_time per race, count races where this driver has the min
+    const byRace = {}
+    for (const lap of driverLaps) {
+      if (!lap.race_id || !lap.lap_time) continue
+      if (!byRace[lap.race_id] || lap.lap_time < byRace[lap.race_id]) {
+        byRace[lap.race_id] = lap.lap_time
+      }
+    }
+    // fallback: also count status-based if no lap data
+    const fromStatus = results.filter(r => /fastest.?lap/i.test(r.status || '')).length
+    return Object.keys(byRace).length > 0 ? Object.keys(byRace).length : fromStatus
+  }, [driverLaps, results])
 
   const racesByDate = results
     .filter(r => r.races?.date)
@@ -166,6 +186,10 @@ export default function DriverPage() {
   const fmtRace = (r) => r ? `${r.races?.name?.replace(' Grand Prix', ' GP') || '—'} (${r.races?.seasons?.year || '—'})` : '—'
 
   const milestones = [
+    { label: 'Wins', value: wins },
+    { label: 'Podiums', value: podiums },
+    { label: 'Poles', value: poles },
+    { label: 'Points', value: totalPoints.toFixed(0) },
     { label: 'Fastest Laps', value: fastestLaps },
     { label: 'First Entry', value: racesByDate.length ? fmtRace(racesByDate[0]) : '—' },
     { label: 'First Win', value: winsByDate.length ? fmtRace(winsByDate[0]) : '—' },
@@ -366,22 +390,7 @@ export default function DriverPage() {
         </div>
       </div>
 
-      {/* ── Metrics ── */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: 'Wins', value: wins },
-          { label: 'Podiums', value: podiums },
-          { label: 'Poles', value: poles },
-          { label: 'Points', value: totalPoints.toFixed(0) },
-        ].map(m => (
-          <div key={m.label} className="apple-card p-4 text-center">
-            <div className="metric-value">{m.value}</div>
-            <div className="metric-label mt-1">{m.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Tabs ── */}
+{/* ── Tabs ── */}
       <div className="tab-bar">
         {activeTabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`tab-pill ${tab === t.id ? 'active' : ''}`}>
@@ -489,34 +498,30 @@ export default function DriverPage() {
           {circuitRecords.length === 0 ? (
             <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No circuit records yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[520px] text-sm">
-                <thead>
-                  <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
-                    <th className="text-left py-2 pl-5">Circuit</th>
-                    <th className="text-right py-2 whitespace-nowrap">Wins</th>
-                    <th className="text-right py-2 whitespace-nowrap">Podiums</th>
-                    <th className="text-right py-2 pr-5 whitespace-nowrap">Poles</th>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                  <th className="text-left py-2 pl-5">Circuit</th>
+                  <th className="text-right py-2 whitespace-nowrap">Wins</th>
+                  <th className="text-right py-2 whitespace-nowrap">Podiums</th>
+                  <th className="text-right py-2 pr-5 whitespace-nowrap">Poles</th>
+                </tr>
+              </thead>
+              <tbody>
+                {circuitRecords.map(row => (
+                  <tr key={row.circuitId} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
+                    <td className="py-2.5 pl-5 min-w-0">
+                      <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
+                        {row.circuitName}
+                      </Link>
+                    </td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.wins}</td>
+                    <td className="py-2.5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.podiums}</td>
+                    <td className="py-2.5 pr-5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.poles}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {circuitRecords.map(row => (
-                    <tr key={row.circuitId} className="border-b transition-colors" style={{ borderColor: 'var(--border)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-raised)'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}>
-                      <td className="py-2.5 pl-5">
-                        <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
-                          {row.circuitName}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.wins}</td>
-                      <td className="py-2.5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.podiums}</td>
-                      <td className="py-2.5 pr-5 text-right font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{row.poles}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           )}
         </Card>
       )}
