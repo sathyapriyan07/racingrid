@@ -5,7 +5,7 @@ import { Search, Menu, X, Shield, Sun, Moon } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { motion, AnimatePresence } from 'framer-motion'
 
-const NAV_LINKS = ['Drivers', 'Teams', 'Circuits', 'Races', 'Standings', 'Compare']
+const NAV_LINKS = ['Drivers', 'Teams', 'Circuits', 'Races', 'Standings', 'Championships', 'Compare']
 
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuthStore()

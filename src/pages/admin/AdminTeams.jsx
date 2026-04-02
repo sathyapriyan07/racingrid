@@ -14,6 +14,8 @@ function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
   const [base, setBase] = useState(row.base || '')
   const [fullName, setFullName] = useState(row.full_name || '')
   const [founded, setFounded] = useState(row.founded || '')
+  const [teamBoss, setTeamBoss] = useState(row.team_boss || '')
+  const [engineManufacturer, setEngineManufacturer] = useState(row.engine_manufacturer || '')
   return (
     <tr className="bg-muted">
       <td colSpan={colSpan} className="px-3 py-3">
@@ -29,9 +31,13 @@ function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
             placeholder="Full team name..." className="input text-xs py-1 w-48" />
           <input value={founded} onChange={e => setFounded(e.target.value)}
             placeholder="Founded year..." className="input text-xs py-1 w-28" type="number" />
+          <input value={teamBoss} onChange={e => setTeamBoss(e.target.value)}
+            placeholder="Team boss..." className="input text-xs py-1 w-48" />
+          <input value={engineManufacturer} onChange={e => setEngineManufacturer(e.target.value)}
+            placeholder="Engine manufacturer..." className="input text-xs py-1 w-48" />
           <div className="flex gap-2 ml-auto">
             <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
-            <button onClick={() => onSave(isActive, base, fullName, founded)} className="btn-primary text-xs py-1">Save</button>
+            <button onClick={() => onSave(isActive, base, fullName, founded, teamBoss, engineManufacturer)} className="btn-primary text-xs py-1">Save</button>
           </div>
         </div>
       </td>
@@ -72,12 +78,14 @@ export default function AdminTeams() {
     load()
   }
 
-  const saveDetails = async (id, is_active, base, full_name, founded) => {
+  const saveDetails = async (id, is_active, base, full_name, founded, team_boss, engine_manufacturer) => {
     const { error } = await supabase.from('teams').update({
       is_active,
       base: base || null,
       full_name: full_name || null,
       founded: founded ? parseInt(founded) : null,
+      team_boss: team_boss || null,
+      engine_manufacturer: engine_manufacturer || null,
     }).eq('id', id)
     if (error) return toast.error(error.message)
     toast.success('Updated')
@@ -221,7 +229,7 @@ export default function AdminTeams() {
                       <DetailsEditRow
                         colSpan={7}
                         row={row}
-                        onSave={(active, base, fullName, founded) => saveDetails(row.id, active, base, fullName, founded)}
+                        onSave={(active, base, fullName, founded, boss, engine) => saveDetails(row.id, active, base, fullName, founded, boss, engine)}
                         onCancel={() => setEditId(null)}
                       />
                     )}

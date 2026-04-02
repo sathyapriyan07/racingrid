@@ -456,6 +456,18 @@ export default function TeamPage() {
                   </div>
                 </div>
               )}
+              {team.team_boss && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Team Boss</p>
+                  <p className="text-sm font-medium">{team.team_boss}</p>
+                </div>
+              )}
+              {team.engine_manufacturer && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Engine Manufacturer</p>
+                  <p className="text-sm font-medium">{team.engine_manufacturer}</p>
+                </div>
+              )}
             </div>
           </Card>
           {team.bio && (
@@ -464,7 +476,7 @@ export default function TeamPage() {
               <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{team.bio}</p>
             </Card>
           )}
-          {!team.full_name && !team.founded && !team.bio && (
+          {!team.full_name && !team.founded && !team.bio && !team.team_boss && !team.engine_manufacturer && (
             <Card><p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>No team info added yet.</p></Card>
           )}
         </div>

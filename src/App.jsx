@@ -15,6 +15,7 @@ import Races from './pages/Races'
 import RacePage from './pages/RacePage'
 import Compare from './pages/Compare'
 import Standings from './pages/Standings'
+import Championships from './pages/Championships'
 import SearchPage from './pages/Search'
 
 import AdminLayout from './pages/admin/AdminLayout'
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="/race/:id" element={<PublicRoute><RacePage /></PublicRoute>} />
         <Route path="/compare" element={<PublicRoute><Compare /></PublicRoute>} />
         <Route path="/standings" element={<PublicRoute><Standings /></PublicRoute>} />
+        <Route path="/championships" element={<PublicRoute><Championships /></PublicRoute>} />
         <Route path="/search" element={<PublicRoute><SearchPage /></PublicRoute>} />
 
         {/* Admin routes */}
