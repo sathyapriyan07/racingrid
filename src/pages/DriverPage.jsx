@@ -156,6 +156,22 @@ export default function DriverPage() {
   const podiums = results.filter(r => r.position <= 3).length
   const poles = results.filter(r => r.grid === 1).length
   const totalPoints = results.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
+  const fastestLaps = results.filter(r => /fastest.?lap/i.test(r.status || '')).length
+
+  const racesByDate = results
+    .filter(r => r.races?.date)
+    .sort((a, b) => new Date(a.races.date) - new Date(b.races.date))
+  const winsByDate = racesByDate.filter(r => r.position === 1)
+
+  const fmtRace = (r) => r ? `${r.races?.name?.replace(' Grand Prix', ' GP') || '—'} (${r.races?.seasons?.year || '—'})` : '—'
+
+  const milestones = [
+    { label: 'Fastest Laps', value: fastestLaps },
+    { label: 'First Entry', value: racesByDate.length ? fmtRace(racesByDate[0]) : '—' },
+    { label: 'First Win', value: winsByDate.length ? fmtRace(winsByDate[0]) : '—' },
+    { label: 'Last Win', value: winsByDate.length ? fmtRace(winsByDate[winsByDate.length - 1]) : '—' },
+    { label: 'Last Entry', value: racesByDate.length ? fmtRace(racesByDate[racesByDate.length - 1]) : '—' },
+  ]
 
   const chartData = results.map(r => ({
     name: r.races?.name?.replace('Grand Prix', 'GP') || '?',
@@ -374,6 +390,20 @@ export default function DriverPage() {
           </button>
         ))}
       </div>
+
+      {/* ── Milestones ── */}
+      <Card className="p-0 overflow-hidden">
+        <table className="w-full">
+          <tbody>
+            {milestones.map((m, i) => (
+              <tr key={m.label} style={{ borderBottom: i < milestones.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <td className="py-2.5 pl-5 text-xs font-semibold uppercase tracking-widest w-32 shrink-0" style={{ color: 'var(--text-muted)' }}>{m.label}</td>
+                <td className="py-2.5 pr-5 text-sm font-semibold text-right" style={{ color: 'var(--text-primary)' }}>{m.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
 
       {/* ── Performance ── */}
       {tab === 'performance' && (
