@@ -6,6 +6,7 @@ import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, StatCard, Card } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import { BarChart2, Flag, Trophy, ExternalLink, MapPin } from 'lucide-react'
+import { formatPeriod } from '../utils/formatPeriod'
 import { useSettingsStore } from '../store/settingsStore'
 
 function Icon({ settingKey, emoji }) {
@@ -46,9 +47,11 @@ export default function TeamPage() {
   const [seasonFilter, setSeasonFilter] = useState('all')
 
   useEffect(() => {
+    let cancelled = false
     const load = async () => {
       try {
         const [t, champs] = await Promise.all([fetchTeam(id), fetchAllChampionships()])
+        if (cancelled) return
         setTeam(t)
         setChampYears(champs.teamChamps[id] || [])
         const [{ data }, { data: poles }] = await Promise.all([
@@ -63,15 +66,17 @@ export default function TeamPage() {
             .eq('team_id', id)
             .eq('position', 1),
         ])
+        if (cancelled) return
         setResults(data || [])
         setPoleRows(poles || [])
       } catch (err) {
         console.error(err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [id])
 
   const wins = results.filter(r => r.position === 1).length
@@ -113,7 +118,7 @@ export default function TeamPage() {
       if (!row.driver?.name && r.drivers?.name) row.driver = r.drivers
     }
 
-    const formatPeriod = (minYear, maxYear, isCurrent) => {
+    const formatPeriod = (minYear, maxYear, isCurrent) => { // fixed
       if (!minYear) return 'â€”'
       if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}â€“Present`
       if (!maxYear || minYear === maxYear) return String(minYear)
@@ -491,7 +496,7 @@ export default function TeamPage() {
           {circuitRecords.length === 0 ? (
             <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No circuit records yet.</p>
           ) : (
-              <table className="w-full table-fixed text-sm">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
                     <th className="text-left py-2 pl-5">Circuit</th>
@@ -504,7 +509,7 @@ export default function TeamPage() {
                   {circuitRecords.map(row => (
                     <tr key={row.circuitId} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
                       <td className="py-2.5 pl-5 min-w-0">
-                        <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium truncate block" style={{ fontSize: 13 }}>
+                        <Link to={`/circuit/${row.circuitId}`} className="hover:text-f1red transition-colors font-medium" style={{ fontSize: 13 }}>
                           {row.circuitName}
                         </Link>
                       </td>

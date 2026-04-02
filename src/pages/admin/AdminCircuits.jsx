@@ -74,7 +74,17 @@ export default function AdminCircuits() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    supabase.from('circuits').select('*').order('name')
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) toast.error(error.message)
+        else setData(data || [])
+      }).finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const saveField = async (id, field, url) => {
     const { error } = await supabase.from('circuits').update({ [field]: url || null }).eq('id', id)

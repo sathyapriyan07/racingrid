@@ -5,7 +5,7 @@ import { Spinner, PageHeader, EmptyState, Card, Badge } from '../components/ui'
 
 export default function Drivers() {
   const { fetchDrivers, drivers } = useDataStore()
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !useDataStore.getState().drivers.length)
   const [search, setSearch] = useState('')
 
   useEffect(() => {

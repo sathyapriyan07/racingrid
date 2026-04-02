@@ -6,7 +6,7 @@ import { Spinner, PageHeader, EmptyState } from '../components/ui'
 
 export default function Circuits() {
   const { fetchCircuits, circuits } = useDataStore()
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !useDataStore.getState().circuits.length)
   const [search, setSearch] = useState('')
 
   useEffect(() => {

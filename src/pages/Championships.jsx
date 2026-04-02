@@ -13,13 +13,12 @@ export default function Championships() {
   const [tab, setTab] = useState('drivers')
 
   useEffect(() => {
+    let cancelled = false
     const load = async () => {
       try {
         const { driverChamps, teamChamps } = await fetchAllChampionships()
-
         const driverIds = Object.keys(driverChamps)
         const teamIds = Object.keys(teamChamps)
-
         const [{ data: driverRows }, { data: teamRows }] = await Promise.all([
           driverIds.length
             ? supabase.from('drivers').select('id, name, nationality, flag_url, image_url').in('id', driverIds)
@@ -28,22 +27,21 @@ export default function Championships() {
             ? supabase.from('teams').select('id, name, nationality, flag_url, logo_url').in('id', teamIds)
             : { data: [] },
         ])
-
+        if (cancelled) return
         const driverList = (driverRows || [])
           .map(d => ({ ...d, years: (driverChamps[d.id] || []).sort((a, b) => a - b), count: (driverChamps[d.id] || []).length }))
           .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-
         const teamList = (teamRows || [])
           .map(t => ({ ...t, years: (teamChamps[t.id] || []).sort((a, b) => a - b), count: (teamChamps[t.id] || []).length }))
           .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-
         setDrivers(driverList)
         setTeams(teamList)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [])
 
   const rows = tab === 'drivers' ? drivers : teams

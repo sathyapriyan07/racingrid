@@ -13,7 +13,7 @@ export default function Standings() {
   const [teamRows, setTeamRows] = useState([])
   const [driverDeltaById, setDriverDeltaById] = useState({})
   const [teamDeltaById, setTeamDeltaById] = useState({})
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !useDataStore.getState().seasons.length)
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [tab, setTab] = useState('drivers')
   const [query, setQuery] = useState('')
@@ -23,6 +23,7 @@ export default function Standings() {
 
   useEffect(() => {
     if (!selectedSeason) return
+    let cancelled = false
     setStandingsLoading(true)
     const load = async () => {
       setDriverDeltaById({})
@@ -32,15 +33,15 @@ export default function Standings() {
         supabase.from('driver_standings').select('*, drivers(id, name, code, image_url), teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
         supabase.from('constructor_standings').select('*, teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
       ])
+      if (cancelled) return
       setDriverRows(d.data || [])
       setTeamRows(t.data || [])
 
-      // Progress vs previous round (based on results up to last round and last-1 round).
       const { data: seasonResults, error } = await supabase
         .from('results')
         .select('driver_id, team_id, points, position, races!inner(round, season_id)')
         .eq('races.season_id', selectedSeason.id)
-      if (error || !seasonResults?.length) return
+      if (error || !seasonResults?.length || cancelled) return
 
       const rounds = seasonResults.map(r => r?.races?.round).filter(n => typeof n === 'number')
       const maxRound = rounds.length ? Math.max(...rounds) : null
@@ -78,11 +79,14 @@ export default function Standings() {
         const cur = row.position
         if (typeof prev === 'number' && typeof cur === 'number') teamDelta[row.team_id] = prev - cur
       }
-      setDriverDeltaById(driverDelta)
-      setTeamDeltaById(teamDelta)
+      if (!cancelled) {
+        setDriverDeltaById(driverDelta)
+        setTeamDeltaById(teamDelta)
+      }
     }
 
-    load().catch(console.error).finally(() => setStandingsLoading(false))
+    load().catch(console.error).finally(() => { if (!cancelled) setStandingsLoading(false) })
+    return () => { cancelled = true }
   }, [selectedSeason])
 
   if (loading) return <Spinner />

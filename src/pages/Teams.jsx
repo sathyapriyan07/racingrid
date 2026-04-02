@@ -5,7 +5,7 @@ import { Spinner, PageHeader, EmptyState, Card, Badge } from '../components/ui'
 
 export default function Teams() {
   const { fetchTeams, teams } = useDataStore()
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !useDataStore.getState().teams.length)
   const [search, setSearch] = useState('')
 
   useEffect(() => {

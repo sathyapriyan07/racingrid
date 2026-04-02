@@ -127,6 +127,8 @@ export default function DriverPage() {
   const [tab, setTab] = useState('results')
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
     Promise.all([
       fetchDriver(id),
       fetchDriverStats(id),
@@ -139,13 +141,15 @@ export default function DriverPage() {
         .then(({ data }) => data || []),
     ])
       .then(([d, r, champs, p]) => {
+        if (cancelled) return
         setDriver(d)
         setResults(r || [])
         setChampYears(champs.driverChamps[id] || [])
         setPoleRows(p || [])
       })
       .catch(console.error)
-      .finally(() => setLoading(false))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [id])
 
   const wins = results.filter(r => r.position === 1).length

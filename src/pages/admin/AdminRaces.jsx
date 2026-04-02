@@ -123,7 +123,18 @@ export default function AdminRaces() {
       .catch(console.error)
   }, [])
 
-  useEffect(() => { load() }, [seasonId])
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    let q = supabase.from('races').select('*, seasons(year)').order('date', { ascending: false })
+    if (seasonId) q = q.eq('season_id', seasonId)
+    q.then(({ data, error }) => {
+      if (cancelled) return
+      if (error) console.error(error)
+      else setData(data || [])
+    }).finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [seasonId])
 
   return (
     <div className="space-y-4">

@@ -8,22 +8,28 @@ export default function Home() {
   const { fetchRaces, fetchDrivers, fetchSeasons, fetchStandings, drivers, seasons } = useDataStore()
   const [races, setRaces] = useState([])
   const [standings, setStandings] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => {
+    const s = useDataStore.getState()
+    return !s.drivers.length || !s.seasons.length
+  })
 
   useEffect(() => {
+    let cancelled = false
     const load = async () => {
       try {
         const [racesData] = await Promise.all([fetchRaces(), fetchDrivers(), fetchSeasons()])
+        if (cancelled) return
         setRaces(racesData)
         const allSeasons = useDataStore.getState().seasons
         if (allSeasons.length) {
           const s = await fetchStandings(allSeasons[0].id).catch(() => null)
-          setStandings(s)
+          if (!cancelled) setStandings(s)
         }
       } catch (err) { console.error(err) }
-      finally { setLoading(false) }
+      finally { if (!cancelled) setLoading(false) }
     }
     load()
+    return () => { cancelled = true }
   }, [])
 
   const currentDrivers = drivers.filter(d => d.is_active)
