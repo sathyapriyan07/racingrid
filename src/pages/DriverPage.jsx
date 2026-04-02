@@ -166,7 +166,6 @@ export default function DriverPage() {
           .neq('driver_id', id)
           .then(({ data }) => { if (!cancelled) setAllTeamResults(data || []) })
       })
-      })
       .catch(console.error)
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
