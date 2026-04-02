@@ -1,46 +1,158 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
+import { uploadImage } from '../../lib/uploadImage'
 import { resolveImageSrc } from '../../lib/resolveImageSrc'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Image, Pencil } from 'lucide-react'
+import { Plus, ImagePlus, Image, Pencil, X, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
-import ImageEditRow from './ImageEditRow'
 
 function toIntOrNull(v) {
-  const trimmed = String(v ?? '').trim()
-  if (!trimmed) return null
-  const n = Number.parseInt(trimmed, 10)
-  return Number.isFinite(n) ? n : null
+  const t = String(v ?? '').trim(); if (!t) return null
+  const n = parseInt(t, 10); return isFinite(n) ? n : null
 }
-
 function toFloatOrNull(v) {
-  const trimmed = String(v ?? '').trim()
-  if (!trimmed) return null
-  const n = Number.parseFloat(trimmed)
-  return Number.isFinite(n) ? n : null
+  const t = String(v ?? '').trim(); if (!t) return null
+  const n = parseFloat(t); return isFinite(n) ? n : null
 }
 
-function LayoutThumb({ name, value }) {
-  const [broken, setBroken] = useState(false)
-  const src = resolveImageSrc(value) || (typeof value === 'string' ? value.trim() : '')
-
-  if (!src || broken) {
-    return (
-      <div className="w-12 h-8 rounded bg-muted flex items-center justify-center text-secondary">
-        <ImagePlus size={12} />
+function InlineImage({ folder, currentUrl, onSave, onCancel }) {
+  const [url, setUrl] = useState(currentUrl || '')
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef()
+  const handleFile = async (e) => {
+    const file = e.target.files[0]; if (!file) return
+    setUploading(true)
+    try { const u = await uploadImage(file, folder); setUrl(u); toast.success('Uploaded') }
+    catch (err) { toast.error(err.message) }
+    finally { setUploading(false) }
+  }
+  return (
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <div className="flex gap-2 items-center">
+        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste URL..." className="input py-1.5 text-xs flex-1" autoFocus />
+        {url && <img src={resolveImageSrc(url) || url} alt="" className="h-8 w-auto object-contain rounded shrink-0" onError={e => e.target.style.display='none'} />}
       </div>
-    )
+      <div className="flex gap-2 flex-wrap">
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        <button onClick={() => fileRef.current.click()} disabled={uploading} className="btn-ghost text-xs py-1 flex items-center gap-1">
+          <Upload size={11} />{uploading ? 'Uploading...' : 'Upload'}
+        </button>
+        <button onClick={() => onSave(url)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function InlineDetails({ row, onSave, onCancel }) {
+  const [d, setD] = useState({
+    track_length_km: row.track_length_km ?? '',
+    lap_count: row.lap_count ?? '',
+    turns: row.turns ?? '',
+    top_speed_kph: row.top_speed_kph ?? '',
+    elevation: row.elevation ?? '',
+    race_lap_record: row.race_lap_record ?? '',
+    opened: row.opened ?? '',
+    first_gp: row.first_gp ?? '',
+  })
+  const field = (key, label, type = 'number', step) => (
+    <div key={key}>
+      <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
+      <input type={type} step={step} className="input text-xs py-1.5 w-full" value={d[key]}
+        onChange={e => setD(prev => ({ ...prev, [key]: e.target.value }))} placeholder={label} />
+    </div>
+  )
+  return (
+    <div className="space-y-3 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {field('track_length_km', 'Length (km)', 'number', '0.001')}
+        {field('lap_count', 'Laps')}
+        {field('turns', 'Turns')}
+        {field('top_speed_kph', 'Top Speed (km/h)')}
+        {field('elevation', 'Elevation', 'number', '0.01')}
+        {field('race_lap_record', 'Lap Record', 'text')}
+        {field('opened', 'Opened')}
+        {field('first_gp', 'First GP')}
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => onSave({
+          track_length_km: toFloatOrNull(d.track_length_km),
+          lap_count: toIntOrNull(d.lap_count),
+          turns: toIntOrNull(d.turns),
+          top_speed_kph: toIntOrNull(d.top_speed_kph),
+          elevation: toFloatOrNull(d.elevation),
+          race_lap_record: String(d.race_lap_record || '').trim() || null,
+          opened: toIntOrNull(d.opened),
+          first_gp: toIntOrNull(d.first_gp),
+        })} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function CircuitControls({ row, onClose, onRefresh, invalidateCache }) {
+  const [editId, setEditId] = useState(null)
+  const toggle = (key) => setEditId(prev => prev === key ? null : key)
+
+  const showDbError = (error) => {
+    const msg = String(error?.message || '')
+    if (error?.code === '42703' || msg.toLowerCase().includes('does not exist')) {
+      toast.error('Missing schema columns. Run the latest SQL from supabase/schema.sql.')
+      return true
+    }
+    return false
   }
 
+  const save = async (field, val) => {
+    const { error } = await supabase.from('circuits').update({ [field]: val ?? null }).eq('id', row.id)
+    if (error) { if (!showDbError(error)) toast.error(error.message); return }
+    toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+  }
+
+  const saveDetails = async (payload) => {
+    const { error } = await supabase.from('circuits').update(payload).eq('id', row.id)
+    if (error) { if (!showDbError(error)) toast.error(error.message); return }
+    toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+  }
+
+  const btnCls = (key) =>
+    `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editId === key ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`
+
+  const layoutSrc = resolveImageSrc(row.layout_image) || row.layout_image
+
   return (
-    <img
-      src={src}
-      alt={name}
-      className="w-12 h-8 object-contain bg-muted rounded"
-      onError={() => setBroken(true)}
-    />
+    <div className="apple-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {layoutSrc
+            ? <img src={layoutSrc} alt={row.name} className="w-14 h-10 object-contain rounded bg-muted p-1 shrink-0" />
+            : <div className="w-14 h-10 rounded bg-muted flex items-center justify-center shrink-0"><ImagePlus size={14} style={{ color: 'var(--text-muted)' }} /></div>
+          }
+          <div>
+            <div className="font-bold text-sm">{row.name}</div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{[row.location, row.country].filter(Boolean).join(', ') || '—'}</div>
+          </div>
+        </div>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0">
+          <X size={14} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {[['layout', 'Layout', ImagePlus], ['hero', 'Hero', Image], ['details', 'Details', Pencil]].map(([key, label, Icon]) => (
+          <button key={key} onClick={() => toggle(key)} className={btnCls(key)} style={{ color: editId === key ? undefined : 'var(--text-muted)' }}>
+            <Icon size={11} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {editId === 'layout' && <InlineImage folder="circuits" currentUrl={row.layout_image} onSave={u => save('layout_image', u || null)} onCancel={() => toggle('layout')} />}
+      {editId === 'hero' && <InlineImage folder="circuits/heroes" currentUrl={row.hero_image_url} onSave={u => save('hero_image_url', u || null)} onCancel={() => toggle('hero')} />}
+      {editId === 'details' && <InlineDetails row={row} onSave={saveDetails} onCancel={() => toggle('details')} />}
+    </div>
   )
 }
 
@@ -48,274 +160,73 @@ export default function AdminCircuits() {
   const { invalidateCache } = useDataStore()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editId, setEditId] = useState(null) // `${id}-layout` or `${id}-hero`
-  const [detailsDraft, setDetailsDraft] = useState(null)
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState(null)
 
-  const showDbError = (error) => {
-    const code = error?.code
-    const msg = String(error?.message || '')
-    if (code === '42703' || code === 'PGRST204' || msg.toLowerCase().includes('does not exist')) {
-      toast.error('Database schema is missing circuit detail columns. Run the latest SQL from `supabase/schema.sql`.')
-      return true
-    }
-    return false
-  }
-
-  const load = async () => {
+  const load = () => {
     setLoading(true)
-    try {
-      const { data, error } = await supabase.from('circuits').select('*').order('name')
-      if (error) throw error
-      setData(data || [])
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setLoading(false)
-    }
+    let q = supabase.from('circuits').select('*').order('name')
+    if (search) q = q.ilike('name', `%${search}%`)
+    q.then(({ data, error }) => {
+      if (error) toast.error(error.message)
+      else setData(data || [])
+    }).finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    supabase.from('circuits').select('*').order('name')
-      .then(({ data, error }) => {
-        if (cancelled) return
-        if (error) toast.error(error.message)
-        else setData(data || [])
-      }).finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [])
+    let c = false; setLoading(true)
+    let q = supabase.from('circuits').select('*').order('name')
+    if (search) q = q.ilike('name', `%${search}%`)
+    q.then(({ data, error }) => { if (c) return; if (error) toast.error(error.message); else setData(data || []) })
+      .finally(() => { if (!c) setLoading(false) })
+    return () => { c = true }
+  }, [search])
 
-  const saveField = async (id, field, url) => {
-    const { error } = await supabase.from('circuits').update({ [field]: url || null }).eq('id', id)
-    if (error) {
-      if (!showDbError(error)) toast.error(error.message)
-      return
-    }
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const toggle = (key) => setEditId(prev => prev === key ? null : key)
+  const selectedRow = data.find(d => d.id === selectedId)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black">Circuits</h1>
-        <Link to="/admin/import" className="btn-primary flex items-center gap-1.5 text-xs">
-          <Plus size={12} /> Import
-        </Link>
+        <Link to="/admin/import" className="btn-primary flex items-center gap-1.5 text-xs"><Plus size={12} /> Import</Link>
       </div>
 
-      <div className="glass p-4">
-        {loading ? <Spinner /> : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-secondary border-b border-border">
-                  <th className="text-left pb-2 pr-4 w-16">Layout</th>
-                  <th className="text-left pb-2 pr-4">Name</th>
-                  <th className="text-left pb-2 pr-4 hidden sm:table-cell">Location</th>
-                  <th className="text-left pb-2 pr-4 hidden sm:table-cell">Country</th>
-                  <th className="text-right pb-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map(row => (
-                  <>
-                    <tr key={row.id} className="border-b border-border hover:bg-muted">
-                      <td className="py-2 pr-4">
-                        <LayoutThumb name={row.name} value={row.layout_image} />
-                      </td>
-                      <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
-                      <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.location || '—'}</td>
-                      <td className="py-2 pr-4 hidden sm:table-cell" style={{ color: 'var(--text-muted)' }}>{row.country || '—'}</td>
-                      <td className="py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => toggle(`${row.id}-layout`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-layout` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-layout` ? undefined : 'var(--text-muted)' }}>
-                            <ImagePlus size={11} /> Layout
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-hero`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
-                            <Image size={11} /> Hero
-                          </button>
-                          <button
-                            onClick={() => {
-                              const key = `${row.id}-details`
-                              if (editId === key) {
-                                setEditId(null)
-                                setDetailsDraft(null)
-                                return
-                              }
-                              setEditId(key)
-                              setDetailsDraft({
-                                id: row.id,
-                                track_length_km: row.track_length_km ?? '',
-                                lap_count: row.lap_count ?? '',
-                                turns: row.turns ?? '',
-                                top_speed_kph: row.top_speed_kph ?? '',
-                                elevation: row.elevation ?? '',
-                                race_lap_record: row.race_lap_record ?? '',
-                                opened: row.opened ?? '',
-                                first_gp: row.first_gp ?? '',
-                              })
-                            }}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-details` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-details` ? undefined : 'var(--text-muted)' }}
-                          >
-                            <Pencil size={11} /> Details
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {editId === `${row.id}-layout` && (
-                      <ImageEditRow
-                        colSpan={5}
-                        folder="circuits"
-                        currentUrl={row.layout_image}
-                        onSave={(url) => saveField(row.id, 'layout_image', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-hero` && (
-                      <ImageEditRow
-                        colSpan={5}
-                        folder="circuits/heroes"
-                        currentUrl={row.hero_image_url}
-                        onSave={(url) => saveField(row.id, 'hero_image_url', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-details` && detailsDraft?.id === row.id && (
-                      <tr className="border-b border-border bg-muted/30">
-                        <td colSpan={5} className="p-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Track length (km)</div>
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="input"
-                                value={detailsDraft.track_length_km}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, track_length_km: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Laps</div>
-                              <input
-                                type="number"
-                                className="input"
-                                value={detailsDraft.lap_count}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, lap_count: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Turns</div>
-                              <input
-                                type="number"
-                                className="input"
-                                value={detailsDraft.turns}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, turns: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Top speed (km/h)</div>
-                              <input
-                                type="number"
-                                className="input"
-                                value={detailsDraft.top_speed_kph}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, top_speed_kph: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Elevation</div>
-                              <input
-                                type="number"
-                                step="0.01"
-                                className="input"
-                                value={detailsDraft.elevation}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, elevation: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Lap record</div>
-                              <input
-                                className="input"
-                                value={detailsDraft.race_lap_record}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, race_lap_record: e.target.value }))}
-                                placeholder="1.29.708"
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>Opened</div>
-                              <input
-                                type="number"
-                                className="input"
-                                value={detailsDraft.opened}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, opened: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: 'var(--text-muted)' }}>First GP</div>
-                              <input
-                                type="number"
-                                className="input"
-                                value={detailsDraft.first_gp}
-                                onChange={(e) => setDetailsDraft(d => ({ ...d, first_gp: e.target.value }))}
-                              />
-                            </div>
-                          </div>
+      <input value={search} onChange={e => { setSearch(e.target.value); setSelectedId(null) }}
+        placeholder="Search by name..." className="input max-w-xs" />
 
-                          <div className="flex items-center justify-end gap-2 mt-4">
-                            <button
-                              className="btn-ghost text-xs"
-                              onClick={() => { setEditId(null); setDetailsDraft(null) }}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              className="btn-primary text-xs"
-                              onClick={async () => {
-                                const payload = {
-                                  track_length_km: toFloatOrNull(detailsDraft.track_length_km),
-                                  lap_count: toIntOrNull(detailsDraft.lap_count),
-                                  turns: toIntOrNull(detailsDraft.turns),
-                                  top_speed_kph: toIntOrNull(detailsDraft.top_speed_kph),
-                                  elevation: toFloatOrNull(detailsDraft.elevation),
-                                  race_lap_record: String(detailsDraft.race_lap_record || '').trim() || null,
-                                  opened: toIntOrNull(detailsDraft.opened),
-                                  first_gp: toIntOrNull(detailsDraft.first_gp),
-                                }
-                                const { error } = await supabase.from('circuits').update(payload).eq('id', row.id)
-                                if (error) {
-                                  if (!showDbError(error)) toast.error(error.message)
-                                  return
-                                }
-                                toast.success('Updated')
-                                setEditId(null)
-                                setDetailsDraft(null)
-                                invalidateCache()
-                                load()
-                              }}
-                            >
-                              Save
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
+      {loading ? <Spinner /> : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {data.map(row => {
+              const layoutSrc = resolveImageSrc(row.layout_image) || row.layout_image
+              return (
+                <button key={row.id} onClick={() => setSelectedId(prev => prev === row.id ? null : row.id)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all text-center ${selectedId === row.id ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/40 hover:bg-muted'}`}
+                  style={{ background: selectedId === row.id ? undefined : 'var(--bg-surface)' }}>
+                  {layoutSrc
+                    ? <img src={layoutSrc} alt={row.name} className="w-16 h-10 object-contain" onError={e => e.target.style.display='none'} />
+                    : <div className="w-16 h-10 rounded bg-muted flex items-center justify-center"><ImagePlus size={14} style={{ color: 'var(--text-muted)' }} /></div>
+                  }
+                  <div className="min-w-0 w-full">
+                    <div className="text-xs font-bold truncate">{row.name}</div>
+                    {row.country && <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{row.country}</div>}
+                  </div>
+                </button>
+              )
+            })}
           </div>
-        )}
-      </div>
+
+          {selectedRow && (
+            <CircuitControls
+              key={selectedRow.id}
+              row={selectedRow}
+              onClose={() => setSelectedId(null)}
+              onRefresh={load}
+              invalidateCache={invalidateCache}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }
