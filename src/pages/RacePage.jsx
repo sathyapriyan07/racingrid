@@ -191,13 +191,17 @@ export default function RacePage() {
     if (!items.length) return null
     return (
       <div className="flex gap-2 flex-wrap mb-3">
-        {items.map(h => (
-          <a key={h.id} href={h.youtube_url} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-            style={{ background: 'rgba(229,57,53,0.12)', color: '#E10600', border: '1px solid rgba(229,57,53,0.25)' }}>
-            <PlayCircle size={13} /> {h.title || 'Watch Highlights'}
-          </a>
-        ))}
+        {items.map(h => {
+          const vid = h.youtube_url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
+          if (!vid) return null
+          return (
+            <a key={h.id} href={`https://www.youtube.com/watch?v=${vid}`} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+              style={{ background: 'rgba(229,57,53,0.12)', color: '#E10600', border: '1px solid rgba(229,57,53,0.25)' }}>
+              <PlayCircle size={13} /> {h.title || 'Watch Highlights'}
+            </a>
+          )
+        })}
       </div>
     )
   }
@@ -726,23 +730,28 @@ export default function RacePage() {
 
       {/* Highlights */}
       {activeTab === 'highlights' && (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {highlights.map(h => {
             const vid = h.youtube_url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
             if (!vid) return null
             return (
-              <Card key={h.id} className="p-0 overflow-hidden">
-                {h.title && (
-                  <div className="px-4 pt-3 pb-2 text-sm font-semibold flex items-center gap-2">
-                    <PlayCircle size={14} className="text-f1red" />{h.title}
+              <a key={h.id} href={`https://www.youtube.com/watch?v=${vid}`} target="_blank" rel="noopener noreferrer"
+                className="apple-card overflow-hidden hover:border-accent/40 transition-colors block">
+                <div className="relative">
+                  <img src={`https://img.youtube.com/vi/${vid}/hqdefault.jpg`} alt={h.title || 'Highlight'}
+                    className="w-full object-cover" style={{ aspectRatio: '16/9' }} />
+                  <div className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: 'rgba(0,0,0,0.3)' }}>
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(229,57,53,0.9)' }}>
+                      <PlayCircle size={28} color="#fff" />
+                    </div>
                   </div>
-                )}
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
-                  <iframe src={`https://www.youtube.com/embed/${vid}`} title={h.title || 'Highlight'}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen className="absolute inset-0 w-full h-full" />
                 </div>
-              </Card>
+                {h.title && (
+                  <div className="px-4 py-3 text-sm font-semibold">{h.title}</div>
+                )}
+              </a>
             )
           })}
         </div>
