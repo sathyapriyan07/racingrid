@@ -1,139 +1,227 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
+import { uploadImage } from '../../lib/uploadImage'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image, Link2, Users } from 'lucide-react'
+import { Plus, ImagePlus, Car, Pencil, Flag, FileText, Image, Link2, Users, X, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
-import ImageEditRow from './ImageEditRow'
-import TextEditRow from './TextEditRow'
-import SocialLinksEditRow from './SocialLinksEditRow'
-import { uploadImage } from '../../lib/uploadImage'
 
-// Run in Supabase SQL Editor:
-// create table if not exists team_partners (
-//   id uuid primary key default uuid_generate_v4(),
-//   team_id uuid references teams(id) on delete cascade,
-//   name text,
-//   logo_url text not null,
-//   sort_order integer default 0,
-//   created_at timestamptz default now()
-// );
-// alter table team_partners enable row level security;
-// create policy "public_read_team_partners" on team_partners for select using (true);
-// create policy "admin_write_team_partners" on team_partners for all using (is_admin());
-
-function PartnersEditPanel({ teamId, onClose }) {
-  const [partners, setPartners] = useState([])
-  const [loading, setLoading] = useState(true)
+function InlineImage({ folder, currentUrl, onSave, onCancel }) {
+  const [url, setUrl] = useState(currentUrl || '')
   const [uploading, setUploading] = useState(false)
-  const [newName, setNewName] = useState('')
-  const fileRef = useState(() => { const r = { current: null }; return r })[0]
-
-  const load = async () => {
-    const { data } = await supabase.from('team_partners').select('*').eq('team_id', teamId).order('sort_order').order('created_at')
-    setPartners(data || [])
-    setLoading(false)
-  }
-
-  useEffect(() => { load() }, [teamId])
-
+  const fileRef = useRef()
   const handleFile = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const file = e.target.files[0]; if (!file) return
     setUploading(true)
-    try {
-      const url = await uploadImage(file, 'teams/partners')
-      const { error } = await supabase.from('team_partners').insert({ team_id: teamId, logo_url: url, name: newName.trim() || null, sort_order: partners.length })
-      if (error) throw new Error(error.message)
-      setNewName('')
-      toast.success('Partner added')
-      load()
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
+    try { const u = await uploadImage(file, folder); setUrl(u); toast.success('Uploaded') }
+    catch (err) { toast.error(err.message) }
+    finally { setUploading(false) }
   }
-
-  const remove = async (id) => {
-    const { error } = await supabase.from('team_partners').delete().eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Removed')
-    load()
-  }
-
   return (
-    <tr className="bg-muted">
-      <td colSpan={7} className="px-3 py-3">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Partners</span>
-            <button onClick={onClose} className="btn-ghost text-xs py-1">Close</button>
-          </div>
-          {loading ? <Spinner /> : (
-            <div className="flex flex-wrap gap-3">
-              {partners.map(p => (
-                <div key={p.id} className="flex flex-col items-center gap-1 relative group">
-                  <img src={p.logo_url} alt={p.name || ''} className="h-10 w-auto max-w-[80px] object-contain rounded bg-surface p-1" />
-                  {p.name && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{p.name}</span>}
-                  <button onClick={() => remove(p.id)}
-                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500/80 text-white text-[10px] hidden group-hover:flex items-center justify-center">
-                    x
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-2 flex-wrap">
-            <input value={newName} onChange={e => setNewName(e.target.value)}
-              placeholder="Partner name (optional)" className="input text-xs py-1 w-44" />
-            <input ref={r => fileRef.current = r} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-            <button onClick={() => fileRef.current?.click()} disabled={uploading}
-              className="btn-primary text-xs py-1 flex items-center gap-1.5">
-              {uploading ? 'Uploading...' : <><Plus size={11} /> Add Logo</>}
-            </button>
-          </div>
-        </div>
-      </td>
-    </tr>
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <div className="flex gap-2 items-center">
+        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste URL..." className="input py-1.5 text-xs flex-1" autoFocus />
+        {url && <img src={url} alt="" className="h-8 w-auto object-contain rounded shrink-0" />}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        <button onClick={() => fileRef.current.click()} disabled={uploading} className="btn-ghost text-xs py-1 flex items-center gap-1">
+          <Upload size={11} />{uploading ? 'Uploading...' : 'Upload'}
+        </button>
+        <button onClick={() => onSave(url)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
   )
 }
 
-function DetailsEditRow({ colSpan, row, onSave, onCancel }) {
+function InlineText({ label, currentValue, rows = 3, onSave, onCancel }) {
+  const [value, setValue] = useState(currentValue || '')
+  return (
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      {label && <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{label}</p>}
+      <textarea value={value} onChange={e => setValue(e.target.value)} rows={rows} className="input text-xs py-2 resize-y w-full" autoFocus />
+      <div className="flex gap-2">
+        <button onClick={() => onSave(value)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function InlineDetails({ row, onSave, onCancel }) {
   const [isActive, setIsActive] = useState(row.is_active || false)
   const [base, setBase] = useState(row.base || '')
   const [fullName, setFullName] = useState(row.full_name || '')
   const [founded, setFounded] = useState(row.founded || '')
   const [teamBoss, setTeamBoss] = useState(row.team_boss || '')
-  const [engineManufacturer, setEngineManufacturer] = useState(row.engine_manufacturer || '')
+  const [engine, setEngine] = useState(row.engine_manufacturer || '')
   return (
-    <tr className="bg-muted">
-      <td colSpan={colSpan} className="px-3 py-3">
-        <div className="flex items-center gap-4 flex-wrap">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)}
-              className="w-4 h-4 accent-f1red" />
-            <span className="text-xs text-secondary">Active (current season)</span>
-          </label>
-          <input value={base} onChange={e => setBase(e.target.value)}
-            placeholder="Base location..." className="input text-xs py-1 w-48" />
-          <input value={fullName} onChange={e => setFullName(e.target.value)}
-            placeholder="Full team name..." className="input text-xs py-1 w-48" />
-          <input value={founded} onChange={e => setFounded(e.target.value)}
-            placeholder="Founded year..." className="input text-xs py-1 w-28" type="number" />
-          <input value={teamBoss} onChange={e => setTeamBoss(e.target.value)}
-            placeholder="Team boss..." className="input text-xs py-1 w-48" />
-          <input value={engineManufacturer} onChange={e => setEngineManufacturer(e.target.value)}
-            placeholder="Engine manufacturer..." className="input text-xs py-1 w-48" />
-          <div className="flex gap-2 ml-auto">
-            <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
-            <button onClick={() => onSave(isActive, base, fullName, founded, teamBoss, engineManufacturer)} className="btn-primary text-xs py-1">Save</button>
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <div className="flex flex-wrap gap-2">
+        <label className="flex items-center gap-2 cursor-pointer w-full">
+          <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="w-4 h-4 accent-f1red" />
+          <span className="text-xs">Active (current season)</span>
+        </label>
+        <input value={base} onChange={e => setBase(e.target.value)} placeholder="Base location" className="input text-xs py-1.5 flex-1 min-w-[160px]" />
+        <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full team name" className="input text-xs py-1.5 flex-1 min-w-[160px]" />
+        <input value={founded} onChange={e => setFounded(e.target.value)} placeholder="Founded year" type="number" className="input text-xs py-1.5 w-28" />
+        <input value={teamBoss} onChange={e => setTeamBoss(e.target.value)} placeholder="Team boss" className="input text-xs py-1.5 flex-1 min-w-[160px]" />
+        <input value={engine} onChange={e => setEngine(e.target.value)} placeholder="Engine manufacturer" className="input text-xs py-1.5 flex-1 min-w-[160px]" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => onSave(isActive, base, fullName, founded, teamBoss, engine)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function InlineSocial({ row, onSave, onCancel }) {
+  const [ig, setIg] = useState(row.instagram_url || '')
+  const [tw, setTw] = useState(row.twitter_url || '')
+  return (
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <input value={ig} onChange={e => setIg(e.target.value)} placeholder="Instagram URL or @handle" className="input text-xs py-1.5 w-full" autoFocus />
+      <input value={tw} onChange={e => setTw(e.target.value)} placeholder="Twitter/X URL or @handle" className="input text-xs py-1.5 w-full" />
+      <div className="flex gap-2">
+        <button onClick={() => onSave(ig, tw)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function InlinePartners({ teamId, onCancel }) {
+  const [partners, setPartners] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [newName, setNewName] = useState('')
+  const fileRef = useRef()
+
+  const load = async () => {
+    const { data } = await supabase.from('team_partners').select('*').eq('team_id', teamId).order('sort_order').order('created_at')
+    setPartners(data || []); setLoading(false)
+  }
+  useEffect(() => { load() }, [teamId])
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0]; if (!file) return
+    setUploading(true)
+    try {
+      const url = await uploadImage(file, 'teams/partners')
+      const { error } = await supabase.from('team_partners').insert({ team_id: teamId, logo_url: url, name: newName.trim() || null, sort_order: partners.length })
+      if (error) throw new Error(error.message)
+      setNewName(''); toast.success('Partner added'); load()
+    } catch (err) { toast.error(err.message) }
+    finally { setUploading(false); e.target.value = '' }
+  }
+
+  const remove = async (id) => {
+    const { error } = await supabase.from('team_partners').delete().eq('id', id)
+    if (error) return toast.error(error.message)
+    toast.success('Removed'); load()
+  }
+
+  return (
+    <div className="space-y-3 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Partners</p>
+      {loading ? <Spinner /> : (
+        <div className="flex flex-wrap gap-3">
+          {partners.map(p => (
+            <div key={p.id} className="flex flex-col items-center gap-1 relative group">
+              <img src={p.logo_url} alt={p.name || ''} className="h-10 w-auto max-w-[80px] object-contain rounded bg-surface p-1" />
+              {p.name && <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{p.name}</span>}
+              <button onClick={() => remove(p.id)}
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500/80 text-white text-[10px] hidden group-hover:flex items-center justify-center">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Partner name (optional)" className="input text-xs py-1 w-44" />
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        <button onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-primary text-xs py-1 flex items-center gap-1.5">
+          {uploading ? 'Uploading...' : <><Plus size={11} /> Add Logo</>}
+        </button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Close</button>
+      </div>
+    </div>
+  )
+}
+
+function TeamControls({ row, onClose, onRefresh, invalidateCache }) {
+  const [editId, setEditId] = useState(null)
+  const toggle = (key) => setEditId(prev => prev === key ? null : key)
+
+  const save = async (field, val) => {
+    const { error } = await supabase.from('teams').update({ [field]: val ?? null }).eq('id', row.id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+  }
+
+  const saveDetails = async (isActive, base, fullName, founded, teamBoss, engine) => {
+    const { error } = await supabase.from('teams').update({
+      is_active: isActive,
+      base: base || null, full_name: fullName || null,
+      founded: founded ? parseInt(founded) : null,
+      team_boss: teamBoss || null, engine_manufacturer: engine || null,
+    }).eq('id', row.id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+  }
+
+  const saveSocial = async (ig, tw) => {
+    const { error } = await supabase.from('teams').update({ instagram_url: ig?.trim() || null, twitter_url: tw?.trim() || null }).eq('id', row.id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+  }
+
+  const btnCls = (key) =>
+    `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editId === key ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`
+
+  return (
+    <div className="apple-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {row.logo_url
+            ? <img src={row.logo_url} alt={row.name} className="w-10 h-10 object-contain rounded-xl bg-muted p-1 shrink-0" />
+            : <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-xs font-black shrink-0" style={{ color: 'var(--text-muted)' }}>{row.name?.slice(0, 2).toUpperCase()}</div>
+          }
+          <div>
+            <div className="font-bold text-sm">{row.name}</div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{row.nationality || '—'}{row.base ? ` · ${row.base}` : ''}</div>
           </div>
         </div>
-      </td>
-    </tr>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0">
+          <X size={14} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {[['details', 'Edit', Pencil], ['bio', 'Bio', FileText], ['logo', 'Logo', ImagePlus],
+          ['detail-logo', 'Detail Logo', ImagePlus], ['hero', 'Hero', Image], ['car', 'Car', Car],
+          ['flag', 'Flag', Flag], ['website', 'Website', Link2], ['social', 'Social', Link2],
+          ['partners', 'Partners', Users],
+        ].map(([key, label, Icon]) => (
+          <button key={key} onClick={() => toggle(key)} className={btnCls(key)} style={{ color: editId === key ? undefined : 'var(--text-muted)' }}>
+            <Icon size={11} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {editId === 'details' && <InlineDetails row={row} onSave={saveDetails} onCancel={() => toggle('details')} />}
+      {editId === 'bio' && <InlineText label="About / Bio" currentValue={row.bio} onSave={v => save('bio', v || null)} onCancel={() => toggle('bio')} />}
+      {editId === 'logo' && <InlineImage folder="teams" currentUrl={row.logo_url} onSave={u => save('logo_url', u || null)} onCancel={() => toggle('logo')} />}
+      {editId === 'detail-logo' && <InlineImage folder="teams/detail" currentUrl={row.detail_logo_url} onSave={u => save('detail_logo_url', u || null)} onCancel={() => toggle('detail-logo')} />}
+      {editId === 'hero' && <InlineImage folder="teams/heroes" currentUrl={row.hero_image_url} onSave={u => save('hero_image_url', u || null)} onCancel={() => toggle('hero')} />}
+      {editId === 'car' && <InlineImage folder="teams/cars" currentUrl={row.car_image} onSave={u => save('car_image', u || null)} onCancel={() => toggle('car')} />}
+      {editId === 'flag' && <InlineImage folder="teams/flags" currentUrl={row.flag_url} onSave={u => save('flag_url', u || null)} onCancel={() => toggle('flag')} />}
+      {editId === 'website' && <InlineText label="Website URL" currentValue={row.website_url} rows={1} onSave={v => save('website_url', v || null)} onCancel={() => toggle('website')} />}
+      {editId === 'social' && <InlineSocial row={row} onSave={saveSocial} onCancel={() => toggle('social')} />}
+      {editId === 'partners' && <InlinePartners teamId={row.id} onCancel={() => toggle('partners')} />}
+    </div>
   )
 }
 
@@ -141,275 +229,71 @@ export default function AdminTeams() {
   const { invalidateCache } = useDataStore()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editId, setEditId] = useState(null)
   const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState(null)
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      let q = supabase.from('teams').select('*').order('name')
-      if (search) q = q.ilike('name', `%${search}%`)
-      const { data, error } = await q
-      if (error) throw error
-      setData(data || [])
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    let cancelled = false
+  const load = () => {
     setLoading(true)
     let q = supabase.from('teams').select('*').order('name')
     if (search) q = q.ilike('name', `%${search}%`)
     q.then(({ data, error }) => {
-      if (cancelled) return
       if (error) toast.error(error.message)
       else setData(data || [])
-    }).finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+    }).finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    let c = false; setLoading(true)
+    let q = supabase.from('teams').select('*').order('name')
+    if (search) q = q.ilike('name', `%${search}%`)
+    q.then(({ data, error }) => { if (c) return; if (error) toast.error(error.message); else setData(data || []) })
+      .finally(() => { if (!c) setLoading(false) })
+    return () => { c = true }
   }, [search])
 
-  const saveField = async (id, field, url) => {
-    const { error } = await supabase.from('teams').update({ [field]: url || null }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const saveDetails = async (id, is_active, base, full_name, founded, team_boss, engine_manufacturer) => {
-    const { error } = await supabase.from('teams').update({
-      is_active,
-      base: base || null,
-      full_name: full_name || null,
-      founded: founded ? parseInt(founded) : null,
-      team_boss: team_boss || null,
-      engine_manufacturer: engine_manufacturer || null,
-    }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const saveSocial = async (id, instagram_url, twitter_url) => {
-    const { error } = await supabase.from('teams').update({
-      instagram_url: instagram_url?.trim() || null,
-      twitter_url: twitter_url?.trim() || null,
-    }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const toggle = (key) => setEditId(prev => prev === key ? null : key)
+  const selectedRow = data.find(d => d.id === selectedId)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black">Teams</h1>
-        <Link to="/admin/import" className="btn-primary flex items-center gap-1.5 text-xs">
-          <Plus size={12} /> Import
-        </Link>
+        <Link to="/admin/import" className="btn-primary flex items-center gap-1.5 text-xs"><Plus size={12} /> Import</Link>
       </div>
-      <div className="glass p-4">
-        <input value={search} onChange={e => { setSearch(e.target.value); setEditId(null) }}
-          placeholder="Search by name..." className="input mb-4 max-w-xs" />
-        {loading ? <Spinner /> : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-secondary border-b border-border">
-                  <th className="text-left pb-2 pr-3 w-10">Logo</th>
-                  <th className="text-left pb-2 pr-3 w-16 hidden sm:table-cell">Car</th>
-                  <th className="text-left pb-2 pr-3">Name</th>
-                  <th className="text-left pb-2 pr-3 hidden sm:table-cell">Nationality</th>
-                  <th className="text-left pb-2 pr-3 hidden md:table-cell">Base</th>
-                  <th className="text-left pb-2 pr-3">Active</th>
-                  <th className="text-right pb-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map(row => (
-                  <>
-                    <tr key={row.id} className="border-b border-border hover:bg-muted">
-                      <td className="py-2 pr-3">
-                        {row.logo_url
-                          ? <img src={row.logo_url} alt={row.name} className="w-8 h-8 object-contain rounded bg-muted p-0.5" />
-                          : <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-secondary"><ImagePlus size={12} /></div>
-                        }
-                      </td>
-                      <td className="py-2 pr-3 hidden sm:table-cell">
-                        {row.car_image
-                          ? <img src={row.car_image} alt={`${row.name} car`} className="w-16 h-8 object-contain rounded bg-muted" />
-                          : <div className="w-16 h-8 rounded bg-muted flex items-center justify-center text-secondary"><Car size={12} /></div>
-                        }
-                      </td>
-                      <td className="py-2 pr-3 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
-                      <td className="py-2 pr-3 hidden sm:table-cell">
-                        <div className="flex items-center gap-1.5">
-                          {row.flag_url && <img src={row.flag_url} alt="" className="h-3.5 w-auto rounded-sm" />}
-                          <span style={{ color: 'var(--text-muted)' }}>{row.nationality || '—'}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-3 hidden md:table-cell text-xs" style={{ color: 'var(--text-muted)' }}>{row.base || '—'}</td>
-                      <td className="py-2 pr-3">
-                        <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-secondary'}`}>
-                          {row.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="py-2 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => toggle(`${row.id}-flag`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-flag` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
-                            <Flag size={11} /> Flag
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-hero`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-hero` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
-                            <Image size={11} /> Hero
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-details`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-details` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-details` ? undefined : 'var(--text-muted)' }}>
-                            <Pencil size={11} /> Edit
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-bio`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-bio` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-bio` ? undefined : 'var(--text-muted)' }}>
-                            <FileText size={11} /> Bio
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-logo`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-logo` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-logo` ? undefined : 'var(--text-muted)' }}>
-                            <ImagePlus size={11} /> Logo
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-detail-logo`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-detail-logo` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-detail-logo` ? undefined : 'var(--text-muted)' }}>
-                            <ImagePlus size={11} /> Detail Logo
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-car`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-car` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-car` ? undefined : 'var(--text-muted)' }}>
-                            <Car size={11} /> Car
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-website`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-website` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-website` ? undefined : 'var(--text-muted)' }}>
-                            <Link2 size={11} /> Website
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-social`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-social` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-social` ? undefined : 'var(--text-muted)' }}>
-                            <Link2 size={11} /> Social
-                          </button>
-                          <button onClick={() => toggle(`${row.id}-partners`)}
-                            className={`flex items-center gap-1 px-2 py-1 rounded transition-colors text-xs ${editId === `${row.id}-partners` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                            style={{ color: editId === `${row.id}-partners` ? undefined : 'var(--text-muted)' }}>
-                            <Users size={11} /> Partners
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {editId === `${row.id}-hero` && (
-                      <ImageEditRow
-                        colSpan={7}
-                        folder="teams/heroes"
-                        currentUrl={row.hero_image_url}
-                        onSave={(url) => saveField(row.id, 'hero_image_url', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-flag` && (
-                      <ImageEditRow
-                        colSpan={7}
-                        folder="teams/flags"
-                        currentUrl={row.flag_url}
-                        onSave={(url) => saveField(row.id, 'flag_url', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-details` && (
-                      <DetailsEditRow
-                        colSpan={7}
-                        row={row}
-                        onSave={(active, base, fullName, founded, boss, engine) => saveDetails(row.id, active, base, fullName, founded, boss, engine)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-bio` && (
-                      <TextEditRow
-                        colSpan={7}
-                        label="About / Bio"
-                        currentValue={row.bio}
-                        onSave={(val) => saveField(row.id, 'bio', val || null)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-logo` && (
-                      <ImageEditRow
-                        colSpan={7}
-                        folder="teams"
-                        currentUrl={row.logo_url}
-                        onSave={(url) => saveField(row.id, 'logo_url', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-detail-logo` && (
-                      <ImageEditRow
-                        colSpan={7}
-                        folder="teams/detail"
-                        currentUrl={row.detail_logo_url}
-                        onSave={(url) => saveField(row.id, 'detail_logo_url', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-car` && (
-                      <ImageEditRow
-                        colSpan={7}
-                        folder="teams/cars"
-                        currentUrl={row.car_image}
-                        onSave={(url) => saveField(row.id, 'car_image', url)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-website` && (
-                      <TextEditRow
-                        colSpan={7}
-                        label="Website URL"
-                        currentValue={row.website_url}
-                        rows={2}
-                        onSave={(val) => saveField(row.id, 'website_url', val || null)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-social` && (
-                      <SocialLinksEditRow
-                        colSpan={7}
-                        row={row}
-                        onSave={(instagramUrl, twitterUrl) => saveSocial(row.id, instagramUrl, twitterUrl)}
-                        onCancel={() => setEditId(null)}
-                      />
-                    )}
-                    {editId === `${row.id}-partners` && (
-                      <PartnersEditPanel teamId={row.id} onClose={() => setEditId(null)} />
-                    )}
-                  </>
-                ))}
-              </tbody>
-            </table>
+
+      <input value={search} onChange={e => { setSearch(e.target.value); setSelectedId(null) }}
+        placeholder="Search by name..." className="input max-w-xs" />
+
+      {loading ? <Spinner /> : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {data.map(row => (
+              <button key={row.id} onClick={() => setSelectedId(prev => prev === row.id ? null : row.id)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all text-center ${selectedId === row.id ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/40 hover:bg-muted'}`}
+                style={{ background: selectedId === row.id ? undefined : 'var(--bg-surface)' }}>
+                {row.logo_url
+                  ? <img src={row.logo_url} alt={row.name} className="w-12 h-12 object-contain" />
+                  : <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-sm font-black" style={{ color: 'var(--text-muted)' }}>{row.name?.slice(0, 2).toUpperCase()}</div>
+                }
+                <div className="min-w-0 w-full">
+                  <div className="text-xs font-bold truncate">{row.name}</div>
+                  {row.nationality && <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{row.nationality}</div>}
+                  {row.is_active && <div className="text-[10px] text-green-400">Active</div>}
+                </div>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+
+          {selectedRow && (
+            <TeamControls
+              key={selectedRow.id}
+              row={selectedRow}
+              onClose={() => setSelectedId(null)}
+              onRefresh={load}
+              invalidateCache={invalidateCache}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

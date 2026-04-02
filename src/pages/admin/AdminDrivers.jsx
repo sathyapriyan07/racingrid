@@ -1,60 +1,149 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useDataStore } from '../../store/dataStore'
+import { uploadImage } from '../../lib/uploadImage'
 import { Spinner } from '../../components/ui'
 import { Link } from 'react-router-dom'
-import { Plus, ImagePlus, Flag, Image, Pencil, FileText, Link2, Zap } from 'lucide-react'
+import { Plus, ImagePlus, Flag, Image, Pencil, FileText, Link2, Zap, X, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
-import ImageEditRow from './ImageEditRow'
-import TextEditRow from './TextEditRow'
-import SocialLinksEditRow from './SocialLinksEditRow'
 
-// Run in Supabase SQL Editor if not already added:
 // ALTER TABLE drivers ADD COLUMN IF NOT EXISTS fastest_laps integer DEFAULT 0;
 
-function FastestLapsEditRow({ colSpan, row, onSave, onCancel }) {
-  const [value, setValue] = useState(row.fastest_laps ?? 0)
+function InlineImage({ folder, currentUrl, onSave, onCancel }) {
+  const [url, setUrl] = useState(currentUrl || '')
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef()
+  const handleFile = async (e) => {
+    const file = e.target.files[0]; if (!file) return
+    setUploading(true)
+    try { const u = await uploadImage(file, folder); setUrl(u); toast.success('Uploaded') }
+    catch (err) { toast.error(err.message) }
+    finally { setUploading(false) }
+  }
   return (
-    <tr className="bg-muted">
-      <td colSpan={colSpan} className="px-3 py-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Fastest Laps</span>
-          <input
-            type="number"
-            min={0}
-            value={value}
-            onChange={e => setValue(Number(e.target.value))}
-            className="input text-xs py-1 w-24"
-            autoFocus
-          />
-          <div className="flex gap-2 ml-auto">
-            <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
-            <button onClick={() => onSave(value)} className="btn-primary text-xs py-1">Save</button>
-          </div>
-        </div>
-      </td>
-    </tr>
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <div className="flex gap-2 items-center">
+        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="Paste URL..." className="input py-1.5 text-xs flex-1" autoFocus />
+        {url && <img src={url} alt="" className="h-8 w-auto object-contain rounded shrink-0" />}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        <button onClick={() => fileRef.current.click()} disabled={uploading} className="btn-ghost text-xs py-1 flex items-center gap-1">
+          <Upload size={11} />{uploading ? 'Uploading...' : 'Upload'}
+        </button>
+        <button onClick={() => onSave(url)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
   )
 }
 
-function ActiveEditRow({ colSpan, row, onSave, onCancel }) {
-  const [isActive, setIsActive] = useState(row.is_active || false)
+function InlineText({ label, currentValue, rows = 3, onSave, onCancel }) {
+  const [value, setValue] = useState(currentValue || '')
   return (
-    <tr className="bg-muted">
-      <td colSpan={colSpan} className="px-3 py-3">
-        <div className="flex items-center gap-4 flex-wrap">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)}
-              className="w-4 h-4 accent-f1red" />
-            <span className="text-xs text-secondary">Active (current season)</span>
-          </label>
-          <div className="flex gap-2 ml-auto">
-            <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
-            <button onClick={() => onSave(isActive)} className="btn-primary text-xs py-1">Save</button>
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      {label && <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{label}</p>}
+      <textarea value={value} onChange={e => setValue(e.target.value)} rows={rows} className="input text-xs py-2 resize-y w-full" autoFocus />
+      <div className="flex gap-2">
+        <button onClick={() => onSave(value)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function InlineSocial({ row, onSave, onCancel }) {
+  const [ig, setIg] = useState(row.instagram_url || '')
+  const [tw, setTw] = useState(row.twitter_url || '')
+  return (
+    <div className="space-y-2 p-3 rounded-xl" style={{ background: 'var(--bg-raised)' }}>
+      <input value={ig} onChange={e => setIg(e.target.value)} placeholder="Instagram URL or @handle" className="input text-xs py-1.5 w-full" autoFocus />
+      <input value={tw} onChange={e => setTw(e.target.value)} placeholder="Twitter/X URL or @handle" className="input text-xs py-1.5 w-full" />
+      <div className="flex gap-2">
+        <button onClick={() => onSave(ig, tw)} className="btn-primary text-xs py-1">Save</button>
+        <button onClick={onCancel} className="btn-ghost text-xs py-1">Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+function DriverControls({ row, onClose, onRefresh, invalidateCache }) {
+  const [editId, setEditId] = useState(null)
+  const [isActive, setIsActive] = useState(row.is_active || false)
+  const [flValue, setFlValue] = useState(row.fastest_laps ?? 0)
+  const toggle = (key) => setEditId(prev => prev === key ? null : key)
+
+  const save = async (field, val) => {
+    const { error } = await supabase.from('drivers').update({ [field]: val ?? null }).eq('id', row.id)
+    if (error) return toast.error(error.message)
+    toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+  }
+
+  const btnCls = (key) =>
+    `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${editId === key ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`
+
+  return (
+    <div className="apple-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {row.image_url
+            ? <img src={row.image_url} alt={row.name} className="w-10 h-10 rounded-full object-cover object-top shrink-0" />
+            : <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xs font-black shrink-0" style={{ color: 'var(--text-muted)' }}>{row.code || '?'}</div>
+          }
+          <div>
+            <div className="font-bold text-sm">{row.name}</div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{row.code || '—'} · {row.nationality || '—'}</div>
           </div>
         </div>
-      </td>
-    </tr>
+        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors shrink-0">
+          <X size={14} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {[['image', 'Photo', ImagePlus], ['hero', 'Hero', Image], ['flag', 'Flag', Flag],
+          ['bio', 'Bio', FileText], ['website', 'Website', Link2], ['social', 'Social', Link2],
+          ['active', 'Active', Pencil], ['fl', 'Fastest Laps', Zap]
+        ].map(([key, label, Icon]) => (
+          <button key={key} onClick={() => toggle(key)} className={btnCls(key)} style={{ color: editId === key ? undefined : 'var(--text-muted)' }}>
+            <Icon size={11} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {editId === 'image' && <InlineImage folder="drivers" currentUrl={row.image_url} onSave={u => save('image_url', u || null)} onCancel={() => toggle('image')} />}
+      {editId === 'hero' && <InlineImage folder="drivers/heroes" currentUrl={row.hero_image_url} onSave={u => save('hero_image_url', u || null)} onCancel={() => toggle('hero')} />}
+      {editId === 'flag' && <InlineImage folder="drivers/flags" currentUrl={row.flag_url} onSave={u => save('flag_url', u || null)} onCancel={() => toggle('flag')} />}
+      {editId === 'bio' && <InlineText label="Biography" currentValue={row.biography} onSave={v => save('biography', v || null)} onCancel={() => toggle('bio')} />}
+      {editId === 'website' && <InlineText label="Website URL" currentValue={row.website_url} rows={1} onSave={v => save('website_url', v || null)} onCancel={() => toggle('website')} />}
+      {editId === 'social' && <InlineSocial row={row} onSave={async (ig, tw) => {
+        const { error } = await supabase.from('drivers').update({ instagram_url: ig?.trim() || null, twitter_url: tw?.trim() || null }).eq('id', row.id)
+        if (error) return toast.error(error.message)
+        toast.success('Updated'); setEditId(null); invalidateCache(); onRefresh()
+      }} onCancel={() => toggle('social')} />}
+      {editId === 'active' && (
+        <div className="flex items-center gap-4 p-3 rounded-xl flex-wrap" style={{ background: 'var(--bg-raised)' }}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} className="w-4 h-4 accent-f1red" />
+            <span className="text-xs">Active (current season)</span>
+          </label>
+          <div className="flex gap-2 ml-auto">
+            <button onClick={() => toggle('active')} className="btn-ghost text-xs py-1">Cancel</button>
+            <button onClick={() => save('is_active', isActive)} className="btn-primary text-xs py-1">Save</button>
+          </div>
+        </div>
+      )}
+      {editId === 'fl' && (
+        <div className="flex items-center gap-3 p-3 rounded-xl flex-wrap" style={{ background: 'var(--bg-raised)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Fastest Laps</span>
+          <input type="number" min={0} value={flValue} onChange={e => setFlValue(Number(e.target.value))} className="input text-xs py-1 w-24" autoFocus />
+          <div className="flex gap-2 ml-auto">
+            <button onClick={() => toggle('fl')} className="btn-ghost text-xs py-1">Cancel</button>
+            <button onClick={() => save('fastest_laps', flValue)} className="btn-primary text-xs py-1">Save</button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -64,263 +153,76 @@ export default function AdminDrivers() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
-  const [editId, setEditId] = useState(null)  // `${id}-image` or `${id}-flag`
+  const [selectedId, setSelectedId] = useState(null)
   const PAGE_SIZE = 20
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      let q = supabase.from('drivers').select('*').order('name').range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-      if (search) q = q.ilike('name', `%${search}%`)
-      const { data, error } = await q
-      if (error) throw error
-      setData(data || [])
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    let cancelled = false
+  const load = () => {
     setLoading(true)
     let q = supabase.from('drivers').select('*').order('name').range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
     if (search) q = q.ilike('name', `%${search}%`)
     q.then(({ data, error }) => {
-      if (cancelled) return
       if (error) toast.error(error.message)
       else setData(data || [])
-    }).finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+    }).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { let c = false; setLoading(true)
+    let q = supabase.from('drivers').select('*').order('name').range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (search) q = q.ilike('name', `%${search}%`)
+    q.then(({ data, error }) => { if (c) return; if (error) toast.error(error.message); else setData(data || []) })
+      .finally(() => { if (!c) setLoading(false) })
+    return () => { c = true }
   }, [page, search])
 
-  const toggle = (key) => setEditId(prev => prev === key ? null : key)
-
-  const saveField = async (id, field, url) => {
-    const { error } = await supabase.from('drivers').update({ [field]: url || null }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const saveActive = async (id, is_active) => {
-    const { error } = await supabase.from('drivers').update({ is_active }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const saveSocial = async (id, instagram_url, twitter_url) => {
-    const { error } = await supabase.from('drivers').update({
-      instagram_url: instagram_url?.trim() || null,
-      twitter_url: twitter_url?.trim() || null,
-    }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
-
-  const saveFastestLaps = async (id, fastest_laps) => {
-    const { error } = await supabase.from('drivers').update({ fastest_laps }).eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Updated')
-    setEditId(null)
-    invalidateCache()
-    load()
-  }
+  const selectedRow = data.find(d => d.id === selectedId)
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black">Drivers</h1>
-        <Link to="/admin/import" className="btn-primary flex items-center gap-1.5 text-xs">
-          <Plus size={12} /> Import
-        </Link>
+        <Link to="/admin/import" className="btn-primary flex items-center gap-1.5 text-xs"><Plus size={12} /> Import</Link>
       </div>
 
-      <div className="glass p-4">
-        <input value={search} onChange={e => { setSearch(e.target.value); setPage(0) }}
-          placeholder="Search by name..." className="input mb-4 max-w-xs" />
+      <input value={search} onChange={e => { setSearch(e.target.value); setPage(0); setSelectedId(null) }}
+        placeholder="Search by name..." className="input max-w-xs" />
 
-        {loading ? <Spinner /> : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-secondary border-b border-border">
-                    <th className="text-left pb-2 pr-4 w-10">Image</th>
-                    <th className="text-left pb-2 pr-4">Name</th>
-                    <th className="text-left pb-2 pr-4">Code</th>
-                    <th className="text-left pb-2 pr-4 hidden sm:table-cell">Nationality</th>
-                    <th className="text-left pb-2 pr-4 hidden md:table-cell">DOB</th>
-                    <th className="text-left pb-2 pr-4">Active</th>
-                    <th className="text-left pb-2 pr-4">FL</th>
-                    <th className="text-right pb-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map(row => (
-                    <>
-                      <tr key={row.id} className="border-b border-border hover:bg-muted">
-                        <td className="py-2 pr-4">
-                          {row.image_url
-                            ? <img src={row.image_url} alt={row.name} className="w-8 h-8 rounded-full object-cover object-top bg-muted" />
-                            : <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-secondary"><ImagePlus size={12} /></div>
-                          }
-                        </td>
-                        <td className="py-2 pr-4 font-medium" style={{ color: 'var(--text-primary)' }}>{row.name}</td>
-                        <td className="py-2 pr-4" style={{ color: 'var(--text-muted)' }}>{row.code || '—'}</td>
-                        <td className="py-2 pr-4 hidden sm:table-cell">
-                          <div className="flex items-center gap-1.5">
-                            {row.flag_url && <img src={row.flag_url} alt="" className="h-3.5 w-auto rounded-sm" />}
-                            <span style={{ color: 'var(--text-muted)' }}>{row.nationality || '—'}</span>
-                          </div>
-                        </td>
-                        <td className="py-2 pr-4 hidden md:table-cell" style={{ color: 'var(--text-muted)' }}>{row.dob || '—'}</td>
-                        <td className="py-2 pr-4">
-                          <span className={`text-xs font-semibold ${row.is_active ? 'text-green-400' : 'text-secondary'}`}>
-                            {row.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-2 pr-4 font-semibold tabular-nums" style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                          {row.fastest_laps ?? 0}
-                        </td>
-                        <td className="py-2 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => toggle(`${row.id}-active`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-active` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-active` ? undefined : 'var(--text-muted)' }}>
-                              <Pencil size={11} /> Edit
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-bio`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-bio` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-bio` ? undefined : 'var(--text-muted)' }}>
-                              <FileText size={11} /> Bio
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-image`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-image` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-image` ? undefined : 'var(--text-muted)' }}>
-                              <ImagePlus size={11} /> Photo
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-hero`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-hero` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-hero` ? undefined : 'var(--text-muted)' }}>
-                              <Image size={11} /> Hero
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-flag`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-flag` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-flag` ? undefined : 'var(--text-muted)' }}>
-                              <Flag size={11} /> Flag
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-website`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-website` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-website` ? undefined : 'var(--text-muted)' }}>
-                              <Link2 size={11} /> Website
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-social`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-social` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-social` ? undefined : 'var(--text-muted)' }}>
-                              <Link2 size={11} /> Social
-                            </button>
-                            <button onClick={() => toggle(`${row.id}-fl`)}
-                              className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${editId === `${row.id}-fl` ? 'bg-accent/20 text-accent' : 'hover:bg-muted'}`}
-                              style={{ color: editId === `${row.id}-fl` ? undefined : 'var(--text-muted)' }}>
-                              <Zap size={11} /> FL
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                      {editId === `${row.id}-active` && (
-                        <ActiveEditRow
-                          colSpan={8}
-                          row={row}
-                          onSave={(active) => saveActive(row.id, active)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-bio` && (
-                        <TextEditRow
-                          colSpan={8}
-                          label="Biography"
-                          currentValue={row.biography}
-                          onSave={(val) => saveField(row.id, 'biography', val || null)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-image` && (
-                        <ImageEditRow
-                          colSpan={8}
-                          folder="drivers"
-                          currentUrl={row.image_url}
-                          onSave={(url) => saveField(row.id, 'image_url', url)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-hero` && (
-                        <ImageEditRow
-                          colSpan={8}
-                          folder="drivers/heroes"
-                          currentUrl={row.hero_image_url}
-                          onSave={(url) => saveField(row.id, 'hero_image_url', url)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-flag` && (
-                        <ImageEditRow
-                          colSpan={8}
-                          folder="drivers/flags"
-                          currentUrl={row.flag_url}
-                          onSave={(url) => saveField(row.id, 'flag_url', url)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-website` && (
-                        <TextEditRow
-                          colSpan={8}
-                          label="Website URL"
-                          currentValue={row.website_url}
-                          rows={2}
-                          onSave={(val) => saveField(row.id, 'website_url', val || null)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-social` && (
-                        <SocialLinksEditRow
-                          colSpan={8}
-                          row={row}
-                          onSave={(instagramUrl, twitterUrl) => saveSocial(row.id, instagramUrl, twitterUrl)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                      {editId === `${row.id}-fl` && (
-                        <FastestLapsEditRow
-                          colSpan={8}
-                          row={row}
-                          onSave={(val) => saveFastestLaps(row.id, val)}
-                          onCancel={() => setEditId(null)}
-                        />
-                      )}
-                    </>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      {loading ? <Spinner /> : (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+            {data.map(row => (
+              <button key={row.id} onClick={() => setSelectedId(prev => prev === row.id ? null : row.id)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all text-center ${selectedId === row.id ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/40 hover:bg-muted'}`}
+                style={{ background: selectedId === row.id ? undefined : 'var(--bg-surface)' }}>
+                {row.image_url
+                  ? <img src={row.image_url} alt={row.name} className="w-14 h-14 rounded-full object-cover object-top" />
+                  : <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-sm font-black" style={{ color: 'var(--text-muted)' }}>{row.code || row.name?.slice(0, 2)}</div>
+                }
+                <div className="min-w-0 w-full">
+                  <div className="text-xs font-bold truncate">{row.name}</div>
+                  {row.code && <div className="text-[10px] font-semibold text-f1red">{row.code}</div>}
+                  {row.is_active && <div className="text-[10px] text-green-400">Active</div>}
+                </div>
+              </button>
+            ))}
+          </div>
 
-            <div className="flex gap-2 mt-4 justify-end">
-              <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="btn-ghost text-xs py-1">← Prev</button>
-              <span className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>Page {page + 1}</span>
-              <button disabled={data.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="btn-ghost text-xs py-1">Next →</button>
-            </div>
-          </>
-        )}
-      </div>
+          {selectedRow && (
+            <DriverControls
+              key={selectedRow.id}
+              row={selectedRow}
+              onClose={() => setSelectedId(null)}
+              onRefresh={load}
+              invalidateCache={invalidateCache}
+            />
+          )}
+
+          <div className="flex gap-2 justify-end">
+            <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="btn-ghost text-xs py-1">← Prev</button>
+            <span className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>Page {page + 1}</span>
+            <button disabled={data.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)} className="btn-ghost text-xs py-1">Next →</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
