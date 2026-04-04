@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
-import { Spinner, Card, Badge, StatCard, Select, ErrorState, SkeletonHero, SkeletonTable, Tabs } from '../components/ui'
+import { Spinner, Card, Badge, StatCard, Select, ErrorState, SkeletonHero, SkeletonTable } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import TrendChart from '../components/charts/TrendChart'
 import { Trophy, ChevronDown, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react'
@@ -677,12 +677,14 @@ export default function DriverPage() {
       </Card>
 
       {/* ── Tabs ── */}
-      <Tabs
-        id={`driver-${id}`}
-        items={activeTabs.map(t => ({ ...t, icon: t.id === 'championships' ? Trophy : undefined }))}
-        value={tab}
-        onChange={setTab}
-      />
+      <div className="tab-bar">
+        {activeTabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} className={`tab-pill ${tab === t.id ? 'active' : ''}`}>
+            {t.id === 'championships' && <Trophy size={11} className="inline mr-1" />}
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {/* ── Performance ── */}
       {tab === 'performance' && (

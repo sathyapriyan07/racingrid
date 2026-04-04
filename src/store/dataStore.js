@@ -183,7 +183,7 @@ export const useDataStore = create((set, get) => ({
   fetchDriverStats: async (driverId) => {
     const { data, error } = await supabase
       .from('results')
-      .select('*, races(id, name, date, round, circuit_id, circuits(id, name), seasons(year)), teams(name, logo_url)')
+      .select('id, race_id, driver_id, team_id, position, grid, points, status, laps, time, races(id, name, date, round, circuit_id, circuits(id, name), seasons(year)), teams(name, logo_url)')
       .eq('driver_id', driverId)
       .order('races(date)', { ascending: true })
     if (error) throw error
