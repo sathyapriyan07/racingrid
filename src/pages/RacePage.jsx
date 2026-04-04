@@ -3,10 +3,13 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { supabase } from '../lib/supabase'
-import { Spinner, Card, Badge, StatCard } from '../components/ui'
-import { Flag, AlertTriangle, Clock, PlayCircle, ArrowUp, ArrowDown } from 'lucide-react'
+import { Spinner, Card, Badge, StatCard, EmptyState, ErrorState, InsightCard } from '../components/ui'
+import { Flag, AlertTriangle, Clock, PlayCircle, ArrowUp, ArrowDown, Layers, History, Sparkles } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 import { useAuthStore } from '../store/authStore'
+import Timeline from '../components/insights/Timeline'
+import PositionReplay from '../features/race/PositionReplay'
+import PitStrategy from '../features/race/PitStrategy'
 
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -39,7 +42,7 @@ function formatSessionDateTime(date, time) {
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights, fetchPitStops, fetchRaceEvents, fetchLaps } = useDataStore()
   const isAdmin = useAuthStore(s => s.isAdmin)
 
   const [race, setRace] = useState(null)
@@ -53,6 +56,13 @@ export default function RacePage() {
   const [previousEdition, setPreviousEdition] = useState(null)
 
   // OpenF1 — only for pit stops + events (not replay)
+  // DB-derived race analytics
+  const [dbPitStops, setDbPitStops] = useState([])
+  const [dbEvents, setDbEvents] = useState([])
+  const [dbLaps, setDbLaps] = useState([])
+  const [dbLoading, setDbLoading] = useState(false)
+  const [dbError, setDbError] = useState(null)
+
   const [of1Drivers, setOf1Drivers] = useState({})
   const [pitStops, setPitStops] = useState([])
   const [events, setEvents] = useState([])
@@ -72,6 +82,28 @@ export default function RacePage() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!race?.id) return
+    if (!['replay', 'strategy', 'timeline', 'insights'].includes(activeTab)) return
+    if (dbLoading || dbPitStops.length || dbEvents.length || dbLaps.length) return
+
+    let cancelled = false
+    setDbLoading(true)
+    setDbError(null)
+
+    Promise.all([fetchPitStops(race.id), fetchRaceEvents(race.id), fetchLaps(race.id)])
+      .then(([p, e, l]) => {
+        if (cancelled) return
+        setDbPitStops(p || [])
+        setDbEvents(e || [])
+        setDbLaps(l || [])
+      })
+      .catch((err) => { if (!cancelled) setDbError(err?.message || 'Failed to load race analytics') })
+      .finally(() => { if (!cancelled) setDbLoading(false) })
+
+    return () => { cancelled = true }
+  }, [activeTab, dbEvents.length, dbLaps.length, dbLoading, dbPitStops.length, fetchLaps, fetchPitStops, fetchRaceEvents, race?.id])
 
   useEffect(() => {
     if (!race?.date) { setPreviousEdition(null); return }
@@ -178,6 +210,87 @@ export default function RacePage() {
 
   const totalLaps = results[0]?.laps || 0
   const hasOf1 = !!race?.openf1_session_key
+  const reloadDb = () => { setDbPitStops([]); setDbEvents([]); setDbLaps([]) }
+
+  const pitByDriver = useMemo(() => {
+    const map = {}
+    dbPitStops.forEach(p => {
+      if (!p.driver_id) return
+      if (!map[p.driver_id]) map[p.driver_id] = []
+      map[p.driver_id].push(p)
+    })
+    Object.values(map).forEach(list => list.sort((a, b) => (a.lap || 0) - (b.lap || 0)))
+    return map
+  }, [dbPitStops])
+
+  const overtakeLeaders = useMemo(() => {
+    const byDriver = {}
+    const byLap = {}
+    dbLaps.forEach(l => {
+      if (!l.driver_id || !l.lap_number || l.position == null) return
+      if (!byLap[l.driver_id]) byLap[l.driver_id] = []
+      byLap[l.driver_id].push(l)
+    })
+    Object.entries(byLap).forEach(([driverId, list]) => {
+      const sorted = [...list].sort((a, b) => (a.lap_number || 0) - (b.lap_number || 0))
+      let overtakes = 0
+      let prev = null
+      for (const lap of sorted) {
+        const pos = Number(lap.position)
+        if (!Number.isFinite(pos)) continue
+        if (prev != null) {
+          const gained = prev - pos
+          if (gained > 0) overtakes += gained
+        }
+        prev = pos
+      }
+      byDriver[driverId] = overtakes
+    })
+    const byId = new Map(results.map(r => [r.driver_id, r.drivers]))
+    return Object.entries(byDriver)
+      .sort((a, b) => (b[1] || 0) - (a[1] || 0))
+      .slice(0, 6)
+      .map(([driverId, count]) => ({ driverId, count, driver: byId.get(driverId) }))
+  }, [dbLaps, results])
+
+  const biggestMover = useMemo(() => {
+    let best = null
+    results.forEach(r => {
+      const grid = Number(r.grid)
+      const pos = Number(r.position)
+      if (!Number.isFinite(grid) || !Number.isFinite(pos)) return
+      const delta = grid - pos
+      if (!best || delta > best.delta) best = { driverId: r.driver_id, driver: r.drivers, team: r.teams, delta, grid, pos }
+    })
+    return best
+  }, [results])
+
+  const timelineItems = useMemo(() => {
+    const driverById = new Map(results.map(r => [r.driver_id, r.drivers]))
+    const pitItems = dbPitStops
+      .filter(p => p.lap != null)
+      .map((p, idx) => ({
+        id: `pit_${idx}_${p.driver_id}_${p.lap}`,
+        lap: p.lap,
+        badge: <Badge color="yellow">PIT</Badge>,
+        title: `${shortName(driverById.get(p.driver_id))}`,
+        description: p.duration ? `Pit stop · ${p.duration}` : 'Pit stop',
+        right: '',
+      }))
+
+    const eventItems = dbEvents
+      .filter(e => e.lap != null)
+      .map((e, idx) => ({
+        id: `evt_${idx}_${e.type}_${e.lap}`,
+        lap: e.lap,
+        badge: <Badge color={e.type === 'red_flag' ? 'red' : e.type === 'safety_car' ? 'yellow' : 'gray'}>{(e.type || 'event').replace('_', ' ')}</Badge>,
+        title: e.type === 'safety_car' ? 'Safety Car' : (e.type || 'Event').replace('_', ' '),
+        description: e.description || '',
+        right: '',
+      }))
+
+    return [...eventItems, ...pitItems].sort((a, b) => (a.lap || 0) - (b.lap || 0))
+  }, [dbEvents, dbPitStops, results])
 
   const hlBySession = highlights.reduce((acc, h) => {
     const s = h.session || 'race'
@@ -211,6 +324,10 @@ export default function RacePage() {
 
   const tabs = [
     { id: 'results', label: 'Results', icon: Flag },
+    { id: 'replay', label: 'Replay', icon: Layers },
+    { id: 'strategy', label: 'Strategy', icon: Clock },
+    { id: 'timeline', label: 'Timeline', icon: History },
+    { id: 'insights', label: 'Insights', icon: Sparkles },
     { id: 'practice', label: 'Practice', icon: Clock },
     { id: 'qualifying', label: 'Qualifying', icon: Clock },
     ...(sprintResults.length ? [{ id: 'sprint', label: 'Sprint', icon: Flag }] : []),
@@ -349,6 +466,124 @@ export default function RacePage() {
           </button>
         ))}
       </div>
+
+      {activeTab === 'replay' && (
+        <div className="space-y-3">
+          {dbLoading && <Spinner />}
+          {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
+          {!dbLoading && !dbError && <PositionReplay laps={dbLaps} results={results} />}
+        </div>
+      )}
+
+      {activeTab === 'strategy' && (
+        <div className="space-y-3">
+          {dbLoading && <Spinner />}
+          {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
+          {!dbLoading && !dbError && <PitStrategy pitStops={dbPitStops} results={results} totalLaps={totalLaps} />}
+        </div>
+      )}
+
+      {activeTab === 'timeline' && (
+        <div className="space-y-3">
+          {dbLoading && <Spinner />}
+          {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
+          {!dbLoading && !dbError && (
+            <Card>
+              <div className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>
+                Race Timeline (events + pit stops)
+              </div>
+              {timelineItems.length === 0 ? <EmptyState message="No events/pit stops imported for this race." icon="⏱" /> : <Timeline items={timelineItems} />}
+            </Card>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'insights' && (
+        <div className="space-y-3">
+          {dbLoading && <Spinner />}
+          {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
+          {!dbLoading && !dbError && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <InsightCard
+                tone="gold"
+                title="Winner"
+                subtitle="Race result P1"
+              >
+                {results.find(r => r.position === 1)?.drivers
+                  ? (
+                    <div className="flex items-center gap-3">
+                      {results.find(r => r.position === 1)?.drivers?.image_url
+                        ? <img src={results.find(r => r.position === 1)?.drivers?.image_url} alt="" className="w-12 h-12 rounded-2xl object-cover object-top" loading="lazy" decoding="async" />
+                        : <div className="w-12 h-12 rounded-2xl bg-muted" />
+                      }
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold truncate">{results.find(r => r.position === 1)?.drivers?.name}</div>
+                        <div className="text-xs text-secondary mt-0.5">{results.find(r => r.position === 1)?.teams?.name}</div>
+                      </div>
+                    </div>
+                  )
+                  : <div className="text-xs text-secondary">No results imported.</div>
+                }
+              </InsightCard>
+
+              <InsightCard
+                tone="green"
+                title="Biggest mover"
+                subtitle="Grid → Finish"
+              >
+                {biggestMover
+                  ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-bold truncate">{biggestMover.driver?.name || '—'}</div>
+                        <div className="text-xs text-secondary mt-0.5">P{biggestMover.grid} → P{biggestMover.pos}</div>
+                      </div>
+                      <Badge color="green">+{biggestMover.delta}</Badge>
+                    </div>
+                  )
+                  : <div className="text-xs text-secondary">No grid/finish data.</div>
+                }
+              </InsightCard>
+
+              <InsightCard
+                tone="accent"
+                title="Top overtakers (estimated)"
+                subtitle="From lap-to-lap position gains"
+              >
+                {overtakeLeaders.length === 0 ? (
+                  <div className="text-xs text-secondary">No lap position data imported.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {overtakeLeaders.map(o => (
+                      <div key={o.driverId} className="flex items-center justify-between gap-3">
+                        <div className="text-xs font-semibold truncate">{o.driver?.name || o.driverId}</div>
+                        <Badge color="blue">{o.count}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </InsightCard>
+
+              <InsightCard
+                tone="neutral"
+                title="Key moments"
+                subtitle="Imported race events"
+              >
+                {dbEvents.length === 0 ? (
+                  <div className="text-xs text-secondary">No race events imported.</div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge color="yellow">{dbEvents.filter(e => e.type === 'safety_car').length} safety car</Badge>
+                    <Badge color="red">{dbEvents.filter(e => e.type === 'red_flag').length} red flag</Badge>
+                    <Badge color="gray">{dbEvents.filter(e => e.type !== 'safety_car' && e.type !== 'red_flag').length} other</Badge>
+                    <Badge color="yellow">{dbPitStops.length} pit stops</Badge>
+                  </div>
+                )}
+              </InsightCard>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Results */}
       {activeTab === 'results' && (

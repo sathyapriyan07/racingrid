@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
-import { Spinner, Card } from '../components/ui'
+import { Spinner, Card, Badge, StatCard, Select, ErrorState, SkeletonHero, SkeletonTable } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
-import { Trophy, ChevronDown, ExternalLink } from 'lucide-react'
+import TrendChart from '../components/charts/TrendChart'
+import { Trophy, ChevronDown, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
+import { buildQualiRaceDelta, calcConsistency, calcOvertakesFromLaps } from '../utils/insights'
 
 function Icon({ settingKey, emoji, className = '' }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -123,17 +125,24 @@ export default function DriverPage() {
   const { fetchDriver, fetchDriverStats, fetchAllChampionships } = useDataStore()
   const [driver, setDriver] = useState(null)
   const [results, setResults] = useState([])
+  const [qualifyingRows, setQualifyingRows] = useState([])
   const [champYears, setChampYears] = useState([])
   const [allTeamChamps, setAllTeamChamps] = useState({})
   const [poleRows, setPoleRows] = useState([])
   const [driverLaps, setDriverLaps] = useState([])
   const [allTeamResults, setAllTeamResults] = useState([])
+  const [allTeamQualifying, setAllTeamQualifying] = useState([])
+  const [perfYear, setPerfYear] = useState('all')
+  const [perfLaps, setPerfLaps] = useState([])
+  const [mateYear, setMateYear] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [tab, setTab] = useState('results')
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setError(null)
     Promise.all([
       fetchDriver(id),
       fetchDriverStats(id),
@@ -150,29 +159,74 @@ export default function DriverPage() {
         .eq('driver_id', id)
         .not('lap_time', 'is', null)
         .then(({ data }) => data || []),
+      supabase
+        .from('qualifying_results')
+        .select('race_id, team_id, position, q1, q2, q3, races(id, name, date, round, seasons(year))')
+        .eq('driver_id', id)
+        .then(({ data }) => (data || []).sort((a, b) => (a.races?.date || '').localeCompare(b.races?.date || ''))),
     ])
-      .then(([d, r, champs, p, driverLaps]) => {
+      .then(([d, r, champs, p, driverLaps, qRows]) => {
         if (cancelled) return
         setDriver(d)
         setResults(r || [])
+        setQualifyingRows(qRows || [])
         setChampYears(champs.driverChamps[id] || [])
         setAllTeamChamps(champs.teamChamps || {})
         setPoleRows(p || [])
         setDriverLaps(driverLaps || [])
         // fetch all results for teams this driver raced with, to compute teammates
         const teamIds = [...new Set((r || []).map(x => x.team_id).filter(Boolean))]
+        const raceIds = [...new Set((r || []).map(x => x.race_id).filter(Boolean))]
         if (!teamIds.length) return
         supabase
           .from('results')
-          .select('driver_id, team_id, position, points, races(season_id, seasons(year)), drivers(id, name, code, image_url)')
+          .select('race_id, driver_id, team_id, position, grid, points, status, races(id, name, date, round, seasons(year)), drivers(id, name, code, image_url)')
+          .in('race_id', raceIds)
           .in('team_id', teamIds)
           .neq('driver_id', id)
           .then(({ data }) => { if (!cancelled) setAllTeamResults(data || []) })
+
+        supabase
+          .from('qualifying_results')
+          .select('race_id, driver_id, team_id, position, races(id, date, round, seasons(year)), drivers(id, name, code, image_url)')
+          .in('race_id', raceIds)
+          .in('team_id', teamIds)
+          .neq('driver_id', id)
+          .then(({ data }) => { if (!cancelled) setAllTeamQualifying(data || []) })
       })
-      .catch(console.error)
+      .catch((err) => { console.error(err); if (!cancelled) setError(err?.message || 'Failed to load driver') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    const years = [...new Set(results.map(r => r.races?.seasons?.year).filter(Boolean))].sort((a, b) => b - a)
+    if (!years.length) return
+    if (perfYear === 'all') setPerfYear(String(years[0]))
+    if (mateYear === 'all') setMateYear(String(years[0]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results])
+
+  useEffect(() => {
+    if (tab !== 'performance') return
+    if (perfYear === 'all') { setPerfLaps([]); return }
+
+    const yearNum = parseInt(perfYear, 10)
+    const raceIds = results.filter(r => r.races?.seasons?.year === yearNum).map(r => r.race_id).filter(Boolean)
+    if (!raceIds.length) { setPerfLaps([]); return }
+
+    let cancelled = false
+    supabase
+      .from('laps')
+      .select('race_id, lap_number, position')
+      .eq('driver_id', id)
+      .in('race_id', raceIds)
+      .order('lap_number')
+      .then(({ data }) => { if (!cancelled) setPerfLaps(data || []) })
+      .catch(() => { if (!cancelled) setPerfLaps([]) })
+
+    return () => { cancelled = true }
+  }, [id, perfYear, results, tab])
 
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
@@ -208,10 +262,144 @@ export default function DriverPage() {
     { label: 'Last Entry', value: racesByDate.length ? fmtRace(racesByDate[racesByDate.length - 1]) : '—', raceId: racesByDate[racesByDate.length - 1]?.race_id },
   ]
 
-  const chartData = results.map(r => ({
-    name: r.races?.name?.replace('Grand Prix', 'GP') || '?',
-    points: parseFloat(r.points) || 0,
-  }))
+  const years = useMemo(() => (
+    [...new Set(results.map(r => r.races?.seasons?.year).filter(Boolean))].sort((a, b) => b - a)
+  ), [results])
+
+  const perfResults = useMemo(() => {
+    if (perfYear === 'all') return results
+    const y = parseInt(perfYear, 10)
+    return results.filter(r => r.races?.seasons?.year === y)
+  }, [perfYear, results])
+
+  const pointsChartData = useMemo(() => (
+    perfResults.map(r => ({
+      name: r.races?.name?.replace('Grand Prix', 'GP') || '?',
+      points: parseFloat(r.points) || 0,
+    }))
+  ), [perfResults])
+
+  const perfQuali = useMemo(() => {
+    if (perfYear === 'all') return qualifyingRows
+    const y = parseInt(perfYear, 10)
+    return qualifyingRows.filter(r => r.races?.seasons?.year === y)
+  }, [perfYear, qualifyingRows])
+
+  const consistency = useMemo(() => calcConsistency(perfResults), [perfResults])
+
+  const consistencyBadge = useMemo(() => {
+    const tier = consistency.tier
+    if (tier === 'Elite') return <Badge color="green">Elite</Badge>
+    if (tier === 'Strong') return <Badge color="blue">Strong</Badge>
+    if (tier === 'Mid') return <Badge color="yellow">Mid</Badge>
+    return <Badge color="gray">Weak</Badge>
+  }, [consistency.tier])
+
+  const deltaRows = useMemo(() => buildQualiRaceDelta({ results: perfResults, qualifying: perfQuali }), [perfResults, perfQuali])
+
+  const avgDelta = useMemo(() => {
+    const rows = deltaRows.filter(r => r.delta != null)
+    if (!rows.length) return null
+    return rows.reduce((s, r) => s + (r.delta || 0), 0) / rows.length
+  }, [deltaRows])
+
+  const trendData = useMemo(() => {
+    const rows = perfResults
+      .filter(r => r.races?.round != null && r.position != null)
+      .map(r => ({
+        round: r.races.round,
+        position: Number(r.position),
+        race: r.races?.name?.replace(' Grand Prix', ' GP') || r.races?.name || 'Race',
+      }))
+      .sort((a, b) => (a.round || 0) - (b.round || 0))
+    return rows
+  }, [perfResults])
+
+  const dnaTraits = useMemo(() => {
+    const traits = []
+    const rows = deltaRows.filter(r => r.delta != null)
+    const avgRace = consistency.avgFinish
+
+    // Consistent
+    if (consistency.raceCount >= 6 && consistency.dnfRate <= 0.12 && avgRace != null && avgRace <= 8) traits.push({ label: 'Consistent', color: 'green' })
+
+    // Quali vs Race
+    if (rows.length >= 6) {
+      const avg = rows.reduce((s, r) => s + r.delta, 0) / rows.length
+      if (avg >= 1.2) traits.push({ label: 'Race specialist', color: 'green' })
+      if (avg <= -1.2) traits.push({ label: 'Qualifying specialist', color: 'blue' })
+    }
+
+    // Aggressive (needs lap positions)
+    const overtakesByRace = calcOvertakesFromLaps(perfLaps)
+    const overtakeVals = Object.values(overtakesByRace)
+    if (overtakeVals.length >= 2) {
+      const avgOv = overtakeVals.reduce((s, v) => s + (v || 0), 0) / overtakeVals.length
+      if (avgOv >= 4.5) traits.push({ label: 'Aggressive', color: 'red' })
+    }
+
+    if (!traits.length) traits.push({ label: 'Developing', color: 'gray' })
+    return traits
+  }, [consistency.avgFinish, consistency.dnfRate, consistency.raceCount, deltaRows, perfLaps])
+
+  const headToHead = useMemo(() => {
+    const year = parseInt(mateYear, 10)
+    if (!Number.isFinite(year)) return []
+
+    const ourSeasonResults = results.filter(r => r.races?.seasons?.year === year)
+    if (!ourSeasonResults.length) return []
+
+    const teamByRace = new Map(ourSeasonResults.map(r => [r.race_id, r.team_id]))
+    const ourPosByRace = new Map(ourSeasonResults.map(r => [r.race_id, Number(r.position)]))
+
+    const ourQualiByRace = new Map(
+      qualifyingRows
+        .filter(q => q.races?.seasons?.year === year)
+        .map(q => [q.race_id, Number(q.position)])
+    )
+
+    const out = {}
+
+    allTeamResults
+      .filter(r => r?.race_id && r.races?.seasons?.year === year)
+      .forEach(r => {
+        const ourTeam = teamByRace.get(r.race_id)
+        if (!ourTeam || r.team_id !== ourTeam) return
+        const mateId = r.driver_id
+        if (!mateId) return
+        if (!out[mateId]) out[mateId] = { driverId: mateId, driver: r.drivers, races: 0, racesAhead: 0, quali: 0, qualiAhead: 0 }
+        const matePos = Number(r.position)
+        const ourPos = ourPosByRace.get(r.race_id)
+        if (Number.isFinite(ourPos) && Number.isFinite(matePos)) {
+          out[mateId].races++
+          if (ourPos < matePos) out[mateId].racesAhead++
+        }
+      })
+
+    allTeamQualifying
+      .filter(q => q?.race_id && q.races?.seasons?.year === year)
+      .forEach(q => {
+        const ourTeam = teamByRace.get(q.race_id)
+        if (!ourTeam || q.team_id !== ourTeam) return
+        const mateId = q.driver_id
+        if (!mateId) return
+        if (!out[mateId]) out[mateId] = { driverId: mateId, driver: q.drivers, races: 0, racesAhead: 0, quali: 0, qualiAhead: 0 }
+        const matePos = Number(q.position)
+        const ourPos = ourQualiByRace.get(q.race_id)
+        if (Number.isFinite(ourPos) && Number.isFinite(matePos)) {
+          out[mateId].quali++
+          if (ourPos < matePos) out[mateId].qualiAhead++
+        }
+      })
+
+    return Object.values(out)
+      .sort((a, b) => (b.races - a.races) || (b.quali - a.quali))
+      .map(row => ({
+        ...row,
+        racesAheadPct: row.races ? Math.round((row.racesAhead / row.races) * 100) : null,
+        qualiAheadPct: row.quali ? Math.round((row.qualiAhead / row.quali) * 100) : null,
+      }))
+  }, [allTeamQualifying, allTeamResults, mateYear, qualifyingRows, results])
 
   const seasonGroups = results.reduce((acc, r) => {
     const year = r.races?.seasons?.year || 'Unknown'
@@ -359,7 +547,15 @@ export default function DriverPage() {
       .sort((a, b) => b.seasons.length - a.seasons.length || b.races - a.races)
   }, [allTeamResults, results])
 
-  if (loading) return <Spinner />
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <SkeletonHero />
+        <SkeletonTable rows={7} cols={4} />
+      </div>
+    )
+  }
+  if (error) return <ErrorState message={error} onRetry={() => window.location.reload()} />
   if (!driver) return <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>Driver not found.</div>
 
   const activeTabs = [
@@ -427,6 +623,41 @@ export default function DriverPage() {
       </div>
 
       {/* ── Milestones ── */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Season</div>
+              <Select value={perfYear} onChange={e => setPerfYear(e.target.value)} className="h-9 text-sm mt-1">
+                <option value="all">Career</option>
+                {years.map(y => <option key={y} value={String(y)}>{y}</option>)}
+              </Select>
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Consistency</div>
+              <div className="mt-1 flex items-center gap-2">
+                <div className="text-2xl font-black tabular-nums" style={{ letterSpacing: '-0.04em' }}>{consistency.score}</div>
+                {consistencyBadge}
+              </div>
+            </div>
+          </div>
+
+          <div className="sm:hidden flex items-center gap-2">
+            <span className="text-xs font-semibold text-secondary">Consistency</span>
+            <span className="text-sm font-black tabular-nums">{consistency.score}</span>
+            {consistencyBadge}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
+          <StatCard label="Avg Finish" value={consistency.avgFinish != null ? consistency.avgFinish.toFixed(1) : '—'} sub={perfYear === 'all' ? 'Career' : perfYear} />
+          <StatCard label="DNFs" value={consistency.dnfCount} sub={`${consistency.raceCount} races`} />
+          <StatCard label="Points" value={consistency.pointsFinishes} sub="Points finishes" />
+          <StatCard label="Δ Quali→Race" value={avgDelta != null ? (avgDelta >= 0 ? `+${avgDelta.toFixed(1)}` : avgDelta.toFixed(1)) : '—'} sub="Avg positions" />
+          <StatCard label="Tier" value={consistency.tier} sub="Consistency" />
+        </div>
+      </Card>
+
       <Card className="p-0 overflow-hidden">
         <table className="w-full">
           <tbody>
@@ -457,10 +688,109 @@ export default function DriverPage() {
 
       {/* ── Performance ── */}
       {tab === 'performance' && (
-        <Card>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Points Per Race</p>
-          <PerformanceChart data={chartData} dataKey="points" label="Points" />
-        </Card>
+        <div className="space-y-3">
+          <Card>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Performance trend</p>
+                <p className="text-sm mt-1 font-semibold" style={{ color: 'var(--text-secondary)' }}>Finishing position by round (lower is better)</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-secondary">Season</span>
+                <span className="text-xs font-bold tabular-nums">{perfYear === 'all' ? 'Career' : perfYear}</span>
+              </div>
+            </div>
+            <TrendChart
+              data={trendData}
+              xKey="round"
+              yKey="position"
+              yReversed
+              yDomain={[1, 'dataMax']}
+              label="Finish"
+            />
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Points per race</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-secondary">Consistency</span>
+                <span className="text-xs font-bold tabular-nums">{consistency.score}</span>
+                {consistencyBadge}
+              </div>
+            </div>
+            <PerformanceChart data={pointsChartData} dataKey="points" label="Points" />
+          </Card>
+
+          <Card className="p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Qualifying vs race delta</div>
+                <div className="text-xs mt-1 text-secondary">Positions gained/lost (Quali → Finish)</div>
+              </div>
+              <div className="text-xs font-semibold text-secondary tabular-nums">
+                Avg: {avgDelta != null ? (avgDelta >= 0 ? `+${avgDelta.toFixed(1)}` : avgDelta.toFixed(1)) : '—'}
+              </div>
+            </div>
+            {deltaRows.filter(r => r.qualiPos != null && r.racePos != null).length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No qualifying data imported for this season.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                    <th className="text-left py-2 pl-5">Race</th>
+                    <th className="text-right py-2 w-14">Q</th>
+                    <th className="text-right py-2 w-14">R</th>
+                    <th className="text-right py-2 pr-5 w-16">Δ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deltaRows
+                    .filter(r => r.qualiPos != null && r.racePos != null)
+                    .slice(-14)
+                    .reverse()
+                    .map(r => (
+                      <tr key={r.raceId} className="border-b hover:bg-muted transition-colors" style={{ borderColor: 'var(--border)' }}>
+                        <td className="py-2.5 pl-5 min-w-0">
+                          <Link to={`/race/${r.raceId}`} className="text-sm font-medium hover:text-f1red transition-colors block truncate">
+                            {r.raceName?.replace(' Grand Prix', ' GP') || '—'}
+                          </Link>
+                          <div className="text-[10px] font-semibold uppercase tracking-widest mt-0.5 text-secondary">{r.year} · R{r.round}</div>
+                        </td>
+                        <td className="py-2.5 text-right tabular-nums text-secondary">{r.qualiPos}</td>
+                        <td className="py-2.5 text-right tabular-nums text-secondary">{r.racePos}</td>
+                        <td className="py-2.5 pr-5 text-right tabular-nums font-bold">
+                          {r.delta > 0 && <span className="text-green-400 inline-flex items-center gap-1"><ArrowUp size={12} /> {r.delta}</span>}
+                          {r.delta < 0 && <span className="text-red-400 inline-flex items-center gap-1"><ArrowDown size={12} /> {Math.abs(r.delta)}</span>}
+                          {r.delta === 0 && <span className="text-secondary">0</span>}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Driver DNA</div>
+                <div className="text-xs mt-1 text-secondary">Auto-generated traits (derived from imported data)</div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {dnaTraits.map(t => (
+                  <Badge key={t.label} color={t.color}>{t.label}</Badge>
+                ))}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard label="Races" value={consistency.raceCount} sub={perfYear === 'all' ? 'Career' : perfYear} />
+              <StatCard label="Points rate" value={`${Math.round(consistency.pointsRate * 100)}%`} sub="Points finishes" />
+              <StatCard label="DNF rate" value={`${Math.round(consistency.dnfRate * 100)}%`} sub="DNFs" />
+              <StatCard label="Overtakes" value={Object.values(calcOvertakesFromLaps(perfLaps)).reduce((s, v) => s + (v || 0), 0) || '—'} sub="Estimated" />
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* â”€â”€ Teams â”€â”€ */}
@@ -535,6 +865,52 @@ export default function DriverPage() {
         <Card className="p-0 overflow-hidden">
           <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
             <span className="text-sm font-bold" style={{ letterSpacing: '-0.02em' }}>Teammates</span>
+          </div>
+
+          <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Domination</div>
+                <div className="text-xs mt-1 text-secondary">Races ahead % and qualifying ahead % vs teammates</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-secondary">Season</span>
+                <Select value={mateYear} onChange={e => setMateYear(e.target.value)} className="h-9 text-sm">
+                  {years.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                </Select>
+              </div>
+            </div>
+
+            {headToHead.length === 0 ? (
+              <div className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>Not enough teammate data for {mateYear}.</div>
+            ) : (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {headToHead.slice(0, 4).map(row => (
+                  <Link key={row.driverId} to={`/driver/${row.driverId}`} className="apple-card p-3 hover:bg-muted transition-colors block">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate">{row.driver?.name || '—'}</div>
+                        <div className="text-[10px] mt-0.5 text-secondary tabular-nums">{row.races} races · {row.quali} quali</div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <div className="text-[10px] text-secondary">Race</div>
+                          <div className={['text-xs font-black tabular-nums', row.racesAheadPct != null && row.racesAheadPct >= 50 ? 'text-green-400' : 'text-red-400'].join(' ')}>
+                            {row.racesAheadPct ?? '—'}{row.racesAheadPct != null ? '%' : ''}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] text-secondary">Quali</div>
+                          <div className={['text-xs font-black tabular-nums', row.qualiAheadPct != null && row.qualiAheadPct >= 50 ? 'text-green-400' : 'text-red-400'].join(' ')}>
+                            {row.qualiAheadPct ?? '—'}{row.qualiAheadPct != null ? '%' : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
           {teammates.length === 0 ? (
             <p className="text-sm px-5 py-6" style={{ color: 'var(--text-muted)' }}>No teammates found.</p>

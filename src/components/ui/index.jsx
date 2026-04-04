@@ -239,6 +239,23 @@ export function SearchSelect({ value, onChange, options = [], placeholder = 'Sea
 }
 
 // ── PageHeader ────────────────────────────────────────────────────────────────
+export function InsightCard({ title, subtitle, children, tone = 'neutral' }) {
+  const tones = {
+    neutral: { bg: 'var(--bg-card)', border: 'var(--border)' },
+    accent: { bg: 'rgba(225,6,0,0.08)', border: 'rgba(225,6,0,0.22)' },
+    gold: { bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.22)' },
+    green: { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.22)' },
+  }
+  const t = tones[tone] || tones.neutral
+  return (
+    <div className="rounded-3xl border shadow-[var(--shadow)] p-5" style={{ background: t.bg, borderColor: t.border }}>
+      <div className="text-sm font-bold">{title}</div>
+      {subtitle && <div className="text-xs mt-1 text-secondary">{subtitle}</div>}
+      {children && <div className="mt-4">{children}</div>}
+    </div>
+  )
+}
+
 export function PageHeader({ title, subtitle, children }) {
   return (
     <motion.div
