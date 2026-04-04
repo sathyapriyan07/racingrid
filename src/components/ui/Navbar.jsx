@@ -50,8 +50,8 @@ export default function Navbar() {
         }}>
         <div className="flex items-center gap-2 px-4 h-12">
           <Link to="/" className="flex items-center gap-0.5 shrink-0">
-            <span className="font-black text-lg tracking-tight text-white">F1</span>
-            <span className="font-black text-lg tracking-tight text-accent">Base</span>
+            <span className="font-black text-lg tracking-tight text-white">Racin</span>
+            <span className="font-black text-lg tracking-tight text-accent">Grid</span>
           </Link>
           <div className="flex-1" />
           <button onClick={openSearch} className="btn-icon w-8 h-8" aria-label="Search">
@@ -126,8 +126,8 @@ export default function Navbar() {
         >
           {/* Logo */}
           <Link to="/" className="flex items-center gap-0.5 shrink-0 mr-2">
-            <span className="font-black text-lg tracking-tight text-white">F1</span>
-            <span className="font-black text-lg tracking-tight text-accent">Base</span>
+            <span className="font-black text-lg tracking-tight text-white">Racin</span>
+            <span className="font-black text-lg tracking-tight text-accent">Grid</span>
           </Link>
 
           {/* Nav links */}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
@@ -226,6 +227,32 @@ export default function DriverPage() {
     return () => { cancelled = true }
   }, [id, perfYear, results, tab])
 
+  // ── perfResults & formGuideRows must be declared BEFORE the useEffect that reads them ──
+  const perfResults = useMemo(() => {
+    if (perfYear === 'all') return results
+    const y = parseInt(perfYear, 10)
+    return results.filter(r => r.races?.seasons?.year === y)
+  }, [perfYear, results])
+
+  const formGuideRows = useMemo(() => {
+    const sorted = perfResults
+      .filter(r => r?.race_id && r?.races?.date)
+      .slice()
+      .sort((a, b) => (b.races?.date || '').localeCompare(a.races?.date || ''))
+      .slice(0, 5)
+    return sorted.map((r) => {
+      const grid = Number(r.grid)
+      const pos = Number(r.position)
+      const delta = (Number.isFinite(grid) && Number.isFinite(pos)) ? (grid - pos) : 0
+      return {
+        raceId: r.race_id,
+        round: r.races?.round,
+        position: Number.isFinite(pos) ? pos : null,
+        delta,
+      }
+    })
+  }, [perfResults])
+
   useEffect(() => {
     if (tab !== 'performance') { setPaceStats(null); setPaceError(null); setPaceLoading(false); return }
 
@@ -303,38 +330,12 @@ export default function DriverPage() {
     [...new Set(results.map(r => r.races?.seasons?.year).filter(Boolean))].sort((a, b) => b - a)
   ), [results])
 
-  const perfResults = useMemo(() => {
-    if (perfYear === 'all') return results
-    const y = parseInt(perfYear, 10)
-    return results.filter(r => r.races?.seasons?.year === y)
-  }, [perfYear, results])
-
   const pointsChartData = useMemo(() => (
     perfResults.map(r => ({
       name: r.races?.name?.replace('Grand Prix', 'GP') || '?',
       points: parseFloat(r.points) || 0,
     }))
   ), [perfResults])
-
-  const formGuideRows = useMemo(() => {
-    const sorted = perfResults
-      .filter(r => r?.race_id && r?.races?.date)
-      .slice()
-      .sort((a, b) => (b.races?.date || '').localeCompare(a.races?.date || ''))
-      .slice(0, 5)
-
-    return sorted.map((r) => {
-      const grid = Number(r.grid)
-      const pos = Number(r.position)
-      const delta = (Number.isFinite(grid) && Number.isFinite(pos)) ? (grid - pos) : 0
-      return {
-        raceId: r.race_id,
-        round: r.races?.round,
-        position: Number.isFinite(pos) ? pos : null,
-        delta,
-      }
-    })
-  }, [perfResults])
 
   const cumulativePointsData = useMemo(() => {
     const sorted = perfResults
@@ -517,7 +518,7 @@ export default function DriverPage() {
     }
 
     const formatPeriod = (minYear, maxYear, isCurrent) => {
-      if (!minYear) return 'â€”'
+      if (!minYear) return '—'
       if (isCurrent && latestYear !== null && maxYear === latestYear) return `${minYear}-Present`
       if (!maxYear || minYear === maxYear) return String(minYear)
       return `${minYear}-${maxYear}`
@@ -923,7 +924,7 @@ export default function DriverPage() {
         </div>
       )}
 
-      {/* â”€â”€ Teams â”€â”€ */}
+      {/* â—€â—€ Teams â—€â—€ */}
       {tab === 'teams' && (
         <div className="space-y-3">
           <Card>
@@ -943,10 +944,10 @@ export default function DriverPage() {
                     </div>
                     <div className="min-w-0">
                       <Link to={`/team/${current.teamId}`} className="text-sm font-bold hover:text-f1red transition-colors block truncate">
-                        {current.team?.name || 'â€”'}
+                        {current.team?.name || '—'}
                       </Link>
                       <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                        {current.period} Â· {current.races} race{current.races !== 1 ? 's' : ''}{current.wins ? ` Â· ${current.wins} win${current.wins !== 1 ? 's' : ''}` : ''}
+                        {current.period} · {current.races} race{current.races !== 1 ? 's' : ''}{current.wins ? ` · ${current.wins} win${current.wins !== 1 ? 's' : ''}` : ''}
                       </div>
                     </div>
                   </div>
@@ -976,7 +977,7 @@ export default function DriverPage() {
                       <td className="py-2.5 pl-5">
                         <Link to={`/team/${s.teamId}`} className="flex items-center gap-2 min-w-0 hover:text-f1red transition-colors">
                           {s.team?.logo_url && <img src={s.team.logo_url} alt={s.team?.name || 'Team'} className="h-4 w-auto object-contain shrink-0" loading="lazy" />}
-                          <span className="text-sm font-medium truncate">{s.team?.name || 'â€”'}</span>
+                          <span className="text-sm font-medium truncate">{s.team?.name || '—'}</span>
                           {s.isCurrent && <span className="text-[10px] px-2 py-0.5 rounded-full border" style={{ borderColor: 'rgba(34,197,94,0.25)', color: 'rgb(34,197,94)', background: 'rgba(34,197,94,0.08)' }}>Current</span>}
                         </Link>
                       </td>

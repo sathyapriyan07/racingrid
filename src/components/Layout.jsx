@@ -24,8 +24,8 @@ function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-0.5 mb-3">
-              <span className="font-black text-base text-primary">F1</span>
-              <span className="font-black text-base text-accent">Base</span>
+              <span className="font-black text-base text-primary">Racin</span>
+              <span className="font-black text-base text-accent">Grid</span>
             </div>
             <p className="text-xs leading-relaxed text-secondary">
               The ultimate Formula 1 archive — races, drivers, teams and lap-by-lap replays.
@@ -59,9 +59,9 @@ function Footer() {
 
         <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="text-xs text-secondary">
-            © {new Date().getFullYear()} F1Base. Not affiliated with Formula 1 or FOM.
+            © {new Date().getFullYear()} RacinGrid. Not affiliated with Formula 1 or FOM.
           </span>
-          <span className="text-xs text-secondary">Built for F1 fans, by F1 fans ❤️</span>
+          <span className="text-xs text-secondary">Built for racing fans, by racing fans ❤️</span>
         </div>
       </div>
     </footer>

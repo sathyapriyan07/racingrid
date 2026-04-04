@@ -374,8 +374,8 @@ export default function Home() {
               className="text-6xl md:text-8xl font-black leading-none mb-4"
               style={{ letterSpacing: '-0.05em' }}
             >
-              <span className="text-white">F1</span>
-              <span className="text-gradient-red">Base</span>
+              <span className="text-white">Racin</span>
+              <span className="text-gradient-red">Grid</span>
             </motion.h1>
 
             <motion.p {...fadeUp(0.3)} className="text-base md:text-lg mb-8 max-w-lg font-medium text-secondary leading-relaxed">
