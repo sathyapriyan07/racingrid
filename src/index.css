@@ -28,69 +28,84 @@
 
 @layer base {
   :root {
-    --bg-base: #ffffff;
-    --bg-surface: #f8f9fb;
-    --bg-card: #ffffff;
-    --bg-muted: #f1f3f5;
-
-    --text-primary: #0f172a;
-    --text-secondary: #6b7280;
-
-    --border: rgba(0,0,0,0.08);
-
-    --accent: #E10600;
-
-    --shadow: 0 4px 20px rgba(0,0,0,0.08);
-
-    /* Compatibility aliases (used across current screens) */
-    --bg-raised: var(--bg-muted);
-    --bg-card-hover: var(--bg-muted);
-    --border-hover: rgba(0,0,0,0.16);
-    --text-muted: var(--text-secondary);
-    --glass-bg: color-mix(in srgb, var(--bg-base) 70%, transparent);
-    --glass-hover-bg: color-mix(in srgb, var(--bg-base) 82%, transparent);
-    --input-bg: var(--bg-surface);
-    --scrollbar-track: var(--bg-surface);
-    --scrollbar-thumb: color-mix(in srgb, var(--text-primary) 14%, transparent);
-    --highlight: color-mix(in srgb, var(--bg-base) 80%, transparent);
-    --overlay-dark: rgba(255,255,255,0.9);
-    --overlay-mid: rgba(255,255,255,0.5);
-    --overlay-light: rgba(255,255,255,0.1);
-
-    color-scheme: light;
-  }
-
-  .dark {
-    --bg-base: #000000; /* true black */
-    --bg-surface: #0a0a0f;
-    --bg-card: #111111;
-    --bg-muted: #1a1a1a;
+    /* Dark mode first tokens (Apple TV / streaming) */
+    --bg-base: #000000;     /* bg-primary */
+    --bg-surface: #0A0A0A;  /* bg-surface-1 */
+    --bg-card: #111111;     /* bg-surface-2 */
+    --bg-muted: #1A1A1A;    /* bg-surface-3 */
 
     --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
 
-    --border: rgba(255,255,255,0.08);
+    --border: #2A2A2A;
 
-    --accent: #E10600;
+    --accent: #E10600; /* single accent (F1 red) */
 
-    --shadow: 0 6px 30px rgba(0,0,0,0.6);
+    --shadow: 0 10px 40px rgba(0,0,0,0.55);
+
+    /* System */
+    --radius-3xl: 1.5rem;
+    --tap: 44px;
+
+    /* Spacing scale (px) */
+    --s-4: 4px;
+    --s-8: 8px;
+    --s-12: 12px;
+    --s-16: 16px;
+    --s-20: 20px;
+    --s-24: 24px;
+    --s-32: 32px;
+    --s-40: 40px;
+    --s-48: 48px;
 
     /* Compatibility aliases (used across current screens) */
     --bg-raised: var(--bg-muted);
     --bg-card-hover: var(--bg-muted);
-    --border-hover: rgba(255,255,255,0.18);
+    --border-hover: color-mix(in srgb, var(--border) 70%, white);
     --text-muted: var(--text-secondary);
     --glass-bg: rgba(255,255,255,0.05);
-    --glass-hover-bg: rgba(255,255,255,0.09);
+    --glass-hover-bg: rgba(255,255,255,0.08);
     --input-bg: var(--bg-surface);
     --scrollbar-track: var(--bg-surface);
-    --scrollbar-thumb: var(--bg-muted);
+    --scrollbar-thumb: rgba(255,255,255,0.16);
     --highlight: rgba(255,255,255,0.05);
-    --overlay-dark: rgba(0,0,0,0.85);
-    --overlay-mid: rgba(0,0,0,0.45);
-    --overlay-light: rgba(0,0,0,0.1);
+    --overlay-dark: rgba(0,0,0,0.86);
+    --overlay-mid: rgba(0,0,0,0.52);
+    --overlay-light: rgba(0,0,0,0.12);
 
     color-scheme: dark;
+  }
+
+  /* Light theme (opt-in) */
+  .light {
+    --bg-base: #ffffff;
+    --bg-surface: #f5f6f8;
+    --bg-card: #ffffff;
+    --bg-muted: #eef0f3;
+
+    --text-primary: #0b1220;
+    --text-secondary: #5b6473;
+
+    --border: rgba(15,23,42,0.12);
+
+    --shadow: 0 10px 40px rgba(15,23,42,0.10);
+
+    /* Compatibility aliases (used across current screens) */
+    --bg-raised: var(--bg-muted);
+    --bg-card-hover: var(--bg-muted);
+    --border-hover: rgba(15,23,42,0.18);
+    --text-muted: var(--text-secondary);
+    --glass-bg: color-mix(in srgb, #ffffff 78%, transparent);
+    --glass-hover-bg: color-mix(in srgb, #ffffff 88%, transparent);
+    --input-bg: var(--bg-surface);
+    --scrollbar-track: var(--bg-surface);
+    --scrollbar-thumb: rgba(15,23,42,0.18);
+    --highlight: rgba(15,23,42,0.05);
+    --overlay-dark: rgba(255,255,255,0.92);
+    --overlay-mid: rgba(255,255,255,0.55);
+    --overlay-light: rgba(255,255,255,0.12);
+
+    color-scheme: light;
   }
 
   html {
@@ -125,6 +140,12 @@
 }
 
 @layer components {
+  /* Type scale */
+  .tv-h1 { font-size: clamp(2rem, 3.2vw, 2.5rem); font-weight: 800; letter-spacing: -0.04em; }
+  .tv-h2 { font-size: clamp(1.5rem, 2.2vw, 1.75rem); font-weight: 800; letter-spacing: -0.03em; }
+  .tv-h3 { font-size: clamp(1.125rem, 1.6vw, 1.25rem); font-weight: 700; letter-spacing: -0.02em; }
+  .tv-body { font-size: 0.95rem; line-height: 1.55; color: var(--text-secondary); }
+
   /* Skeleton shimmer */
   .skeleton {
     position: relative;
@@ -156,16 +177,17 @@
   .glass {
     background: var(--glass-bg);
     border: 1px solid var(--border);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-3xl);
     box-shadow: var(--shadow);
   }
 
   .glass-hover {
     background: var(--glass-bg);
     border: 1px solid var(--border);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-3xl);
     box-shadow: var(--shadow);
     cursor: pointer;
+    transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
   }
   .glass-hover:hover { background: var(--glass-hover-bg); }
 
@@ -173,8 +195,9 @@
   .apple-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 1.5rem;
+    border-radius: var(--radius-3xl);
     box-shadow: var(--shadow);
+    transition: transform 240ms ease, border-color 240ms ease, background 240ms ease, box-shadow 240ms ease;
   }
   .apple-card:hover { background: var(--bg-muted); }
 
@@ -182,7 +205,7 @@
   .btn-primary {
     background: var(--accent);
     color: #fff;
-    padding: 0.5rem 1.25rem;
+    padding: 0.625rem 1rem;
     border-radius: 9999px;
     font-weight: 600;
     font-size: 0.875rem;
@@ -193,14 +216,38 @@
     align-items: center;
     gap: 0.375rem;
     cursor: pointer;
+    min-height: var(--tap);
+    transition: transform 220ms ease, filter 220ms ease, opacity 220ms ease;
   }
-  .btn-primary:hover { filter: brightness(0.92); }
+  .btn-primary:hover { filter: brightness(0.92); transform: scale(1.02); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: color-mix(in srgb, var(--bg-card) 70%, white);
+    color: var(--text-primary);
+    padding: 0.625rem 1rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+    min-height: var(--tap);
+    transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, opacity 220ms ease;
+  }
+  .btn-secondary:hover { background: var(--bg-muted); border-color: var(--border-hover); transform: scale(1.02); }
+  .btn-secondary:active { transform: scale(0.98); }
+  .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
   .btn-ghost {
-    background: var(--bg-card);
+    background: transparent;
     border: 1px solid var(--border);
     color: var(--text-primary);
-    padding: 0.5rem 1.25rem;
+    padding: 0.625rem 1rem;
     border-radius: 9999px;
     font-weight: 500;
     font-size: 0.875rem;
@@ -209,8 +256,32 @@
     align-items: center;
     gap: 0.375rem;
     cursor: pointer;
+    min-height: var(--tap);
+    transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, opacity 220ms ease;
   }
-  .btn-ghost:hover { background: var(--bg-muted); border-color: var(--border-hover); }
+  .btn-ghost:hover { background: var(--bg-muted); border-color: var(--border-hover); transform: scale(1.02); }
+  .btn-ghost:active { transform: scale(0.98); }
+  .btn-ghost:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.14);
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.28);
+    padding: 0.625rem 1rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    cursor: pointer;
+    min-height: var(--tap);
+    transition: transform 220ms ease, background 220ms ease, opacity 220ms ease;
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.18); transform: scale(1.02); }
+  .btn-danger:active { transform: scale(0.98); }
+  .btn-danger:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
   .btn-icon {
     background: var(--bg-surface);
@@ -222,8 +293,13 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    min-width: var(--tap);
+    min-height: var(--tap);
+    transition: transform 200ms ease, background 200ms ease, color 200ms ease, border-color 200ms ease, opacity 200ms ease;
   }
-  .btn-icon:hover { background: var(--bg-muted); color: var(--text-primary); }
+  .btn-icon:hover { background: var(--bg-muted); color: var(--text-primary); transform: scale(1.04); }
+  .btn-icon:active { transform: scale(0.97); }
+  .btn-icon:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
   /* Input */
   .input {
@@ -267,11 +343,13 @@
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     width: 100%;
+    min-height: var(--tap);
+    align-items: center;
   }
   .tab-bar::-webkit-scrollbar { display: none; }
 
   .tab-pill {
-    padding: 0.375rem 0.875rem;
+    padding: 0.625rem 0.875rem;
     border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 600;
@@ -282,17 +360,19 @@
     background: transparent;
     white-space: nowrap;
     flex-shrink: 0;
+    min-height: calc(var(--tap) - 10px);
+    transition: transform 200ms ease, background 200ms ease, color 200ms ease;
   }
-  .tab-pill:hover { background: var(--bg-card); color: var(--text-primary); }
+  .tab-pill:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); transform: scale(1.02); }
   .tab-pill.active {
-    background: var(--bg-card);
+    background: color-mix(in srgb, var(--bg-card) 88%, white);
     color: var(--text-primary);
     box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   }
 
   /* Section heading */
   .section-title {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.03em;
     color: var(--text-primary);

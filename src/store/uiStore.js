@@ -5,5 +5,8 @@ export const useUIStore = create((set) => ({
   openSearch: () => set({ searchOpen: true }),
   closeSearch: () => set({ searchOpen: false }),
   toggleSearch: () => set((s) => ({ searchOpen: !s.searchOpen })),
-}))
 
+  accent: null,
+  setAccent: (accent) => set({ accent }),
+  clearAccent: () => set({ accent: null }),
+}))

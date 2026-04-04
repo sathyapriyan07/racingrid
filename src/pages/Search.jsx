@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import { Card, EmptyState, ErrorState, Skeleton } from '../components/ui'
+import { Card, EmptyState, ErrorState, Skeleton, Tabs } from '../components/ui'
 import { useSearchAllQuery } from '../services/queries'
 
 export default function SearchPage() {
@@ -64,17 +64,12 @@ export default function SearchPage() {
         />
       </div>
 
-      <div className="tab-bar">
-        {Object.entries(tabs).map(([key, t]) => (
-          <button
-            key={key}
-            className={['tab-pill', tab === key ? 'active' : ''].join(' ')}
-            onClick={() => setTab(key)}
-          >
-            {t.label} <span className="text-secondary tabular-nums">({t.count})</span>
-          </button>
-        ))}
-      </div>
+      <Tabs
+        id={`search-${q || 'empty'}`}
+        value={tab}
+        onChange={setTab}
+        items={Object.entries(tabs).map(([key, t]) => ({ id: key, label: `${t.label} (${t.count})` }))}
+      />
 
       {error && <ErrorState message={error?.message || 'Search failed.'} onRetry={() => refetch()} />}
 

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { supabase } from '../lib/supabase'
-import { Spinner, Card, Badge, StatCard, EmptyState, ErrorState, InsightCard } from '../components/ui'
+import { Spinner, Card, Badge, StatCard, EmptyState, ErrorState, InsightCard, Tabs } from '../components/ui'
 import { Flag, AlertTriangle, Clock, PlayCircle, ArrowUp, ArrowDown, Layers, History, Sparkles } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
 import { useAuthStore } from '../store/authStore'
@@ -458,14 +458,7 @@ export default function RacePage() {
       )}
 
       {/* Tabs */}
-      <div className="tab-bar">
-        {tabs.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`tab-pill ${activeTab === tab.id ? 'active' : ''}`}>
-            <tab.icon size={12} className="inline mr-1" /> {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs items={tabs} value={activeTab} onChange={setActiveTab} id={`race-${id}`} />
 
       {activeTab === 'replay' && (
         <div className="space-y-3">

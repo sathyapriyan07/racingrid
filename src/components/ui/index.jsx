@@ -2,6 +2,88 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown } from 'lucide-react'
 
+function InlineSpinner({ className = '' }) {
+  return (
+    <span
+      className={['inline-block w-4 h-4 rounded-full border-2 animate-spin', className].join(' ')}
+      style={{ borderColor: 'rgba(255,255,255,0.25)', borderTopColor: 'rgba(255,255,255,0.95)' }}
+      aria-hidden="true"
+    />
+  )
+}
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  loading = false,
+  disabled = false,
+  leftIcon,
+  rightIcon,
+  className = '',
+  children,
+  ...props
+}) {
+  const base = variant === 'primary'
+    ? 'btn-primary'
+    : variant === 'secondary'
+      ? 'btn-secondary'
+      : variant === 'danger'
+        ? 'btn-danger'
+        : 'btn-ghost'
+
+  const sizes = {
+    sm: 'text-xs px-3 py-2',
+    md: 'text-sm px-4 py-2.5',
+    lg: 'text-sm px-5 py-3',
+  }
+
+  return (
+    <button
+      {...props}
+      className={[base, sizes[size] || sizes.md, className].join(' ')}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+    >
+      {loading ? <InlineSpinner /> : leftIcon}
+      <span className="truncate">{children}</span>
+      {rightIcon}
+    </button>
+  )
+}
+
+export function Tabs({ items = [], value, onChange, id = 'tabs', className = '' }) {
+  return (
+    <div className={['tab-bar relative', className].join(' ')} role="tablist" aria-label="Tabs">
+      {items.map((t) => {
+        const active = value === t.id
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange?.(t.id)}
+            className={['tab-pill relative overflow-hidden', active ? 'active' : ''].join(' ')}
+          >
+            {active && (
+              <motion.span
+                layoutId={`tab-indicator-${id}`}
+                className="absolute inset-0 rounded-full"
+                style={{ background: 'color-mix(in srgb, var(--bg-card) 88%, white)' }}
+                transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1">
+              {t.icon && <t.icon size={12} />}
+              {t.label}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Skeleton shimmer ──────────────────────────────────────────────────────────
 export function Skeleton({ className = '', style = {} }) {
   return (
@@ -69,12 +151,14 @@ export function PageTransition({ children }) {
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────
-export function Card({ children, className = '', hover = false }) {
+export function Card({ children, className = '', hover = false, variant = 'default' }) {
+  const interactive = hover || variant === 'interactive'
+  const glass = variant === 'glass'
   return (
     <div
       className={[
-        'bg-card border border-border shadow-[var(--shadow)] rounded-3xl',
-        hover
+        glass ? 'glass' : 'bg-card border border-border shadow-[var(--shadow)] rounded-3xl',
+        interactive
           ? 'cursor-pointer transition-all duration-200 ease-out will-change-transform hover:scale-[1.05] hover:shadow-glow-sm hover:border-accent/25'
           : 'transition-colors duration-200 hover:bg-muted',
         'p-5',
@@ -111,10 +195,13 @@ export function Spinner() {
 }
 
 // ── StatCard ──────────────────────────────────────────────────────────────────
-export function StatCard({ label, value, sub }) {
+export function StatCard({ label, value, sub, trend = null }) {
   return (
     <div className="bg-card border border-border shadow-[var(--shadow)] rounded-3xl p-4 text-center hover:bg-muted transition-colors">
       <div className="text-2xl font-black text-primary" style={{ letterSpacing: '-0.04em' }}>{value ?? '—'}</div>
+      {trend === 'up' && <div className="text-[10px] font-black text-green-400 -mt-1">↑</div>}
+      {trend === 'down' && <div className="text-[10px] font-black text-red-400 -mt-1">↓</div>}
+      {trend === 'flat' && <div className="text-[10px] font-black text-secondary -mt-1">→</div>}
       <div className="text-xs font-semibold mt-1 uppercase tracking-widest text-secondary">{label}</div>
       {sub && <div className="text-xs mt-0.5 text-secondary">{sub}</div>}
     </div>

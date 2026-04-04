@@ -8,6 +8,7 @@ import PerformanceChart from '../components/charts/PerformanceChart'
 import { BarChart2, Flag, Trophy, ExternalLink, MapPin } from 'lucide-react'
 import { formatPeriod } from '../utils/formatPeriod'
 import { useSettingsStore } from '../store/settingsStore'
+import { useUIStore } from '../store/uiStore'
 
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -38,6 +39,8 @@ function normalizeSocialUrl(platform, value) {
 export default function TeamPage() {
   const { id } = useParams()
   const { fetchTeam, fetchAllChampionships } = useDataStore()
+  const setAccent = useUIStore(s => s.setAccent)
+  const clearAccent = useUIStore(s => s.clearAccent)
   const [team, setTeam] = useState(null)
   const [results, setResults] = useState([])
   const [poleRows, setPoleRows] = useState([])
@@ -83,6 +86,26 @@ export default function TeamPage() {
     load()
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    if (!team) return
+    const candidate =
+      team.accent ||
+      team.accent_color ||
+      team.accent_hex ||
+      team.color ||
+      team.color_hex ||
+      team.primary_color ||
+      null
+
+    if (typeof candidate === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(candidate.trim())) {
+      setAccent(candidate.trim())
+    } else {
+      clearAccent()
+    }
+
+    return () => clearAccent()
+  }, [team, setAccent, clearAccent])
 
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
