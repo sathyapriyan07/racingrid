@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 
+const SETTINGS_ENABLED = import.meta.env.VITE_APP_SETTINGS_ENABLED === '1'
+
 export const useSettingsStore = create((set, get) => ({
   settings: {},
   loaded: false,
@@ -8,6 +10,12 @@ export const useSettingsStore = create((set, get) => ({
   error: null,
 
   fetchSettings: async () => {
+    if (!SETTINGS_ENABLED) {
+      // Avoid network calls (and 404 console noise) on deployments that don't ship `app_settings`.
+      set({ loaded: true, loading: false, error: null })
+      return get().settings
+    }
+
     const s = get()
     if (s.loaded || s.loading) return s.settings
     set({ loading: true, error: null })

@@ -89,6 +89,22 @@ export const useDataStore = create((set, get) => ({
     return data
   },
 
+  fetchLapPositions: async (raceId) => {
+    const key = `lappos_${raceId}`
+    if (get().cache[key]) return get().cache[key]
+    const { data, error } = await supabase
+      .from('laps')
+      .select('race_id, driver_id, lap_number, position')
+      .eq('race_id', raceId)
+      .order('lap_number')
+    if (error) {
+      if (error.code === '42P01') return []
+      throw error
+    }
+    set(s => ({ cache: { ...s.cache, [key]: data } }))
+    return data
+  },
+
   fetchPitStops: async (raceId) => {
     const key = `pits_${raceId}`
     if (get().cache[key]) return get().cache[key]
@@ -96,7 +112,10 @@ export const useDataStore = create((set, get) => ({
       .from('pit_stops')
       .select('*, drivers(name, code)')
       .eq('race_id', raceId)
-    if (error) throw error
+    if (error) {
+      if (error.code === '42P01') return []
+      throw error
+    }
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
   },
@@ -109,7 +128,10 @@ export const useDataStore = create((set, get) => ({
       .select('*')
       .eq('race_id', raceId)
       .order('lap')
-    if (error) throw error
+    if (error) {
+      if (error.code === '42P01') return []
+      throw error
+    }
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
   },

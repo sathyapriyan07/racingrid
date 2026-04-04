@@ -42,7 +42,7 @@ function formatSessionDateTime(date, time) {
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights, fetchPitStops, fetchRaceEvents, fetchLaps } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights, fetchPitStops, fetchRaceEvents, fetchLapPositions } = useDataStore()
   const isAdmin = useAuthStore(s => s.isAdmin)
 
   const [race, setRace] = useState(null)
@@ -92,7 +92,16 @@ export default function RacePage() {
     setDbLoading(true)
     setDbError(null)
 
-    Promise.all([fetchPitStops(race.id), fetchRaceEvents(race.id), fetchLaps(race.id)])
+    const withTimeout = (p, ms, label) => Promise.race([
+      p,
+      new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} timed out`)), ms)),
+    ])
+
+    Promise.all([
+      withTimeout(fetchPitStops(race.id), 12_000, 'Pit stops'),
+      withTimeout(fetchRaceEvents(race.id), 12_000, 'Race events'),
+      withTimeout(fetchLapPositions(race.id), 18_000, 'Lap positions'),
+    ])
       .then(([p, e, l]) => {
         if (cancelled) return
         setDbPitStops(p || [])
@@ -103,7 +112,7 @@ export default function RacePage() {
       .finally(() => { if (!cancelled) setDbLoading(false) })
 
     return () => { cancelled = true }
-  }, [activeTab, dbEvents.length, dbLaps.length, dbLoading, dbPitStops.length, fetchLaps, fetchPitStops, fetchRaceEvents, race?.id])
+  }, [activeTab, dbEvents.length, dbLaps.length, dbLoading, dbPitStops.length, fetchLapPositions, fetchPitStops, fetchRaceEvents, race?.id])
 
   useEffect(() => {
     if (!race?.date) { setPreviousEdition(null); return }

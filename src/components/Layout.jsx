@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import Navbar from './ui/Navbar'
 import { Toaster } from 'react-hot-toast'
-import { useSettingsStore } from '../store/settingsStore'
 import { Link } from 'react-router-dom'
 import GlobalSearchOverlay from '../features/search/GlobalSearchOverlay'
 import { useUIStore } from '../store/uiStore'
@@ -57,12 +56,7 @@ function Footer() {
 }
 
 export default function Layout({ children }) {
-  const { fetchSettings } = useSettingsStore()
   const accent = useUIStore(s => s.accent)
-
-  useEffect(() => {
-    fetchSettings()
-  }, [fetchSettings])
 
   useEffect(() => {
     const root = document.documentElement
