@@ -1,5 +1,4 @@
 import { Component } from 'react'
-import { Link } from 'react-router-dom'
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -28,7 +27,8 @@ export default class ErrorBoundary extends Component {
             <div className="flex gap-3 justify-center">
               <button onClick={() => this.setState({ hasError: false, error: null })}
                 className="btn-primary text-sm">Try Again</button>
-              <Link to="/" className="btn-ghost text-sm">Go Home</Link>
+              {/* Use native anchor — Link requires router context which may not exist here */}
+              <a href="/" className="btn-ghost text-sm">Go Home</a>
             </div>
           </div>
         </div>
