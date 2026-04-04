@@ -8,8 +8,12 @@ import { Flag, AlertTriangle, Clock, PlayCircle, ArrowUp, ArrowDown, Layers, His
 import { useSettingsStore } from '../store/settingsStore'
 import { useAuthStore } from '../store/authStore'
 import Timeline from '../components/insights/Timeline'
+import InsightsPanel from '../components/insights/InsightsPanel'
 import PositionReplay from '../features/race/PositionReplay'
 import PitStrategy from '../features/race/PitStrategy'
+import RaceWeekendFlow from '../features/race/RaceWeekendFlow'
+import { formatMs } from '../utils/insights'
+import { summarizeLapTimes } from '../utils/lapTimes'
 
 function Icon({ settingKey, emoji }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -18,19 +22,6 @@ function Icon({ settingKey, emoji }) {
     : <span>{emoji}</span>
 }
 const POSITION_COLORS = ['pos-1', 'pos-2', 'pos-3']
-
-const FLAG_COLOR = {
-  YELLOW: 'yellow', 'DOUBLE YELLOW': 'yellow', RED: 'red',
-  GREEN: 'green', CHEQUERED: 'gray', BLUE: 'blue',
-}
-
-async function openf1Fetch(path) {
-  const res = await fetch(`/api/openf1${path}`)
-  if (!res.ok) throw new Error(`OpenF1 ${res.status}`)
-  return res.json()
-}
-
-function delay(ms) { return new Promise(r => setTimeout(r, ms)) }
 
 function formatSessionDateTime(date, time) {
   if (!date) return '—'
@@ -42,7 +33,7 @@ function formatSessionDateTime(date, time) {
 
 export default function RacePage() {
   const { id } = useParams()
-  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights, fetchPitStops, fetchRaceEvents, fetchLapPositions } = useDataStore()
+  const { fetchRace, fetchRaceResults, fetchPracticeResults, fetchQualifying, fetchSprintResults, fetchHighlights, fetchPitStops, fetchRaceEvents, fetchLapPositions, fetchLapTimes } = useDataStore()
   const isAdmin = useAuthStore(s => s.isAdmin)
 
   const [race, setRace] = useState(null)
@@ -55,19 +46,13 @@ export default function RacePage() {
   const [activeTab, setActiveTab] = useState('results')
   const [previousEdition, setPreviousEdition] = useState(null)
 
-  // OpenF1 — only for pit stops + events (not replay)
   // DB-derived race analytics
   const [dbPitStops, setDbPitStops] = useState([])
   const [dbEvents, setDbEvents] = useState([])
   const [dbLaps, setDbLaps] = useState([])
+  const [dbLapTimes, setDbLapTimes] = useState([])
   const [dbLoading, setDbLoading] = useState(false)
   const [dbError, setDbError] = useState(null)
-
-  const [of1Drivers, setOf1Drivers] = useState({})
-  const [pitStops, setPitStops] = useState([])
-  const [events, setEvents] = useState([])
-  const [of1Loading, setOf1Loading] = useState(false)
-  const [of1Error, setOf1Error] = useState(null)
 
   useEffect(() => {
     Promise.all([fetchRace(id), fetchRaceResults(id), fetchPracticeResults(id), fetchQualifying(id), fetchSprintResults(id), fetchHighlights(id)])
@@ -85,8 +70,8 @@ export default function RacePage() {
 
   useEffect(() => {
     if (!race?.id) return
-    if (!['replay', 'strategy', 'timeline', 'insights'].includes(activeTab)) return
-    if (dbLoading || dbPitStops.length || dbEvents.length || dbLaps.length) return
+    if (!['replay', 'strategy', 'timeline', 'insights', 'pits', 'events'].includes(activeTab)) return
+    if (dbLoading || dbPitStops.length || dbEvents.length || dbLaps.length || dbLapTimes.length) return
 
     let cancelled = false
     setDbLoading(true)
@@ -101,18 +86,20 @@ export default function RacePage() {
       withTimeout(fetchPitStops(race.id), 12_000, 'Pit stops'),
       withTimeout(fetchRaceEvents(race.id), 12_000, 'Race events'),
       withTimeout(fetchLapPositions(race.id), 18_000, 'Lap positions'),
+      withTimeout(fetchLapTimes(race.id), 18_000, 'Lap times'),
     ])
-      .then(([p, e, l]) => {
+      .then(([p, e, l, lt]) => {
         if (cancelled) return
         setDbPitStops(p || [])
         setDbEvents(e || [])
         setDbLaps(l || [])
+        setDbLapTimes(lt || [])
       })
       .catch((err) => { if (!cancelled) setDbError(err?.message || 'Failed to load race analytics') })
       .finally(() => { if (!cancelled) setDbLoading(false) })
 
     return () => { cancelled = true }
-  }, [activeTab, dbEvents.length, dbLaps.length, dbLoading, dbPitStops.length, fetchLapPositions, fetchPitStops, fetchRaceEvents, race?.id])
+  }, [activeTab, dbEvents.length, dbLaps.length, dbLapTimes.length, dbLoading, dbPitStops.length, fetchLapPositions, fetchLapTimes, fetchPitStops, fetchRaceEvents, race?.id])
 
   useEffect(() => {
     if (!race?.date) { setPreviousEdition(null); return }
@@ -188,38 +175,8 @@ export default function RacePage() {
     return parts.length ? parts[parts.length - 1] : '—'
   }
 
-  // Load OpenF1 pit stops + events only when those tabs are opened
-  useEffect(() => {
-    if (!race?.openf1_session_key) return
-    if (activeTab !== 'pits' && activeTab !== 'events') return
-    if (of1Loading || pitStops.length || events.length) return
-
-    const sk = race.openf1_session_key
-    setOf1Loading(true)
-    setOf1Error(null)
-
-    const load = async () => {
-      const driversData = await openf1Fetch(`/drivers?session_key=${sk}`)
-      await delay(300)
-      const pitsData = await openf1Fetch(`/pit?session_key=${sk}`)
-      await delay(300)
-      const rcData = await openf1Fetch(`/race_control?session_key=${sk}`)
-      const dMap = {}
-      driversData.forEach(d => { dMap[d.driver_number] = d })
-      setOf1Drivers(dMap)
-      setPitStops(pitsData)
-      setEvents(rcData.filter(e =>
-        (e.category === 'Flag' && e.flag && !['GREEN', 'CLEAR'].includes(e.flag) && e.scope === 'Track') ||
-        e.category === 'SafetyCar' ||
-        (e.category === 'SessionStatus' && ['Started', 'Finished', 'Aborted'].includes(e.message))
-      ))
-    }
-    load().catch(err => setOf1Error(err.message)).finally(() => setOf1Loading(false))
-  }, [race?.openf1_session_key, activeTab])
-
   const totalLaps = results[0]?.laps || 0
-  const hasOf1 = !!race?.openf1_session_key
-  const reloadDb = () => { setDbPitStops([]); setDbEvents([]); setDbLaps([]) }
+  const reloadDb = () => { setDbPitStops([]); setDbEvents([]); setDbLaps([]); setDbLapTimes([]) }
 
   const pitByDriver = useMemo(() => {
     const map = {}
@@ -273,6 +230,67 @@ export default function RacePage() {
     })
     return best
   }, [results])
+
+  const worstQualiDelta = useMemo(() => {
+    const qByDriver = new Map(qualifying.filter(q => q?.driver_id).map(q => [q.driver_id, q]))
+    let worst = null
+    for (const r of results) {
+      if (!r?.driver_id) continue
+      const qualiPos = Number(qByDriver.get(r.driver_id)?.position)
+      const racePos = Number(r.position)
+      if (!Number.isFinite(qualiPos) || !Number.isFinite(racePos)) continue
+      const delta = qualiPos - racePos
+      if (!worst || delta < worst.delta) worst = { driverId: r.driver_id, driver: r.drivers, qualiPos, racePos, delta }
+    }
+    return worst
+  }, [qualifying, results])
+
+  const paceSummary = useMemo(() => summarizeLapTimes(dbLapTimes), [dbLapTimes])
+
+  const bestPace = useMemo(() => {
+    let best = null
+    const byId = new Map(results.map(r => [r.driver_id, r.drivers]))
+    for (const [driverId, s] of paceSummary.entries()) {
+      if (!Number.isFinite(s.avgMs) || !s.n) continue
+      if (!best || s.avgMs < best.avgMs) best = { driverId, driver: byId.get(driverId) || null, ...s }
+    }
+    return best
+  }, [paceSummary, results])
+
+  const driverOfDay = useMemo(() => {
+    if (!results.length) return null
+    const picks = []
+    for (const r of results) {
+      if (!r?.driver_id) continue
+      const finish = Number(r.position)
+      if (!Number.isFinite(finish)) continue
+      const grid = Number(r.grid)
+      const gained = (Number.isFinite(grid) ? (grid - finish) : 0)
+      const pace = paceSummary.get(r.driver_id)
+      const avgMs = pace?.avgMs
+      const stdMs = pace?.stdMs
+
+      const finishScore = Math.max(0, Math.min(1, (20 - Math.min(20, Math.max(1, finish))) / 19)) * 40
+      const gainScore = Math.max(0, Math.min(15, gained)) / 15 * 40
+      const consistencyScore = Number.isFinite(stdMs) ? (Math.max(0, 1 - Math.min(1, stdMs / 3500)) * 20) : 0
+      const score = Math.round(finishScore + gainScore + consistencyScore)
+
+      picks.push({
+        driverId: r.driver_id,
+        driver: r.drivers,
+        team: r.teams,
+        finish,
+        grid: Number.isFinite(grid) ? grid : null,
+        gained,
+        avgMs,
+        stdMs,
+        score,
+      })
+    }
+
+    picks.sort((a, b) => (b.score - a.score) || (a.finish - b.finish))
+    return picks[0] || null
+  }, [paceSummary, results])
 
   const timelineItems = useMemo(() => {
     const driverById = new Map(results.map(r => [r.driver_id, r.drivers]))
@@ -512,8 +530,19 @@ export default function RacePage() {
           {dbLoading && <Spinner />}
           {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
           {!dbLoading && !dbError && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <InsightCard
+            <div className="space-y-3">
+              <InsightsPanel
+                title="Race Insights"
+                items={[
+                  { label: 'Driver of Day', value: driverOfDay?.driver?.code || driverOfDay?.driver?.name?.split(' ').pop() || '\u2014', sub: driverOfDay ? `Score ${driverOfDay.score}` : 'No data' },
+                  { label: 'Biggest mover', value: biggestMover ? `+${biggestMover.delta}` : '\u2014', sub: biggestMover?.driver?.code || biggestMover?.driver?.name || '\u2014', trend: biggestMover ? 'up' : null },
+                  { label: 'Best pace', value: bestPace?.avgMs ? formatMs(bestPace.avgMs) : '\u2014', sub: bestPace?.driver?.code || bestPace?.driver?.name || '\u2014' },
+                  { label: 'Worst quali delta', value: worstQualiDelta?.delta != null ? String(worstQualiDelta.delta) : '\u2014', sub: worstQualiDelta?.driver?.code || worstQualiDelta?.driver?.name || '\u2014', trend: worstQualiDelta?.delta < 0 ? 'down' : null },
+                ]}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <InsightCard
                 tone="gold"
                 title="Winner"
                 subtitle="Race result P1"
@@ -589,7 +618,32 @@ export default function RacePage() {
                   </div>
                 )}
               </InsightCard>
+
+              <InsightCard
+                tone="accent"
+                title="Driver of the Day"
+                subtitle="Computed (gain + finish + consistency)"
+              >
+                {driverOfDay ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-bold truncate">{driverOfDay.driver?.name || '\u2014'}</div>
+                      <Badge color="red">{driverOfDay.score}</Badge>
+                    </div>
+                    <div className="text-xs text-secondary">
+                      {driverOfDay.grid != null ? `Grid P${driverOfDay.grid} â†’ P${driverOfDay.finish}` : `Finish P${driverOfDay.finish}`}
+                      {driverOfDay.gained > 0 ? ` Â· +${driverOfDay.gained}` : ''}
+                      {driverOfDay.avgMs ? ` Â· avg ${formatMs(driverOfDay.avgMs)}` : ''}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-secondary">Not enough data.</div>
+                )}
+              </InsightCard>
             </div>
+
+            <RaceWeekendFlow practiceResults={practiceResults} qualifying={qualifying} results={results} />
+          </div>
           )}
         </div>
       )}
@@ -906,70 +960,78 @@ export default function RacePage() {
         </Card>
       )}
 
-      {/* Pit Stops — OpenF1 */}
+      {/* Pit Stops */}
       {activeTab === 'pits' && (
-        <Card>
-          <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--text-secondary)' }}>Pit Stop Timeline</h2>
-          {!hasOf1 ? (
-            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
-          ) : of1Loading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm" style={{ color: 'var(--text-muted)' }}><Spinner />Loading...</div>
-          ) : of1Error ? (
-            <p className="text-f1red text-sm text-center py-4">{of1Error}</p>
-          ) : pitStops.length === 0 ? (
-            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No pit stop data.</p>
-          ) : (
-            <div className="relative">
-              <div className="absolute left-16 top-0 bottom-0 w-px bg-border" />
-              <div className="space-y-3">
-                {[...pitStops].sort((a, b) => a.lap_number - b.lap_number).map((pit, i) => {
-                  const d = of1Drivers[pit.driver_number]
-                  return (
-                    <div key={i} className="flex items-center gap-4">
-                      <span className="text-xs w-14 text-right shrink-0" style={{ color: 'var(--text-muted)' }}>Lap {pit.lap_number}</span>
-                      <div className="w-2 h-2 rounded-full bg-f1red shrink-0 relative z-10" />
-                      <div className="glass px-3 py-2 flex-1 flex items-center gap-3">
-                        {d?.team_colour && <div className="w-1 h-4 rounded-full" style={{ backgroundColor: `#${d.team_colour}` }} />}
-                        <span className="text-sm font-medium">{d?.name_acronym || `#${pit.driver_number}`}</span>
-                        <span className="text-xs flex-1" style={{ color: 'var(--text-muted)' }}>{d?.full_name}</span>
-                        {pit.pit_duration && <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{pit.pit_duration.toFixed(1)}s</span>}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+        <div className="space-y-3">
+          {dbLoading && <Spinner />}
+          {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
+          {!dbLoading && !dbError && (
+            <>
+              <PitStrategy pitStops={dbPitStops} results={results} totalLaps={totalLaps} />
+              <Card className="p-0 overflow-hidden">
+                <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <div className="text-sm font-bold">Pit stops</div>
+                </div>
+                {dbPitStops.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No pit stops imported.</div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr style={{ fontSize: 10, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
+                        <th className="text-left py-3 pl-5 w-16">Lap</th>
+                        <th className="text-left py-3">Driver</th>
+                        <th className="text-right py-3 pr-5 w-28">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...dbPitStops].sort((a, b) => (a.lap || 0) - (b.lap || 0)).slice(0, 120).map((p, idx) => (
+                        <tr key={`${p.id || idx}`} className="border-b" style={{ borderColor: 'var(--border)' }}>
+                          <td className="py-2 pl-5 text-xs tabular-nums" style={{ color: 'var(--text-secondary)' }}>{p.lap ?? '\u2014'}</td>
+                          <td className="py-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{p.drivers?.name || '\u2014'}</td>
+                          <td className="py-2 pr-5 text-right text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{p.duration || '\u2014'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </Card>
+            </>
           )}
-        </Card>
+        </div>
       )}
 
-      {/* Events — OpenF1 */}
+      {/* Events */}
       {activeTab === 'events' && (
-        <Card>
-          <h2 className="text-sm font-bold mb-4" style={{ color: 'var(--text-secondary)' }}>Race Control</h2>
-          {!hasOf1 ? (
-            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No OpenF1 session linked. Run "Sync Session Keys" in Admin.</p>
-          ) : of1Loading ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm" style={{ color: 'var(--text-muted)' }}><Spinner />Loading...</div>
-          ) : of1Error ? (
-            <p className="text-f1red text-sm text-center py-4">{of1Error}</p>
-          ) : events.length === 0 ? (
-            <p className="text-sm text-center py-4" style={{ color: 'var(--text-muted)' }}>No events recorded.</p>
-          ) : (
-            <div className="space-y-2">
-              {events.map((ev, i) => {
-                const color = FLAG_COLOR[ev.flag] || (ev.category === 'SafetyCar' ? 'yellow' : 'gray')
-                return (
-                  <div key={i} className="flex items-start gap-3 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
-                    <Badge color={color}>{ev.flag || ev.category}</Badge>
-                    <span className="text-sm flex-1" style={{ color: 'var(--text-secondary)' }}>{ev.message}</span>
-                    {ev.lap_number && <span className="text-xs shrink-0" style={{ color: 'var(--text-muted)' }}>Lap {ev.lap_number}</span>}
-                  </div>
-                )
-              })}
-            </div>
+        <div className="space-y-3">
+          {dbLoading && <Spinner />}
+          {dbError && <ErrorState message={dbError} onRetry={reloadDb} />}
+          {!dbLoading && !dbError && (
+            <Card className="p-0 overflow-hidden">
+              <div className="px-5 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="text-sm font-bold">Race events</div>
+              </div>
+              {dbEvents.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No race events imported.</div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                  {[...dbEvents].sort((a, b) => (a.lap || 0) - (b.lap || 0)).slice(0, 200).map((e, idx) => (
+                    <div key={`${e.id || idx}`} className="px-5 py-3 flex items-start gap-3">
+                      <Badge color={e.type === 'red_flag' ? 'red' : e.type === 'safety_car' ? 'yellow' : 'gray'}>
+                        {(e.type || 'event').replace('_', ' ')}
+                      </Badge>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                          Lap {e.lap ?? '\u2014'}
+                        </div>
+                        {e.description && <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{e.description}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Highlights */}

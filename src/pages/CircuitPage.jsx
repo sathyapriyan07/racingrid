@@ -22,6 +22,8 @@ export default function CircuitPage() {
   const [winnerRows, setWinnerRows] = useState([])
   const [podiumRows, setPodiumRows] = useState([])
   const [poleRows, setPoleRows] = useState([])
+  const [insights, setInsights] = useState(null)
+  const [insightsLoading, setInsightsLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('overview')
 
@@ -71,10 +73,78 @@ export default function CircuitPage() {
           winner: winnerMap[r.id] || null,
           sprintWinner: sprintMap[r.id] || null,
         })))
+
+        // Insights (last 3 races): overtakes + pit frequency
+        const recentRaceIds = raceIds.slice(0, 3)
+        if (recentRaceIds.length) {
+          setInsightsLoading(true)
+          const [pitsRes, lapsRes] = await Promise.all([
+            supabase.from('pit_stops').select('race_id, driver_id').in('race_id', recentRaceIds),
+            supabase.from('laps').select('race_id, driver_id, lap_number, position').in('race_id', recentRaceIds).order('lap_number'),
+          ])
+
+          const pits = pitsRes?.error
+            ? (pitsRes.error.code === '42P01' ? [] : [])
+            : (pitsRes.data || [])
+
+          const laps = lapsRes?.error
+            ? (lapsRes.error.code === '42P01' ? [] : [])
+            : (lapsRes.data || [])
+
+          const driverSet = new Set(laps.map(l => l.driver_id).filter(Boolean))
+          const driverCount = driverSet.size || new Set(pits.map(p => p.driver_id).filter(Boolean)).size || 0
+
+          const grouped = {}
+          for (const l of laps) {
+            if (!l?.race_id || !l?.driver_id || l.position == null || l.lap_number == null) continue
+            const k = `${l.race_id}_${l.driver_id}`
+            if (!grouped[k]) grouped[k] = []
+            grouped[k].push(l)
+          }
+
+          let totalOvertakes = 0
+          Object.values(grouped).forEach(list => {
+            const sorted = [...list].sort((a, b) => (a.lap_number || 0) - (b.lap_number || 0))
+            let prev = null
+            for (const row of sorted) {
+              const pos = Number(row.position)
+              if (!Number.isFinite(pos)) continue
+              if (prev != null) {
+                const gained = prev - pos
+                if (gained > 0) totalOvertakes += gained
+              }
+              prev = pos
+            }
+          })
+
+          const pitCount = pits.length
+          const sampleRaces = recentRaceIds.length
+          const overtakePerDriverRace = driverCount ? (totalOvertakes / (driverCount * sampleRaces)) : null
+          const pitPerDriverRace = driverCount ? (pitCount / (driverCount * sampleRaces)) : null
+
+          const clamp01 = (n) => Math.max(0, Math.min(1, n))
+          const overtakeScore = overtakePerDriverRace == null ? 0 : clamp01(overtakePerDriverRace / 3)
+          const pitScore = pitPerDriverRace == null ? 0 : clamp01(pitPerDriverRace / 1.2)
+          const difficulty = Math.round(100 * (0.6 * overtakeScore + 0.4 * pitScore))
+
+          setInsights({
+            sampleRaces,
+            driverCount,
+            totalOvertakes,
+            pitCount,
+            overtakePerDriverRace,
+            pitPerDriverRace,
+            difficulty,
+          })
+          setInsightsLoading(false)
+        } else {
+          setInsights(null)
+        }
       } catch (err) {
         console.error(err)
       } finally {
         setLoading(false)
+        setInsightsLoading(false)
       }
     }
     load()
@@ -257,6 +327,30 @@ export default function CircuitPage() {
               ))}
             </div>
           )}
+
+          <Card className="p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+              <div>
+                <div className="text-sm font-bold">Insights</div>
+                <div className="text-xs mt-0.5 text-secondary">Difficulty rating (derived from overtakes + pit frequency)</div>
+              </div>
+              {insights?.sampleRaces ? (
+                <span className="text-xs text-secondary">Last {insights.sampleRaces} races</span>
+              ) : null}
+            </div>
+            {insightsLoading ? (
+              <div className="px-5 py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Loading insights...</div>
+            ) : !insights ? (
+              <div className="px-5 py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>Not enough data to generate insights.</div>
+            ) : (
+              <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCard label="Difficulty" value={insights.difficulty} sub="/ 100" />
+                <StatCard label="Overtakes" value={insights.totalOvertakes} sub={insights.driverCount ? `${insights.driverCount} drivers` : ''} />
+                <StatCard label="Pit stops" value={insights.pitCount} sub={insights.driverCount ? `${insights.driverCount} drivers` : ''} />
+                <StatCard label="Pit freq" value={insights.pitPerDriverRace != null ? insights.pitPerDriverRace.toFixed(2) : 'â€”'} sub="stops/driver/race" />
+              </div>
+            )}
+          </Card>
 
           {/* Circuit Layout */}
           {circuit.layout_image && (

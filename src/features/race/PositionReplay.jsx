@@ -72,6 +72,44 @@ export default function PositionReplay({ laps = [], results = [] }) {
     return Array.from(lapMap.values())
   }, [laps, maxLap])
 
+  const movers = useMemo(() => {
+    const driverIndex = new Map(drivers.map(d => [d.id, d]))
+    const byDriver = new Map() // driverId -> { first, last, delta }
+
+    const grouped = {}
+    for (const l of laps || []) {
+      if (!l?.driver_id || l?.lap_number == null || l.position == null) continue
+      if (!grouped[l.driver_id]) grouped[l.driver_id] = []
+      grouped[l.driver_id].push(l)
+    }
+
+    for (const [driverId, list] of Object.entries(grouped)) {
+      const sorted = [...list].sort((a, b) => (a.lap_number || 0) - (b.lap_number || 0))
+      const first = sorted.find(x => x.position != null)?.position
+      const last = [...sorted].reverse().find(x => x.position != null)?.position
+      const f = Number(first)
+      const la = Number(last)
+      if (!Number.isFinite(f) || !Number.isFinite(la)) continue
+      byDriver.set(driverId, { first: f, last: la, delta: f - la, driver: driverIndex.get(driverId) || null })
+    }
+
+    let bestGain = null
+    let worstLoss = null
+    for (const [driverId, s] of byDriver.entries()) {
+      if (!bestGain || s.delta > bestGain.delta) bestGain = { driverId, ...s }
+      if (!worstLoss || s.delta < worstLoss.delta) worstLoss = { driverId, ...s }
+    }
+
+    return { bestGain, worstLoss }
+  }, [laps, drivers])
+
+  const highlightIds = useMemo(() => {
+    const ids = []
+    if (movers.bestGain?.driverId) ids.push(movers.bestGain.driverId)
+    if (movers.worstLoss?.driverId) ids.push(movers.worstLoss.driverId)
+    return ids
+  }, [movers.bestGain?.driverId, movers.worstLoss?.driverId])
+
   const activeDrivers = useMemo(() => {
     const set = new Set(selectedIds)
     return drivers.filter(d => set.has(d.id))
@@ -107,6 +145,20 @@ export default function PositionReplay({ laps = [], results = [] }) {
           <div>
             <div className="text-xs font-semibold uppercase tracking-widest text-secondary">Replay</div>
             <div className="text-sm font-bold mt-1">Lap {currentLap} / {maxLap}</div>
+            {(movers.bestGain || movers.worstLoss) && (
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {movers.bestGain && (
+                  <Badge color="green">
+                    Biggest gain: {movers.bestGain.driver?.label || '—'} +{movers.bestGain.delta}
+                  </Badge>
+                )}
+                {movers.worstLoss && movers.worstLoss.delta < 0 && (
+                  <Badge color="red">
+                    Biggest loss: {movers.worstLoss.driver?.label || '—'} {movers.worstLoss.delta}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -141,6 +193,7 @@ export default function PositionReplay({ laps = [], results = [] }) {
         <div className="mt-4 flex flex-wrap gap-1.5">
           {drivers.slice(0, 14).map(d => {
             const on = selectedIds.includes(d.id)
+            const isHighlight = highlightIds.includes(d.id)
             return (
               <button
                 key={d.id}
@@ -148,7 +201,7 @@ export default function PositionReplay({ laps = [], results = [] }) {
                 className="transition-opacity"
                 style={{ opacity: on ? 1 : 0.55 }}
               >
-                <Badge color={on ? 'red' : 'gray'}>
+                <Badge color={isHighlight ? (movers.bestGain?.driverId === d.id ? 'green' : 'red') : (on ? 'red' : 'gray')}>
                   <span className="inline-flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
                     {d.label}
@@ -196,7 +249,8 @@ export default function PositionReplay({ laps = [], results = [] }) {
                 dataKey={d.id}
                 name={d.label}
                 stroke={d.color}
-                strokeWidth={2}
+                strokeWidth={highlightIds.includes(d.id) ? 3 : 2}
+                strokeOpacity={highlightIds.length ? (highlightIds.includes(d.id) ? 1 : 0.75) : 1}
                 dot={false}
                 isAnimationActive={false}
                 connectNulls
@@ -208,4 +262,3 @@ export default function PositionReplay({ laps = [], results = [] }) {
     </div>
   )
 }
-

@@ -6,9 +6,11 @@ import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { Spinner, Card, Badge, StatCard, Select, ErrorState, SkeletonHero, SkeletonTable } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
 import TrendChart from '../components/charts/TrendChart'
+import PointsProgressionChart from '../components/charts/PointsProgressionChart'
 import { Trophy, ChevronDown, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react'
 import { useSettingsStore } from '../store/settingsStore'
-import { buildQualiRaceDelta, calcConsistency, calcOvertakesFromLaps } from '../utils/insights'
+import { buildQualiRaceDelta, calcConsistency, calcOvertakesFromLaps, parseLapTimeToMs, formatMs } from '../utils/insights'
+import FormGuide from '../components/insights/FormGuide'
 
 function Icon({ settingKey, emoji, className = '' }) {
   const url = useSettingsStore(s => s.settings[settingKey])
@@ -129,11 +131,14 @@ export default function DriverPage() {
   const [champYears, setChampYears] = useState([])
   const [allTeamChamps, setAllTeamChamps] = useState({})
   const [poleRows, setPoleRows] = useState([])
-  const [driverLaps, setDriverLaps] = useState([])
   const [allTeamResults, setAllTeamResults] = useState([])
   const [allTeamQualifying, setAllTeamQualifying] = useState([])
   const [perfYear, setPerfYear] = useState('all')
   const [perfLaps, setPerfLaps] = useState([])
+  const [paceStats, setPaceStats] = useState(null)
+  const [paceLoading, setPaceLoading] = useState(false)
+  const [paceError, setPaceError] = useState(null)
+  const [paceNonce, setPaceNonce] = useState(0)
   const [mateYear, setMateYear] = useState('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -154,18 +159,12 @@ export default function DriverPage() {
         .eq('position', 1)
         .then(({ data }) => data || []),
       supabase
-        .from('laps')
-        .select('race_id, lap_time')
-        .eq('driver_id', id)
-        .not('lap_time', 'is', null)
-        .then(({ data }) => data || []),
-      supabase
         .from('qualifying_results')
         .select('race_id, team_id, position, q1, q2, q3, races(id, name, date, round, seasons(year))')
         .eq('driver_id', id)
         .then(({ data }) => (data || []).sort((a, b) => (a.races?.date || '').localeCompare(b.races?.date || ''))),
     ])
-      .then(([d, r, champs, p, driverLaps, qRows]) => {
+      .then(([d, r, champs, p, qRows]) => {
         if (cancelled) return
         setDriver(d)
         setResults(r || [])
@@ -173,7 +172,6 @@ export default function DriverPage() {
         setChampYears(champs.driverChamps[id] || [])
         setAllTeamChamps(champs.teamChamps || {})
         setPoleRows(p || [])
-        setDriverLaps(driverLaps || [])
         // fetch all results for teams this driver raced with, to compute teammates
         const teamIds = [...new Set((r || []).map(x => x.team_id).filter(Boolean))]
         const raceIds = [...new Set((r || []).map(x => x.race_id).filter(Boolean))]
@@ -228,20 +226,59 @@ export default function DriverPage() {
     return () => { cancelled = true }
   }, [id, perfYear, results, tab])
 
+  useEffect(() => {
+    if (tab !== 'performance') { setPaceStats(null); setPaceError(null); setPaceLoading(false); return }
+
+    const raceIds = formGuideRows.map(r => r.raceId).filter(Boolean)
+    if (!raceIds.length) { setPaceStats(null); setPaceError(null); setPaceLoading(false); return }
+
+    let cancelled = false
+    setPaceLoading(true)
+    setPaceError(null)
+
+    supabase
+      .from('laps')
+      .select('race_id, lap_time')
+      .eq('driver_id', id)
+      .in('race_id', raceIds)
+      .not('lap_time', 'is', null)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          if (error.code === '42P01') { setPaceStats(null); return }
+          throw error
+        }
+
+        let n = 0
+        let sum = 0
+        let sumSq = 0
+        for (const row of (data || [])) {
+          const ms = parseLapTimeToMs(row.lap_time)
+          if (!Number.isFinite(ms)) continue
+          n += 1
+          sum += ms
+          sumSq += ms * ms
+        }
+        if (!n) { setPaceStats(null); return }
+        const avg = sum / n
+        const variance = Math.max(0, sumSq / n - avg * avg)
+        const std = Math.sqrt(variance)
+        setPaceStats({ avgMs: avg, stdMs: std, n, races: raceIds.length })
+      })
+      .catch((err) => { if (!cancelled) setPaceError(err?.message || 'Failed to load pace stats') })
+      .finally(() => { if (!cancelled) setPaceLoading(false) })
+
+    return () => { cancelled = true }
+  }, [formGuideRows, id, paceNonce, tab])
+
   const wins = results.filter(r => r.position === 1).length
   const podiums = results.filter(r => r.position <= 3).length
   const poles = results.filter(r => r.grid === 1).length
   const totalPoints = results.reduce((s, r) => s + (parseFloat(r.points) || 0), 0)
   const fastestLaps = useMemo(() => {
     if (driver?.fastest_laps != null) return driver.fastest_laps
-    const byRace = {}
-    for (const lap of driverLaps) {
-      if (!lap.race_id || !lap.lap_time) continue
-      if (!byRace[lap.race_id] || lap.lap_time < byRace[lap.race_id]) byRace[lap.race_id] = lap.lap_time
-    }
-    const fromStatus = results.filter(r => /fastest.?lap/i.test(r.status || '')).length
-    return Object.keys(byRace).length > 0 ? Object.keys(byRace).length : fromStatus
-  }, [driver, driverLaps, results])
+    return results.filter(r => /fastest.?lap/i.test(r.status || '')).length
+  }, [driver, results])
 
   const racesByDate = results
     .filter(r => r.races?.date)
@@ -278,6 +315,39 @@ export default function DriverPage() {
       points: parseFloat(r.points) || 0,
     }))
   ), [perfResults])
+
+  const formGuideRows = useMemo(() => {
+    const sorted = perfResults
+      .filter(r => r?.race_id && r?.races?.date)
+      .slice()
+      .sort((a, b) => (b.races?.date || '').localeCompare(a.races?.date || ''))
+      .slice(0, 5)
+
+    return sorted.map((r) => {
+      const grid = Number(r.grid)
+      const pos = Number(r.position)
+      const delta = (Number.isFinite(grid) && Number.isFinite(pos)) ? (grid - pos) : 0
+      return {
+        raceId: r.race_id,
+        round: r.races?.round,
+        position: Number.isFinite(pos) ? pos : null,
+        delta,
+      }
+    })
+  }, [perfResults])
+
+  const cumulativePointsData = useMemo(() => {
+    const sorted = perfResults
+      .filter(r => r?.races?.round != null && r?.race_id)
+      .slice()
+      .sort((a, b) => (a.races?.round || 0) - (b.races?.round || 0))
+
+    let total = 0
+    return sorted.map((r) => {
+      total += parseFloat(r.points) || 0
+      return { round: r.races?.round, points: Math.round(total * 10) / 10 }
+    })
+  }, [perfResults])
 
   const perfQuali = useMemo(() => {
     if (perfYear === 'all') return qualifyingRows
@@ -689,6 +759,29 @@ export default function DriverPage() {
       {/* ── Performance ── */}
       {tab === 'performance' && (
         <div className="space-y-3">
+          <FormGuide title="Form Guide (last 5)" rows={formGuideRows} />
+
+          <Card className="p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Race pace</div>
+                <div className="text-xs mt-1 text-secondary">Average lap time + consistency (last {formGuideRows.length} races)</div>
+              </div>
+              {paceLoading && <span className="text-xs text-secondary">Loading...</span>}
+            </div>
+            {paceError ? (
+              <div className="px-5 py-6">
+                <ErrorState message={paceError} onRetry={() => { setPaceError(null); setPaceNonce(n => n + 1) }} />
+              </div>
+            ) : (
+              <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatCard label="Avg Lap" value={paceStats?.avgMs ? formatMs(paceStats.avgMs) : '\u2014'} sub={paceStats ? `${paceStats.n} laps` : 'No lap time data'} />
+                <StatCard label="Consistency" value={paceStats?.stdMs ? formatMs(paceStats.stdMs) : '\u2014'} sub={paceStats ? 'Std dev' : '\u2014'} />
+                <StatCard label="Sample" value={paceStats?.races ?? '\u2014'} sub="Races" />
+                <StatCard label="Season" value={perfYear === 'all' ? 'Career' : perfYear} sub="Filter" />
+              </div>
+            )}
+          </Card>
           <Card>
             <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
               <div>
@@ -720,6 +813,23 @@ export default function DriverPage() {
               </div>
             </div>
             <PerformanceChart data={pointsChartData} dataKey="points" label="Points" />
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Points progression</p>
+                <p className="text-xs mt-1 text-secondary">Cumulative points by round</p>
+              </div>
+              <div className="text-xs font-semibold text-secondary tabular-nums">
+                Total: {cumulativePointsData.length ? cumulativePointsData[cumulativePointsData.length - 1]?.points : '\u2014'}
+              </div>
+            </div>
+            {cumulativePointsData.length ? (
+              <PointsProgressionChart data={cumulativePointsData} xKey="round" yKey="points" label="Cumulative" />
+            ) : (
+              <div className="text-xs text-center py-10" style={{ color: 'var(--text-muted)' }}>Not enough round data for this season.</div>
+            )}
           </Card>
 
           <Card className="p-0 overflow-hidden">

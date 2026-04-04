@@ -105,6 +105,22 @@ export const useDataStore = create((set, get) => ({
     return data
   },
 
+  fetchLapTimes: async (raceId) => {
+    const key = `laptimes_${raceId}`
+    if (get().cache[key]) return get().cache[key]
+    const { data, error } = await supabase
+      .from('laps')
+      .select('race_id, driver_id, lap_number, lap_time')
+      .eq('race_id', raceId)
+      .order('lap_number')
+    if (error) {
+      if (error.code === '42P01') return []
+      throw error
+    }
+    set(s => ({ cache: { ...s.cache, [key]: data } }))
+    return data
+  },
+
   fetchPitStops: async (raceId) => {
     const key = `pits_${raceId}`
     if (get().cache[key]) return get().cache[key]

@@ -94,3 +94,43 @@ export function calcOvertakesFromLaps(laps = []) {
   return totals
 }
 
+export function parseLapTimeToMs(value) {
+  if (value == null) return null
+  const s = String(value).trim()
+  if (!s) return null
+
+  // numeric seconds or ms as string
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const n = Number(s)
+    if (!Number.isFinite(n)) return null
+    // assume seconds when below 10k
+    return n > 10_000 ? Math.round(n) : Math.round(n * 1000)
+  }
+
+  // "M:SS.mmm" or "SS.mmm"
+  const parts = s.split(':')
+  if (parts.length === 1) {
+    const sec = Number(parts[0])
+    if (!Number.isFinite(sec)) return null
+    return Math.round(sec * 1000)
+  }
+  if (parts.length === 2) {
+    const min = Number(parts[0])
+    const sec = Number(parts[1])
+    if (!Number.isFinite(min) || !Number.isFinite(sec)) return null
+    return Math.round((min * 60 + sec) * 1000)
+  }
+  return null
+}
+
+export function formatMs(ms) {
+  if (!Number.isFinite(ms)) return '—'
+  const total = Math.max(0, Math.round(ms))
+  const min = Math.floor(total / 60_000)
+  const rem = total - min * 60_000
+  const sec = Math.floor(rem / 1000)
+  const milli = rem - sec * 1000
+  const secStr = String(sec).padStart(2, '0')
+  const msStr = String(milli).padStart(3, '0')
+  return `${min}:${secStr}.${msStr}`
+}

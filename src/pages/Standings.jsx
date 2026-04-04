@@ -5,6 +5,7 @@ import { useDataStore } from '../store/dataStore'
 import { Spinner, Card, SearchSelect } from '../components/ui'
 import { Trophy, ArrowUp, ArrowDown } from 'lucide-react'
 import { motion } from 'framer-motion'
+import PressureMeter from '../components/visual/PressureMeter'
 
 export default function Standings() {
   const { fetchSeasons, seasons } = useDataStore()
@@ -13,6 +14,8 @@ export default function Standings() {
   const [teamRows, setTeamRows] = useState([])
   const [driverDeltaById, setDriverDeltaById] = useState({})
   const [teamDeltaById, setTeamDeltaById] = useState({})
+  const [driverFormById, setDriverFormById] = useState({})
+  const [teamFormById, setTeamFormById] = useState({})
   const [loading, setLoading] = useState(() => !useDataStore.getState().seasons.length)
   const [standingsLoading, setStandingsLoading] = useState(false)
   const [tab, setTab] = useState('drivers')
@@ -28,6 +31,8 @@ export default function Standings() {
     const load = async () => {
       setDriverDeltaById({})
       setTeamDeltaById({})
+      setDriverFormById({})
+      setTeamFormById({})
 
       const [d, t] = await Promise.all([
         supabase.from('driver_standings').select('*, drivers(id, name, code, image_url), teams(id, name, logo_url)').eq('season_id', selectedSeason.id).order('position'),
@@ -39,7 +44,7 @@ export default function Standings() {
 
       const { data: seasonResults, error } = await supabase
         .from('results')
-        .select('driver_id, team_id, points, position, races!inner(round, season_id)')
+        .select('driver_id, team_id, points, position, races!inner(id, round, season_id)')
         .eq('races.season_id', selectedSeason.id)
       if (error || !seasonResults?.length || cancelled) return
 
@@ -83,6 +88,37 @@ export default function Standings() {
         setDriverDeltaById(driverDelta)
         setTeamDeltaById(teamDelta)
       }
+
+      const uniqueRounds = [...new Set(rounds)].sort((a, b) => b - a)
+      const recentRounds = uniqueRounds.slice(0, 5).sort((a, b) => a - b)
+      const driverForm = {}
+      const teamForm = {}
+
+      for (const r of seasonResults) {
+        const round = r?.races?.round
+        if (typeof round !== 'number' || !recentRounds.includes(round)) continue
+        const pos = Number(r.position)
+        const entry = { round, position: Number.isFinite(pos) ? pos : null, raceId: r?.races?.id || null }
+        if (r.driver_id) {
+          if (!driverForm[r.driver_id]) driverForm[r.driver_id] = {}
+          driverForm[r.driver_id][round] = entry
+        }
+        if (r.team_id) {
+          if (!teamForm[r.team_id]) teamForm[r.team_id] = {}
+          // team has two results per round; keep the better position for quick form.
+          const prev = teamForm[r.team_id][round]
+          if (!prev || (entry.position != null && (prev.position == null || entry.position < prev.position))) teamForm[r.team_id][round] = entry
+        }
+      }
+
+      const toArray = (m) => recentRounds.map(rd => m?.[rd] || { round: rd, position: null, raceId: null })
+      const driverFormById = Object.fromEntries(Object.entries(driverForm).map(([id, m]) => [id, toArray(m)]))
+      const teamFormById = Object.fromEntries(Object.entries(teamForm).map(([id, m]) => [id, toArray(m)]))
+
+      if (!cancelled) {
+        setDriverFormById(driverFormById)
+        setTeamFormById(teamFormById)
+      }
     }
 
     load().catch(console.error).finally(() => { if (!cancelled) setStandingsLoading(false) })
@@ -109,6 +145,37 @@ export default function Standings() {
     const hay = `${row.teams?.name || ''}`.toLowerCase()
     return hay.includes(q)
   })
+
+  const FormPills = ({ items = [] }) => (
+    <div className="flex items-center gap-1">
+      {items.map((it, idx) => {
+        const pos = typeof it.position === 'number' ? it.position : null
+        const color =
+          pos == null ? 'rgba(255,255,255,0.06)'
+            : pos <= 3 ? 'rgba(234,179,8,0.16)'
+              : pos <= 10 ? 'rgba(34,197,94,0.14)'
+                : 'rgba(255,255,255,0.06)'
+
+        const chip = (
+          <span
+            className="px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums border"
+            style={{ background: color, borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+            title={pos != null ? `P${pos}` : '—'}
+          >
+            {pos != null ? `P${pos}` : '\u2014'}
+          </span>
+        )
+
+        return it.raceId ? (
+          <Link key={`${it.round}_${idx}`} to={`/race/${it.raceId}`} className="hover:opacity-90 transition-opacity">
+            {chip}
+          </Link>
+        ) : (
+          <span key={`${it.round}_${idx}`}>{chip}</span>
+        )
+      })}
+    </div>
+  )
 
   return (
     <div className="space-y-8">
@@ -142,7 +209,19 @@ export default function Standings() {
       </div>
 
       {standingsLoading ? <Spinner /> : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }} className="space-y-3">
+          {tab === 'drivers' && driverRows.length > 1 && (
+            <PressureMeter
+              title="Championship Pressure"
+              rows={driverRows.map(r => ({ id: r.driver_id, name: r.drivers?.name || '—', points: r.points }))}
+            />
+          )}
+          {tab === 'constructors' && teamRows.length > 1 && (
+            <PressureMeter
+              title="Constructors Pressure"
+              rows={teamRows.map(r => ({ id: r.team_id, name: r.teams?.name || '—', points: r.points }))}
+            />
+          )}
           <Card className="p-0 overflow-hidden">
             {tab === 'drivers' ? (
               driverRows.length === 0 ? (
@@ -154,6 +233,7 @@ export default function Standings() {
                       <th className="text-left py-3 pl-5 w-10">Pos</th>
                       <th className="text-left py-3">Driver</th>
                       <th className="text-left py-3 hidden sm:table-cell">Team</th>
+                      <th className="text-left py-3 hidden lg:table-cell">Form</th>
                       <th className="text-center py-3">Wins</th>
                       <th className="text-right py-3 pr-5">Points</th>
                     </tr>
@@ -196,6 +276,9 @@ export default function Standings() {
                             {row.teams?.name || '—'}
                           </Link>
                         </td>
+                        <td className="py-3 hidden lg:table-cell">
+                          <FormPills items={driverFormById[row.driver_id] || []} />
+                        </td>
                         <td className="py-3 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.wins}</td>
                         <td className="py-3 text-right pr-5 font-bold tabular-nums">{parseFloat(row.points).toFixed(0)}</td>
                       </tr>
@@ -212,6 +295,7 @@ export default function Standings() {
                     <tr style={{ fontSize: 10, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
                       <th className="text-left py-3 pl-5 w-10">Pos</th>
                       <th className="text-left py-3">Constructor</th>
+                      <th className="text-left py-3 hidden lg:table-cell">Form</th>
                       <th className="text-center py-3">Wins</th>
                       <th className="text-right py-3 pr-5">Points</th>
                     </tr>
@@ -245,6 +329,9 @@ export default function Standings() {
                             }
                             <span className="font-semibold text-sm group-hover:text-f1red transition-colors" style={{ letterSpacing: '-0.02em' }}>{row.teams?.name}</span>
                           </Link>
+                        </td>
+                        <td className="py-3 hidden lg:table-cell">
+                          <FormPills items={teamFormById[row.team_id] || []} />
                         </td>
                         <td className="py-3 text-center text-xs" style={{ color: 'var(--text-muted)' }}>{row.wins}</td>
                         <td className="py-3 text-right pr-5 font-bold tabular-nums">{parseFloat(row.points).toFixed(0)}</td>

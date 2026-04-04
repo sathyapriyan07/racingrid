@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
-import { Spinner, StatCard, Card } from '../components/ui'
+import { Spinner, StatCard, Card, Badge } from '../components/ui'
 import PerformanceChart from '../components/charts/PerformanceChart'
+import PointsProgressionChart from '../components/charts/PointsProgressionChart'
 import { BarChart2, Flag, Trophy, ExternalLink, MapPin } from 'lucide-react'
 import { formatPeriod } from '../utils/formatPeriod'
 import { useSettingsStore } from '../store/settingsStore'
@@ -145,6 +146,52 @@ export default function TeamPage() {
   const seasons = [...new Set(results.map(r => r.races?.seasons?.year).filter(Boolean))].sort((a, b) => b - a)
   const filteredResults = seasonFilter === 'all' ? results : results.filter(r => String(r.races?.seasons?.year) === seasonFilter)
 
+  const perfYear = useMemo(() => {
+    if (seasonFilter !== 'all') {
+      const y = parseInt(seasonFilter, 10)
+      return Number.isFinite(y) ? y : (seasons[0] || null)
+    }
+    return seasons[0] || null
+  }, [seasonFilter, seasons])
+
+  const perfSeasonResults = useMemo(() => {
+    if (!perfYear) return []
+    return results.filter(r => r.races?.seasons?.year === perfYear)
+  }, [perfYear, results])
+
+  const perfPointsByRound = useMemo(() => {
+    const map = {}
+    for (const r of perfSeasonResults) {
+      const round = r?.races?.round
+      if (round == null) continue
+      if (!map[round]) map[round] = 0
+      map[round] += parseFloat(r.points) || 0
+    }
+    return Object.entries(map)
+      .map(([round, points]) => ({ round: Number(round), name: `R${round}`, points: Math.round(points * 10) / 10 }))
+      .sort((a, b) => (a.round || 0) - (b.round || 0))
+  }, [perfSeasonResults])
+
+  const perfCumulative = useMemo(() => {
+    let total = 0
+    return perfPointsByRound.map(r => {
+      total += Number(r.points) || 0
+      return { round: r.round, points: Math.round(total * 10) / 10 }
+    })
+  }, [perfPointsByRound])
+
+  const latestWeekend = useMemo(() => {
+    const sorted = perfSeasonResults
+      .filter(r => r?.race_id && r?.races?.date)
+      .slice()
+      .sort((a, b) => (b.races?.date || '').localeCompare(a.races?.date || ''))
+    const latest = sorted[0]
+    if (!latest?.race_id) return null
+    const raceId = latest.race_id
+    const rows = sorted.filter(r => r.race_id === raceId)
+    return { race: latest.races, raceId, rows: rows.sort((a, b) => (a.position || 999) - (b.position || 999)) }
+  }, [perfSeasonResults])
+
   const driverStints = useMemo(() => {
     const map = {}
     let latestYear = null
@@ -242,6 +289,7 @@ export default function TeamPage() {
     { id: 'drivers', label: 'Drivers' },
     { id: 'info', label: 'Info' },
     { id: 'results', label: 'Results' },
+    { id: 'performance', label: 'Performance' },
     { id: 'records', label: 'Records' },
     ...(partners.length > 0 ? [{ id: 'partners', label: 'Partners' }] : []),
     ...(driverChampions.length > 0 ? [{ id: 'driver-champs', label: "Drivers' Champions" }] : []),
@@ -549,6 +597,84 @@ export default function TeamPage() {
               </table>
           )}
         </Card>
+      )}
+
+      {tab === 'performance' && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setSeasonFilter(seasons[0] ? String(seasons[0]) : 'all')}
+              className={`tab-pill ${(seasonFilter === 'all' || seasonFilter === String(seasons[0] || '')) ? 'active' : ''}`}
+            >
+              Latest
+            </button>
+            {seasons.map(yr => (
+              <button key={yr} onClick={() => setSeasonFilter(String(yr))} className={`tab-pill ${seasonFilter === String(yr) ? 'active' : ''}`}>{yr}</button>
+            ))}
+          </div>
+
+          <Card className="p-0 overflow-hidden">
+            <div className="px-5 py-3 border-b flex items-center justify-between gap-3 flex-wrap" style={{ borderColor: 'var(--border)' }}>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Weekend summary</div>
+                <div className="text-xs mt-1 text-secondary">{latestWeekend?.race?.name || 'â€”'}</div>
+              </div>
+              {perfYear && <Badge color="gray">{perfYear}</Badge>}
+            </div>
+            {!latestWeekend ? (
+              <div className="px-5 py-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>No season results to summarize.</div>
+            ) : (
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {latestWeekend.rows.map((r) => (
+                  <Link key={r.id} to={`/driver/${r.driver_id}`} className="apple-card p-4 flex items-center gap-3">
+                    {r.drivers?.image_url
+                      ? <img src={r.drivers.image_url} alt={r.drivers.name} className="w-10 h-10 rounded-2xl object-cover object-top shrink-0" loading="lazy" />
+                      : <div className="w-10 h-10 rounded-2xl bg-muted shrink-0" />
+                    }
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold truncate">{r.drivers?.name || 'â€”'}</div>
+                      <div className="text-xs text-secondary mt-0.5">
+                        Grid {r.grid ?? 'â€”'} â†’ P{r.position ?? 'â€”'} Â· {r.points ?? 0} pts
+                      </div>
+                    </div>
+                    <Badge color={r.position === 1 ? 'yellow' : r.position <= 10 ? 'green' : 'gray'}>P{r.position ?? 'â€”'}</Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Team trend</p>
+                <p className="text-xs mt-1 text-secondary">Points per round</p>
+              </div>
+              <div className="text-xs font-semibold text-secondary tabular-nums">
+                Total: {perfCumulative.length ? perfCumulative[perfCumulative.length - 1]?.points : 'â€”'}
+              </div>
+            </div>
+            {perfPointsByRound.length ? (
+              <PerformanceChart data={perfPointsByRound} dataKey="points" label="Points" />
+            ) : (
+              <div className="text-xs text-center py-10" style={{ color: 'var(--text-muted)' }}>No round data for this season.</div>
+            )}
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>Cumulative points</p>
+                <p className="text-xs mt-1 text-secondary">Season progression</p>
+              </div>
+            </div>
+            {perfCumulative.length ? (
+              <PointsProgressionChart data={perfCumulative} xKey="round" yKey="points" label="Cumulative" />
+            ) : (
+              <div className="text-xs text-center py-10" style={{ color: 'var(--text-muted)' }}>No data.</div>
+            )}
+          </Card>
+        </div>
       )}
 
       {tab === 'results' && (
