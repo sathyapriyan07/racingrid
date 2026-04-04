@@ -1,16 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useDataStore } from '../store/dataStore'
-import { Spinner, PageHeader, EmptyState, Card, Badge } from '../components/ui'
+import { useDriversQuery } from '../services/queries'
+import { PageHeader, EmptyState, Card, Badge, ErrorState, SkeletonTable } from '../components/ui'
 
 export default function Drivers() {
-  const { fetchDrivers, drivers } = useDataStore()
-  const [loading, setLoading] = useState(() => !useDataStore.getState().drivers.length)
   const [search, setSearch] = useState('')
-
-  useEffect(() => {
-    fetchDrivers().catch(console.error).finally(() => setLoading(false))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const { data: drivers = [], isLoading, error, refetch } = useDriversQuery()
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -29,7 +24,8 @@ export default function Drivers() {
     })
   }, [filtered])
 
-  if (loading) return <Spinner />
+  if (isLoading) return <SkeletonTable rows={9} cols={4} />
+  if (error) return <ErrorState message={error?.message || 'Failed to load drivers.'} onRetry={() => refetch()} />
 
   return (
     <div className="space-y-10">
@@ -43,7 +39,33 @@ export default function Drivers() {
       </PageHeader>
 
       {sorted.length === 0 ? <EmptyState message="No drivers found." /> : (
-        <Card className="p-0 overflow-hidden">
+        <>
+          <div className="sm:hidden space-y-2">
+            {sorted.map(d => (
+              <Link key={d.id} to={`/driver/${d.id}`} className="block">
+                <div className="apple-card p-4 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl overflow-hidden bg-muted shrink-0">
+                    {d.image_url
+                      ? <img src={d.image_url} alt={d.name} className="w-full h-full object-cover object-top" loading="lazy" decoding="async" />
+                      : <div className="w-full h-full flex items-center justify-center text-xs font-black" style={{ color: 'var(--text-muted)' }}>{d.code || '?'}</div>
+                    }
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold truncate">{d.name}</div>
+                    <div className="text-xs font-bold text-f1red mt-0.5">{d.code || 'N/A'}</div>
+                    <div className="text-xs text-secondary mt-1 truncate">
+                      {[d.nationality, d.dob ? new Date(d.dob).getFullYear() : null].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    {d.is_active ? <Badge color="green">Active</Badge> : <Badge color="gray">Inactive</Badge>}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <Card className="p-0 overflow-hidden hidden sm:block">
           <table className="w-full table-fixed">
             <thead>
               <tr className="border-b" style={{ fontSize: 10, borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
@@ -92,8 +114,8 @@ export default function Drivers() {
             </tbody>
           </table>
         </Card>
+        </>
       )}
     </div>
   )
 }
-

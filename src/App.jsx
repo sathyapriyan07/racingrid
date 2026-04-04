@@ -1,78 +1,119 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
+import { Spinner } from './components/ui'
 
-import Home from './pages/Home'
-import Login from './pages/Login'
-import Drivers from './pages/Drivers'
-import DriverPage from './pages/DriverPage'
-import Teams from './pages/Teams'
-import TeamPage from './pages/TeamPage'
-import Circuits from './pages/Circuits'
-import CircuitPage from './pages/CircuitPage'
-import Races from './pages/Races'
-import RacePage from './pages/RacePage'
-import Compare from './pages/Compare'
-import Standings from './pages/Standings'
-import Championships from './pages/Championships'
-import SearchPage from './pages/Search'
+// Lazy-loaded public pages
+const Home           = lazy(() => import('./pages/Home'))
+const Login          = lazy(() => import('./pages/Login'))
+const Drivers        = lazy(() => import('./pages/Drivers'))
+const DriverPage     = lazy(() => import('./pages/DriverPage'))
+const Teams          = lazy(() => import('./pages/Teams'))
+const TeamPage       = lazy(() => import('./pages/TeamPage'))
+const Circuits       = lazy(() => import('./pages/Circuits'))
+const CircuitPage    = lazy(() => import('./pages/CircuitPage'))
+const Races          = lazy(() => import('./pages/Races'))
+const RacePage       = lazy(() => import('./pages/RacePage'))
+const Compare        = lazy(() => import('./pages/Compare'))
+const Standings      = lazy(() => import('./pages/Standings'))
+const Championships  = lazy(() => import('./pages/Championships'))
+const SearchPage     = lazy(() => import('./pages/Search'))
 
-import AdminLayout from './pages/admin/AdminLayout'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminImport from './pages/admin/AdminImport'
-import AdminDrivers from './pages/admin/AdminDrivers'
-import AdminTeams from './pages/admin/AdminTeams'
-import AdminCircuits from './pages/admin/AdminCircuits'
-import AdminRaces from './pages/admin/AdminRaces'
-import AdminPractice from './pages/admin/AdminPractice'
-import AdminSync from './pages/admin/AdminSync'
-import AdminMedia from './pages/admin/AdminMedia'
+// Lazy-loaded admin pages
+const AdminLayout    = lazy(() => import('./pages/admin/AdminLayout'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminImport    = lazy(() => import('./pages/admin/AdminImport'))
+const AdminDrivers   = lazy(() => import('./pages/admin/AdminDrivers'))
+const AdminTeams     = lazy(() => import('./pages/admin/AdminTeams'))
+const AdminCircuits  = lazy(() => import('./pages/admin/AdminCircuits'))
+const AdminRaces     = lazy(() => import('./pages/admin/AdminRaces'))
+const AdminPractice  = lazy(() => import('./pages/admin/AdminPractice'))
+const AdminSync      = lazy(() => import('./pages/admin/AdminSync'))
+const AdminMedia     = lazy(() => import('./pages/admin/AdminMedia'))
 
-function PublicRoute({ children }) {
-  return <Layout>{children}</Layout>
+function NotFound() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 text-center px-4">
+      <div className="text-7xl font-black" style={{ color: 'var(--accent)', letterSpacing: '-0.05em' }}>404</div>
+      <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Page not found</h1>
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>The page you're looking for doesn't exist.</p>
+      <Link to="/" className="btn-primary text-sm mt-2">Back to Home</Link>
+    </div>
+  )
 }
 
-function AdminRoute({ children }) {
-  return <AdminLayout>{children}</AdminLayout>
+function PageLoader() {
+  return <div className="min-h-[60vh] flex items-center justify-center"><Spinner /></div>
+}
+
+function StaticHostRedirector() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const redirect = params.get('redirect')
+    if (!redirect) return
+    if (!redirect.startsWith('/')) return
+    navigate(redirect, { replace: true })
+  }, [location.search, navigate])
+
+  return null
+}
+
+function AnimatedRoutes() {
+  const location = useLocation()
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+
+        {/* Public */}
+        <Route path="/"            element={<Layout><Suspense fallback={<PageLoader />}><Home /></Suspense></Layout>} />
+        <Route path="/drivers"     element={<Layout><Suspense fallback={<PageLoader />}><Drivers /></Suspense></Layout>} />
+        <Route path="/driver/:id"  element={<Layout><Suspense fallback={<PageLoader />}><DriverPage /></Suspense></Layout>} />
+        <Route path="/teams"       element={<Layout><Suspense fallback={<PageLoader />}><Teams /></Suspense></Layout>} />
+        <Route path="/team/:id"    element={<Layout><Suspense fallback={<PageLoader />}><TeamPage /></Suspense></Layout>} />
+        <Route path="/circuits"    element={<Layout><Suspense fallback={<PageLoader />}><Circuits /></Suspense></Layout>} />
+        <Route path="/circuit/:id" element={<Layout><Suspense fallback={<PageLoader />}><CircuitPage /></Suspense></Layout>} />
+        <Route path="/races"       element={<Layout><Suspense fallback={<PageLoader />}><Races /></Suspense></Layout>} />
+        <Route path="/race/:id"    element={<Layout><Suspense fallback={<PageLoader />}><RacePage /></Suspense></Layout>} />
+        <Route path="/compare"     element={<Layout><Suspense fallback={<PageLoader />}><Compare /></Suspense></Layout>} />
+        <Route path="/standings"   element={<Layout><Suspense fallback={<PageLoader />}><Standings /></Suspense></Layout>} />
+        <Route path="/championships" element={<Layout><Suspense fallback={<PageLoader />}><Championships /></Suspense></Layout>} />
+        <Route path="/search"      element={<Layout><Suspense fallback={<PageLoader />}><SearchPage /></Suspense></Layout>} />
+
+        {/* Admin */}
+        <Route path="/admin"           element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminDashboard /></AdminLayout></Suspense>} />
+        <Route path="/admin/import"    element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminImport /></AdminLayout></Suspense>} />
+        <Route path="/admin/drivers"   element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminDrivers /></AdminLayout></Suspense>} />
+        <Route path="/admin/teams"     element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminTeams /></AdminLayout></Suspense>} />
+        <Route path="/admin/circuits"  element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminCircuits /></AdminLayout></Suspense>} />
+        <Route path="/admin/races"     element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminRaces /></AdminLayout></Suspense>} />
+        <Route path="/admin/practice"  element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminPractice /></AdminLayout></Suspense>} />
+        <Route path="/admin/sync"      element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminSync /></AdminLayout></Suspense>} />
+        <Route path="/admin/media"     element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminMedia /></AdminLayout></Suspense>} />
+
+        {/* 404 */}
+        <Route path="*" element={<Layout><NotFound /></Layout>} />
+      </Routes>
+    </AnimatePresence>
+  )
 }
 
 export default function App() {
   const { init } = useAuthStore()
-
   useEffect(() => { init() }, [])
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-
-        {/* Public routes */}
-        <Route path="/" element={<PublicRoute><Home /></PublicRoute>} />
-        <Route path="/drivers" element={<PublicRoute><Drivers /></PublicRoute>} />
-        <Route path="/driver/:id" element={<PublicRoute><DriverPage /></PublicRoute>} />
-        <Route path="/teams" element={<PublicRoute><Teams /></PublicRoute>} />
-        <Route path="/team/:id" element={<PublicRoute><TeamPage /></PublicRoute>} />
-        <Route path="/circuits" element={<PublicRoute><Circuits /></PublicRoute>} />
-        <Route path="/circuit/:id" element={<PublicRoute><CircuitPage /></PublicRoute>} />
-        <Route path="/races" element={<PublicRoute><Races /></PublicRoute>} />
-        <Route path="/race/:id" element={<PublicRoute><RacePage /></PublicRoute>} />
-        <Route path="/compare" element={<PublicRoute><Compare /></PublicRoute>} />
-        <Route path="/standings" element={<PublicRoute><Standings /></PublicRoute>} />
-        <Route path="/championships" element={<PublicRoute><Championships /></PublicRoute>} />
-        <Route path="/search" element={<PublicRoute><SearchPage /></PublicRoute>} />
-
-        {/* Admin routes */}
-        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-        <Route path="/admin/import" element={<AdminRoute><AdminImport /></AdminRoute>} />
-        <Route path="/admin/drivers" element={<AdminRoute><AdminDrivers /></AdminRoute>} />
-        <Route path="/admin/teams" element={<AdminRoute><AdminTeams /></AdminRoute>} />
-        <Route path="/admin/circuits" element={<AdminRoute><AdminCircuits /></AdminRoute>} />
-        <Route path="/admin/races" element={<AdminRoute><AdminRaces /></AdminRoute>} />
-        <Route path="/admin/practice" element={<AdminRoute><AdminPractice /></AdminRoute>} />
-        <Route path="/admin/sync" element={<AdminRoute><AdminSync /></AdminRoute>} />
-        <Route path="/admin/media" element={<AdminRoute><AdminMedia /></AdminRoute>} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <StaticHostRedirector />
+        <AnimatedRoutes />
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }

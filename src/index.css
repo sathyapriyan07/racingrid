@@ -125,6 +125,33 @@
 }
 
 @layer components {
+  /* Skeleton shimmer */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-muted);
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-120%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--bg-card) 55%, transparent) 40%,
+      transparent 80%
+    );
+    animation: shimmer 1.25s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after { animation: none; }
+  }
+
+  @keyframes shimmer {
+    100% { transform: translateX(120%); }
+  }
+
   /* Glass (used for navbar, overlays) */
   .glass {
     background: var(--glass-bg);

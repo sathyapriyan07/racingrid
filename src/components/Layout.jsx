@@ -3,6 +3,7 @@ import Navbar from './ui/Navbar'
 import { Toaster } from 'react-hot-toast'
 import { useSettingsStore } from '../store/settingsStore'
 import { Link } from 'react-router-dom'
+import GlobalSearchOverlay from '../features/search/GlobalSearchOverlay'
 
 function Footer() {
   return (
@@ -64,6 +65,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-base text-primary flex flex-col">
       <Navbar />
+      <GlobalSearchOverlay />
       <main className="relative z-10 max-w-7xl mx-auto px-4 pb-16 pt-2 flex-1 w-full">
         {children}
       </main>

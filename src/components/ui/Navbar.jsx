@@ -1,32 +1,21 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Menu, X, Shield, Sun, Moon } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useUIStore } from '../../store/uiStore'
 
 const NAV_LINKS = ['Drivers', 'Teams', 'Circuits', 'Races', 'Standings', 'Championships', 'Compare']
 
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuthStore()
-  const navigate = useNavigate()
   const location = useLocation()
-  const [query, setQuery] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
   const { theme, toggle } = useTheme()
-  const searchRef = useRef(null)
+  const openSearch = useUIStore(s => s.openSearch)
 
-  useEffect(() => { setMenuOpen(false); setSearchOpen(false) }, [location.pathname])
-  useEffect(() => { if (searchOpen) setTimeout(() => searchRef.current?.focus(), 50) }, [searchOpen])
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (!query.trim()) return
-    navigate(`/search?q=${encodeURIComponent(query.trim())}`)
-    setQuery('')
-    setSearchOpen(false)
-  }
+  useEffect(() => { setMenuOpen(false) }, [location.pathname])
 
   const isActive = (path) => location.pathname === `/${path.toLowerCase()}`
 
@@ -40,33 +29,10 @@ export default function Navbar() {
             <span className="font-bold text-lg tracking-tight text-primary">Base</span>
           </Link>
           <div className="flex-1" />
-          <button onClick={() => setSearchOpen(o => !o)} className="btn-icon w-8 h-8"><Search size={14} /></button>
+          <button onClick={openSearch} className="btn-icon w-8 h-8" aria-label="Search"><Search size={14} /></button>
           <button onClick={toggle} className="btn-icon w-8 h-8">{theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}</button>
           <button onClick={() => setMenuOpen(o => !o)} className="btn-icon w-8 h-8">{menuOpen ? <X size={15} /> : <Menu size={15} />}</button>
         </div>
-
-        <AnimatePresence>
-          {searchOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden px-4 pb-3"
-            >
-              <form onSubmit={handleSearch} className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
-                <input
-                  ref={searchRef}
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Search drivers, teams, races..."
-                  className="input pl-8 py-2 text-sm"
-                />
-              </form>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <AnimatePresence>
           {menuOpen && (
@@ -142,35 +108,9 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-1.5 ml-auto">
-            <div className="flex items-center">
-              <AnimatePresence mode="wait">
-                {searchOpen ? (
-                  <motion.form
-                    key="open"
-                    initial={{ width: 32, opacity: 0 }}
-                    animate={{ width: 180, opacity: 1 }}
-                    exit={{ width: 32, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    onSubmit={handleSearch}
-                    className="relative overflow-hidden"
-                  >
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-secondary" />
-                    <input
-                      ref={searchRef}
-                      value={query}
-                      onChange={e => setQuery(e.target.value)}
-                      onBlur={() => { if (!query) setSearchOpen(false) }}
-                      placeholder="Search..."
-                      className="input pl-7 py-1 text-xs h-8 w-full rounded-xl"
-                    />
-                  </motion.form>
-                ) : (
-                  <motion.button key="closed" onClick={() => setSearchOpen(true)} className="btn-icon w-8 h-8">
-                    <Search size={14} />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
+            <button onClick={openSearch} className="btn-icon w-8 h-8" aria-label="Search">
+              <Search size={14} />
+            </button>
 
             <button onClick={toggle} className="btn-icon w-8 h-8">
               {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
@@ -197,4 +137,3 @@ export default function Navbar() {
     </>
   )
 }
-
