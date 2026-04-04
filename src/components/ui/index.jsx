@@ -352,8 +352,8 @@ export function PageHeader({ title, subtitle, children }) {
       className="mb-8 flex items-start justify-between gap-4 flex-wrap"
     >
       <div>
-        <h1 className="text-3xl font-black tracking-tight text-primary" style={{ letterSpacing: '-0.04em' }}>{title}</h1>
-        {subtitle && <p className="text-sm mt-1.5 font-semibold text-secondary">{subtitle}</p>}
+        <h1 className="tv-h1 text-primary">{title}</h1>
+        {subtitle && <p className="text-sm mt-2 font-semibold text-secondary">{subtitle}</p>}
       </div>
       {children}
     </motion.div>
