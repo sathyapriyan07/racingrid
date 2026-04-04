@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useDataStore } from '../store/dataStore'
 import { resolveImageSrc } from '../lib/resolveImageSrc'
 import { supabase } from '../lib/supabase'
@@ -366,14 +367,29 @@ export default function RacePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="glass p-6">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="relative overflow-hidden rounded-3xl border border-border p-6"
+        style={{ background: 'var(--bg-card)' }}
+      >
+        {/* Accent top line */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-accent" />
+        {/* Background glow */}
+        <div className="absolute top-0 left-0 w-64 h-64 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(225,6,0,0.08) 0%, transparent 70%)', transform: 'translate(-30%, -30%)' }} />
+        <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="min-w-0">
-            <div className="text-xs mb-1" style={{ color: 'var(--text-muted)' }}>{race.seasons?.year} · Round {race.round}</div>
-            <h1 className="text-3xl font-black">{race.name}</h1>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-secondary">{race.seasons?.year}</span>
+              <span className="text-secondary">·</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-accent">Round {race.round}</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black" style={{ letterSpacing: '-0.04em' }}>{race.name}</h1>
             <div className="flex gap-4 mt-2 text-sm flex-wrap" style={{ color: 'var(--text-secondary)' }}>
               {race.circuits && (
-                <Link to={`/circuit/${race.circuit_id}`} className="hover:text-f1red transition-colors flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                <Link to={`/circuit/${race.circuit_id}`} className="hover:text-accent transition-colors flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
                   <Icon settingKey="icon_location" emoji="📍" /> {race.circuits.name}
                 </Link>
               )}
@@ -442,7 +458,7 @@ export default function RacePage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Circuit */}
       {race.circuits && (

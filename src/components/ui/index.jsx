@@ -154,13 +154,14 @@ export function PageTransition({ children }) {
 export function Card({ children, className = '', hover = false, variant = 'default' }) {
   const interactive = hover || variant === 'interactive'
   const glass = variant === 'glass'
+  const glow  = variant === 'glow'
   return (
     <div
       className={[
-        glass ? 'glass' : 'bg-card border border-border shadow-[var(--shadow)] rounded-3xl',
-        interactive
-          ? 'cursor-pointer transition-all duration-200 ease-out will-change-transform hover:scale-[1.05] hover:shadow-glow-sm hover:border-accent/25'
-          : 'transition-colors duration-200 hover:bg-muted',
+        glass ? 'glass'
+          : glow ? 'card-glow'
+          : interactive ? 'card-premium cursor-pointer'
+          : 'bg-card border border-border shadow-[var(--shadow)] rounded-3xl transition-colors duration-200 hover:bg-muted',
         'p-5',
         className,
       ].join(' ')}
@@ -197,13 +198,15 @@ export function Spinner() {
 // ── StatCard ──────────────────────────────────────────────────────────────────
 export function StatCard({ label, value, sub, trend = null }) {
   return (
-    <div className="bg-card border border-border shadow-[var(--shadow)] rounded-3xl p-4 text-center hover:bg-muted transition-colors">
-      <div className="text-2xl font-black text-primary" style={{ letterSpacing: '-0.04em' }}>{value ?? '—'}</div>
-      {trend === 'up' && <div className="text-[10px] font-black text-green-400 -mt-1">↑</div>}
-      {trend === 'down' && <div className="text-[10px] font-black text-red-400 -mt-1">↓</div>}
-      {trend === 'flat' && <div className="text-[10px] font-black text-secondary -mt-1">→</div>}
-      <div className="text-xs font-semibold mt-1 uppercase tracking-widest text-secondary">{label}</div>
-      {sub && <div className="text-xs mt-0.5 text-secondary">{sub}</div>}
+    <div className="stat-premium text-center">
+      <div className="flex items-center justify-center gap-1">
+        <div className="text-2xl font-black text-primary" style={{ letterSpacing: '-0.04em' }}>{value ?? '—'}</div>
+        {trend === 'up'   && <span className="text-xs font-black text-green-400">↑</span>}
+        {trend === 'down' && <span className="text-xs font-black text-red-400">↓</span>}
+        {trend === 'flat' && <span className="text-xs font-black text-secondary">→</span>}
+      </div>
+      <div className="text-[10px] font-bold mt-1 uppercase tracking-widest text-secondary">{label}</div>
+      {sub && <div className="text-[10px] mt-0.5 text-secondary">{sub}</div>}
     </div>
   )
 }
@@ -325,7 +328,7 @@ export function SearchSelect({ value, onChange, options = [], placeholder = 'Sea
   )
 }
 
-// ── PageHeader ────────────────────────────────────────────────────────────────
+// ── InsightCard ───────────────────────────────────────────────────────────────
 export function InsightCard({ title, subtitle, children, tone = 'neutral' }) {
   const tones = {
     neutral: { bg: 'var(--bg-card)', border: 'var(--border)' },
@@ -346,14 +349,14 @@ export function InsightCard({ title, subtitle, children, tone = 'neutral' }) {
 export function PageHeader({ title, subtitle, children }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="mb-8 flex items-start justify-between gap-4 flex-wrap"
     >
       <div>
-        <h1 className="tv-h1 text-primary">{title}</h1>
-        {subtitle && <p className="text-sm mt-2 font-semibold text-secondary">{subtitle}</p>}
+        <h1 className="tv-h1 text-primary" style={{ letterSpacing: '-0.04em' }}>{title}</h1>
+        {subtitle && <p className="text-sm mt-2 font-medium text-secondary">{subtitle}</p>}
       </div>
       {children}
     </motion.div>

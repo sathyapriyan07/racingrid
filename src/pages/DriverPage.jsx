@@ -640,18 +640,38 @@ export default function DriverPage() {
   return (
     <div className="space-y-6">
       {/* ── Driver Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl" style={{ minHeight: 380 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="relative overflow-hidden rounded-3xl"
+        style={{ minHeight: 400 }}
+      >
         {driver.hero_image_url
           ? <img src={driver.hero_image_url} alt={driver.name} className="absolute inset-0 w-full h-full object-cover object-center" />
           : driver.image_url
             ? <img src={driver.image_url} alt={driver.name} className="absolute inset-0 w-full h-full object-cover object-top" />
-            : <div className="absolute inset-0" style={{ background: 'var(--bg-surface)' }} />
+            : <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, var(--bg-surface), var(--bg-muted))' }} />
         }
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)' }} />
-      </div>
+        {/* Gradient overlays */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(225,6,0,0.12) 0%, transparent 50%)' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' }} />
+        {/* Driver code watermark */}
+        {driver.code && (
+          <div className="absolute top-6 right-6 text-[80px] md:text-[120px] font-black leading-none select-none pointer-events-none"
+            style={{ color: 'rgba(255,255,255,0.04)', letterSpacing: '-0.05em' }}>
+            {driver.code}
+          </div>
+        )}
+      </motion.div>
 
       {/* ── Driver Info (below banner) ── */}
-      <div className="flex flex-col items-center text-center gap-2 py-2">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="flex flex-col items-center text-center gap-2 py-2"
+      >
         {driver.code && (
           <span className="text-xs font-black tracking-widest px-3 py-1 rounded-full" style={{ background: 'rgba(229,57,53,0.15)', color: 'var(--f1red, #e53935)', letterSpacing: '0.15em' }}>{driver.code}</span>
         )}
@@ -690,7 +710,7 @@ export default function DriverPage() {
           )}
           <Link to={`/compare?a=${id}`} className="btn-ghost text-xs py-1.5 px-3 whitespace-nowrap">Compare</Link>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Milestones ── */}
       <Card className="p-5">

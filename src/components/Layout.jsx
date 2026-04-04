@@ -1,54 +1,67 @@
 import { useEffect } from 'react'
+import { motion } from 'framer-motion'
 import Navbar from './ui/Navbar'
 import { Toaster } from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import GlobalSearchOverlay from '../features/search/GlobalSearchOverlay'
 import { useUIStore } from '../store/uiStore'
 
+const FOOTER_LINKS = {
+  Explore: [['Races', '/races'], ['Drivers', '/drivers'], ['Teams', '/teams'], ['Circuits', '/circuits']],
+  Stats:   [['Standings', '/standings'], ['Championships', '/championships'], ['Compare', '/compare'], ['Search', '/search']],
+  More:    [['Home', '/'], ['Login', '/login']],
+}
+
 function Footer() {
   return (
-    <footer className="border-t mt-16" style={{ borderColor: 'var(--border)' }}>
-      <div className="max-w-7xl mx-auto px-4 py-10">
+    <footer className="relative border-t border-border mt-20">
+      {/* Top accent line */}
+      <div className="absolute top-0 left-0 right-0 h-px"
+        style={{ background: 'linear-gradient(90deg, transparent, var(--accent), transparent)' }} />
+
+      <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
+          {/* Brand */}
           <div>
-            <div className="font-bold text-sm mb-3">
-              <span style={{ color: 'var(--text-primary)' }}>F1</span>
-              <span style={{ color: 'var(--accent)' }}>Base</span>
+            <div className="flex items-center gap-0.5 mb-3">
+              <span className="font-black text-base text-primary">F1</span>
+              <span className="font-black text-base text-accent">Base</span>
             </div>
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            <p className="text-xs leading-relaxed text-secondary">
               The ultimate Formula 1 archive — races, drivers, teams and lap-by-lap replays.
             </p>
-          </div>
-          <div>
-            <div className="font-semibold text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Explore</div>
-            <div className="space-y-2">
-              {[['Races', '/races'], ['Drivers', '/drivers'], ['Teams', '/teams'], ['Circuits', '/circuits']].map(([label, to]) => (
-                <Link key={to} to={to} className="block text-xs hover:text-f1red transition-colors" style={{ color: 'var(--text-secondary)' }}>{label}</Link>
+            {/* Social placeholder */}
+            <div className="flex gap-2 mt-4">
+              {['🏎️', '🏁', '⚡'].map((e, i) => (
+                <div key={i} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                  style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)' }}>
+                  {e}
+                </div>
               ))}
             </div>
           </div>
-          <div>
-            <div className="font-semibold text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>Stats</div>
-            <div className="space-y-2">
-              {[['Standings', '/standings'], ['Championships', '/championships'], ['Compare', '/compare'], ['Search', '/search']].map(([label, to]) => (
-                <Link key={to} to={to} className="block text-xs hover:text-f1red transition-colors" style={{ color: 'var(--text-secondary)' }}>{label}</Link>
-              ))}
+
+          {/* Link columns */}
+          {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
+            <div key={heading}>
+              <div className="text-[10px] font-black uppercase tracking-widest mb-3 text-secondary">{heading}</div>
+              <div className="space-y-2">
+                {links.map(([label, to]) => (
+                  <Link key={to} to={to}
+                    className="block text-xs text-secondary hover:text-accent transition-colors duration-200">
+                    {label}
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <div className="font-semibold text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>More</div>
-            <div className="space-y-2">
-              {[['Home', '/'], ['Login', '/login']].map(([label, to]) => (
-                <Link key={to} to={to} className="block text-xs hover:text-f1red transition-colors" style={{ color: 'var(--text-secondary)' }}>{label}</Link>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
-        <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-2" style={{ borderColor: 'var(--border)' }}>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            &copy; {new Date().getFullYear()} F1Base. Not affiliated with Formula 1 or FOM.
+
+        <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span className="text-xs text-secondary">
+            © {new Date().getFullYear()} F1Base. Not affiliated with Formula 1 or FOM.
           </span>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Built with love for F1 fans</span>
+          <span className="text-xs text-secondary">Built for F1 fans, by F1 fans ❤️</span>
         </div>
       </div>
     </footer>
@@ -68,9 +81,14 @@ export default function Layout({ children }) {
     <div className="min-h-screen bg-base text-primary flex flex-col">
       <Navbar />
       <GlobalSearchOverlay />
-      <main className="relative z-10 max-w-7xl mx-auto px-4 pb-16 pt-2 flex-1 w-full">
+      <motion.main
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="relative z-10 max-w-7xl mx-auto px-4 pb-16 pt-2 flex-1 w-full"
+      >
         {children}
-      </main>
+      </motion.main>
       <Footer />
       <Toaster
         position="bottom-right"
