@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
 import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -65,10 +64,8 @@ function StaticHostRedirector() {
 }
 
 function AnimatedRoutes() {
-  const location = useLocation()
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Routes>
         <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
 
         {/* Public */}
@@ -100,7 +97,6 @@ function AnimatedRoutes() {
         {/* 404 */}
         <Route path="*" element={<Layout><NotFound /></Layout>} />
       </Routes>
-    </AnimatePresence>
   )
 }
 
