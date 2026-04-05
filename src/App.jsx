@@ -1,4 +1,3 @@
-```jsx
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
@@ -143,4 +142,3 @@ export default function App() {
     </ErrorBoundary>
   )
 }
-```
