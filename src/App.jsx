@@ -1,3 +1,4 @@
+```jsx
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
@@ -45,7 +46,11 @@ function NotFound() {
 }
 
 function PageLoader() {
-  return <div className="min-h-[60vh] flex items-center justify-center"><Spinner /></div>
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <Spinner />
+    </div>
+  )
 }
 
 function StaticHostRedirector() {
@@ -66,43 +71,68 @@ function StaticHostRedirector() {
 function AnimatedRoutes() {
   return (
     <Routes>
-        <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+      <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
 
-        {/* Public */}
-        <Route path="/"            element={<Layout><Suspense fallback={<PageLoader />}><Home /></Suspense></Layout>} />
-        <Route path="/drivers"     element={<Layout><Suspense fallback={<PageLoader />}><Drivers /></Suspense></Layout>} />
-        <Route path="/driver/:id"  element={<Layout><Suspense fallback={<PageLoader />}><DriverPage /></Suspense></Layout>} />
-        <Route path="/teams"       element={<Layout><Suspense fallback={<PageLoader />}><Teams /></Suspense></Layout>} />
-        <Route path="/team/:id"    element={<Layout><Suspense fallback={<PageLoader />}><TeamPage /></Suspense></Layout>} />
-        <Route path="/circuits"    element={<Layout><Suspense fallback={<PageLoader />}><Circuits /></Suspense></Layout>} />
-        <Route path="/circuit/:id" element={<Layout><Suspense fallback={<PageLoader />}><CircuitPage /></Suspense></Layout>} />
-        <Route path="/races"       element={<Layout><Suspense fallback={<PageLoader />}><Races /></Suspense></Layout>} />
-        <Route path="/race/:id"    element={<Layout><Suspense fallback={<PageLoader />}><RacePage /></Suspense></Layout>} />
-        <Route path="/compare"     element={<Layout><Suspense fallback={<PageLoader />}><Compare /></Suspense></Layout>} />
-        <Route path="/standings"   element={<Layout><Suspense fallback={<PageLoader />}><Standings /></Suspense></Layout>} />
-        <Route path="/championships" element={<Layout><Suspense fallback={<PageLoader />}><Championships /></Suspense></Layout>} />
-        <Route path="/search"      element={<Layout><Suspense fallback={<PageLoader />}><SearchPage /></Suspense></Layout>} />
+      {/* Public */}
+      <Route path="/" element={<Layout><Suspense fallback={<PageLoader />}><Home /></Suspense></Layout>} />
+      <Route path="/drivers" element={<Layout><Suspense fallback={<PageLoader />}><Drivers /></Suspense></Layout>} />
+      <Route path="/driver/:id" element={<Layout><Suspense fallback={<PageLoader />}><DriverPage /></Suspense></Layout>} />
+      <Route path="/teams" element={<Layout><Suspense fallback={<PageLoader />}><Teams /></Suspense></Layout>} />
+      <Route path="/team/:id" element={<Layout><Suspense fallback={<PageLoader />}><TeamPage /></Suspense></Layout>} />
+      <Route path="/circuits" element={<Layout><Suspense fallback={<PageLoader />}><Circuits /></Suspense></Layout>} />
+      <Route path="/circuit/:id" element={<Layout><Suspense fallback={<PageLoader />}><CircuitPage /></Suspense></Layout>} />
+      <Route path="/races" element={<Layout><Suspense fallback={<PageLoader />}><Races /></Suspense></Layout>} />
+      <Route path="/race/:id" element={<Layout><Suspense fallback={<PageLoader />}><RacePage /></Suspense></Layout>} />
+      <Route path="/compare" element={<Layout><Suspense fallback={<PageLoader />}><Compare /></Suspense></Layout>} />
+      <Route path="/standings" element={<Layout><Suspense fallback={<PageLoader />}><Standings /></Suspense></Layout>} />
+      <Route path="/championships" element={<Layout><Suspense fallback={<PageLoader />}><Championships /></Suspense></Layout>} />
+      <Route path="/search" element={<Layout><Suspense fallback={<PageLoader />}><SearchPage /></Suspense></Layout>} />
 
-        {/* Admin */}
-        <Route path="/admin"           element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminDashboard /></AdminLayout></Suspense>} />
-        <Route path="/admin/import"    element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminImport /></AdminLayout></Suspense>} />
-        <Route path="/admin/drivers"   element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminDrivers /></AdminLayout></Suspense>} />
-        <Route path="/admin/teams"     element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminTeams /></AdminLayout></Suspense>} />
-        <Route path="/admin/circuits"  element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminCircuits /></AdminLayout></Suspense>} />
-        <Route path="/admin/races"     element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminRaces /></AdminLayout></Suspense>} />
-        <Route path="/admin/practice"  element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminPractice /></AdminLayout></Suspense>} />
-        <Route path="/admin/sync"      element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminSync /></AdminLayout></Suspense>} />
-        <Route path="/admin/media"     element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminMedia /></AdminLayout></Suspense>} />
+      {/* Admin */}
+      <Route path="/admin" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminDashboard /></AdminLayout></Suspense>} />
+      <Route path="/admin/import" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminImport /></AdminLayout></Suspense>} />
+      <Route path="/admin/drivers" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminDrivers /></AdminLayout></Suspense>} />
+      <Route path="/admin/teams" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminTeams /></AdminLayout></Suspense>} />
+      <Route path="/admin/circuits" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminCircuits /></AdminLayout></Suspense>} />
+      <Route path="/admin/races" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminRaces /></AdminLayout></Suspense>} />
+      <Route path="/admin/practice" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminPractice /></AdminLayout></Suspense>} />
+      <Route path="/admin/sync" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminSync /></AdminLayout></Suspense>} />
+      <Route path="/admin/media" element={<Suspense fallback={<PageLoader />}><AdminLayout><AdminMedia /></AdminLayout></Suspense>} />
 
-        {/* 404 */}
-        <Route path="*" element={<Layout><NotFound /></Layout>} />
-      </Routes>
+      {/* 404 */}
+      <Route path="*" element={<Layout><NotFound /></Layout>} />
+    </Routes>
   )
 }
 
 export default function App() {
   const { init } = useAuthStore()
-  useEffect(() => { init() }, [])
+
+  useEffect(() => {
+    // Initial load
+    init()
+
+    // Re-run when tab comes back
+    const handleFocus = () => {
+      console.log("Refocus → restoring app state")
+      init()
+    }
+
+    window.addEventListener("focus", handleFocus)
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleFocus()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility)
+
+    return () => {
+      window.removeEventListener("focus", handleFocus)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
+  }, [init])
 
   return (
     <ErrorBoundary>
@@ -113,3 +143,4 @@ export default function App() {
     </ErrorBoundary>
   )
 }
+```
