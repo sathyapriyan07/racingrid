@@ -110,19 +110,27 @@ function MobileAuthShell({ title, subtitle, children }) {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col justify-end px-5 pb-10">
+      <div className="relative z-10 min-h-screen flex flex-col justify-end">
         <Link to="/" className="absolute top-5 left-5 flex items-center gap-0.5">
           <span className="font-black text-lg tracking-tight text-white">Racin</span>
           <span className="font-black text-lg tracking-tight text-accent">Grid</span>
         </Link>
 
-        <div className="space-y-2">
-          <h1 className="text-3xl font-black" style={{ letterSpacing: '-0.05em' }}>{title}</h1>
-          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
-        </div>
+        <div
+          className="px-5 pb-10 pt-10"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.96) 18%, rgba(0,0,0,1) 100%)',
+          }}
+        >
+          <div className="space-y-2">
+            <h1 className="text-3xl font-black" style={{ letterSpacing: '-0.05em' }}>{title}</h1>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
+          </div>
 
-        <div className="mt-7">
-          {children}
+          <div className="mt-7">
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -224,4 +232,3 @@ export default function Signup() {
     </>
   )
 }
-
