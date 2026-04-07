@@ -5,9 +5,9 @@ import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import { Spinner } from './components/ui'
+import Home from './pages/Home'
 
 // Lazy-loaded public pages
-const Home           = lazy(() => import('./pages/Home'))
 const Login          = lazy(() => import('./pages/Login'))
 const Drivers        = lazy(() => import('./pages/Drivers'))
 const DriverPage     = lazy(() => import('./pages/DriverPage'))
@@ -143,6 +143,31 @@ export default function App() {
       window.removeEventListener('pagehide', sleep)
     }
   }, [init, queryClient])
+
+  // Warm up route chunks so navigation feels instant.
+  useEffect(() => {
+    const warm = () => {
+      Promise.allSettled([
+        import('./pages/Drivers'),
+        import('./pages/Teams'),
+        import('./pages/Races'),
+        import('./pages/Standings'),
+        import('./pages/Championships'),
+        import('./pages/Compare'),
+        import('./pages/Search'),
+        import('./pages/admin/AdminLayout'),
+        import('./pages/admin/AdminDashboard'),
+      ]).catch(() => {})
+    }
+
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(warm, { timeout: 2500 })
+      return () => window.cancelIdleCallback(id)
+    }
+
+    const t = setTimeout(warm, 800)
+    return () => clearTimeout(t)
+  }, [])
 
   return (
     <ErrorBoundary>

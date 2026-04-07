@@ -15,6 +15,8 @@ export const useDataStore = create((set, get) => ({
   drivers: [], teams: [], circuits: [], seasons: [], races: [],
   cache: {},
 
+  setCacheItem: (key, value) => set(s => ({ cache: { ...s.cache, [key]: value } })),
+
   fetchDrivers: async (force = false) => {
     if (!force && get().drivers.length) return get().drivers
     const data = await fetchTable('drivers')

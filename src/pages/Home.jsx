@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useDataStore } from '../store/dataStore'
 import { supabase } from '../lib/supabase'
+import { withTimeout } from '../lib/withTimeout'
 import { Skeleton } from '../components/ui'
 import {
   Calendar, Trophy, ChevronRight, ChevronLeft,
@@ -264,34 +265,82 @@ function CarouselSkeleton({ count = 5, w = 200, h = 120 }) {
    MAIN HOME PAGE
 ══════════════════════════════════════════════════════════════════ */
 export default function Home() {
-  const { fetchRaces, fetchDrivers, fetchSeasons, fetchStandings, drivers, seasons } = useDataStore()
-  const [races, setRaces] = useState([])
-  const [upcomingRaces, setUpcomingRaces] = useState([])
-  const [highlights, setHighlights] = useState([])
+  const {
+    fetchRaces, fetchDrivers, fetchSeasons, fetchStandings,
+    drivers, seasons, races: storeRaces, cache, setCacheItem,
+  } = useDataStore()
+
+  const [races, setRaces] = useState(() => storeRaces || [])
+  const [upcomingRaces, setUpcomingRaces] = useState(() => cache?.home_upcoming?.data || [])
+  const [highlights, setHighlights] = useState(() => cache?.home_highlights?.data || [])
   const [standings, setStandings] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !(drivers.length && seasons.length && storeRaces.length))
   const heroRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
+    const HOME_CACHE_TTL = 10 * 60_000
+
     const load = async () => {
       try {
+        // If we already have base data, don't go back to skeletons.
+        const hasBase = useDataStore.getState().drivers.length &&
+          useDataStore.getState().seasons.length &&
+          useDataStore.getState().races.length
+        if (!hasBase) setLoading(true)
+
         const [racesData] = await Promise.all([fetchRaces(), fetchDrivers(), fetchSeasons()])
         if (cancelled) return
         setRaces(racesData || [])
 
         const today = new Date().toISOString().slice(0, 10)
-        const [{ data: upcoming }, { data: hl }] = await Promise.all([
-          supabase.from('races')
-            .select('*, circuits(name, location, country, layout_image), seasons(year)')
-            .gte('date', today).order('date', { ascending: true }).limit(5),
-          supabase.from('race_highlights')
-            .select('*, races(id, name, seasons(year))')
-            .order('created_at', { ascending: false }).limit(12),
-        ])
-        if (cancelled) return
-        setUpcomingRaces(upcoming || [])
-        setHighlights(hl || [])
+
+        const now = Date.now()
+        const cachedUpcoming = cache?.home_upcoming
+        const cachedHighlights = cache?.home_highlights
+        const upcomingFresh = cachedUpcoming?.ts && (now - cachedUpcoming.ts) < HOME_CACHE_TTL
+        const highlightsFresh = cachedHighlights?.ts && (now - cachedHighlights.ts) < HOME_CACHE_TTL
+
+        const requests = []
+        if (!upcomingFresh) {
+          requests.push(
+            withTimeout(
+              supabase.from('races')
+                .select('*, circuits(name, location, country, layout_image), seasons(year)')
+                .gte('date', today).order('date', { ascending: true }).limit(5),
+              20_000,
+              'Upcoming races timed out',
+            ).then(res => ({ kind: 'upcoming', res })),
+          )
+        }
+        if (!highlightsFresh) {
+          requests.push(
+            withTimeout(
+              supabase.from('race_highlights')
+                .select('*, races(id, name, seasons(year))')
+                .order('created_at', { ascending: false }).limit(12),
+              20_000,
+              'Highlights timed out',
+            ).then(res => ({ kind: 'highlights', res })),
+          )
+        }
+
+        if (requests.length) {
+          const results = await Promise.all(requests)
+          if (cancelled) return
+          for (const r of results) {
+            if (r.kind === 'upcoming') {
+              const upcoming = r.res?.data || []
+              setUpcomingRaces(upcoming)
+              setCacheItem('home_upcoming', { ts: Date.now(), data: upcoming })
+            }
+            if (r.kind === 'highlights') {
+              const hl = r.res?.data || []
+              setHighlights(hl)
+              setCacheItem('home_highlights', { ts: Date.now(), data: hl })
+            }
+          }
+        }
 
         const allSeasons = useDataStore.getState().seasons
         if (allSeasons.length) {
