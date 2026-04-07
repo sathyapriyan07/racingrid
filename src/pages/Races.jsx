@@ -81,7 +81,7 @@ export default function Races() {
       </PageHeader>
 
       {loading ? <Spinner /> : filtered.length === 0 ? <EmptyState message="No races found." /> : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 cv-auto">
           {filtered.map(race => {
             const top3 = podiums[race.id] || []
             const medals = ['🥇', '🥈', '🥉']

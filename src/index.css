@@ -400,6 +400,12 @@
   .scroll-row::-webkit-scrollbar { display: none; }
   .scroll-row > * { scroll-snap-align: start; flex-shrink: 0; }
 
+  /* Render optimization for long lists/grids (improves scroll performance) */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 900px;
+  }
+
   /* Noise overlay */
   .noise-overlay::after {
     content: '';

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Menu, X, Shield, Sun, Moon, Command } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -13,15 +13,36 @@ export default function Navbar() {
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [isScrolling, setIsScrolling] = useState(false)
+  const scrollEndTimerRef = useRef(null)
+  const rafRef = useRef(null)
   const { theme, toggle } = useTheme()
   const openSearch = useUIStore(s => s.openSearch)
 
   useEffect(() => { setMenuOpen(false) }, [location.pathname])
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
+    const onScroll = () => {
+      if (rafRef.current) return
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null
+
+        const nextScrolled = window.scrollY > 20
+        setScrolled((prev) => (prev === nextScrolled ? prev : nextScrolled))
+
+        setIsScrolling(true)
+        if (scrollEndTimerRef.current) clearTimeout(scrollEndTimerRef.current)
+        scrollEndTimerRef.current = setTimeout(() => setIsScrolling(false), 140)
+      })
+    }
+
+    onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current)
+      if (scrollEndTimerRef.current) clearTimeout(scrollEndTimerRef.current)
+    }
   }, [])
 
   // Ctrl+K / Cmd+K shortcut
@@ -44,8 +65,8 @@ export default function Navbar() {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 border-b border-border"
         style={{
           background: scrolled ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          backdropFilter: isScrolling ? 'none' : 'blur(20px)',
+          WebkitBackdropFilter: isScrolling ? 'none' : 'blur(20px)',
           transition: 'background 300ms ease',
         }}>
         <div className="flex items-center gap-2 px-4 h-12">
@@ -73,7 +94,11 @@ export default function Navbar() {
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
               className="overflow-hidden border-t border-border"
-              style={{ background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(20px)' }}
+              style={{
+                background: 'rgba(0,0,0,0.95)',
+                backdropFilter: isScrolling ? 'none' : 'blur(20px)',
+                WebkitBackdropFilter: isScrolling ? 'none' : 'blur(20px)',
+              }}
             >
               <div className="px-3 py-3 grid grid-cols-3 gap-1.5">
                 {NAV_LINKS.map(item => (
@@ -118,8 +143,8 @@ export default function Navbar() {
           className="rounded-2xl border px-4 h-12 grid grid-cols-[1fr_auto_1fr] items-center gap-2 transition-all duration-300"
           style={{
             background: scrolled ? 'rgba(0,0,0,0.88)' : 'rgba(10,10,10,0.7)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
+            backdropFilter: isScrolling ? 'none' : 'blur(24px)',
+            WebkitBackdropFilter: isScrolling ? 'none' : 'blur(24px)',
             borderColor: scrolled ? 'rgba(255,255,255,0.1)' : 'var(--border)',
             boxShadow: scrolled ? '0 8px 32px rgba(0,0,0,0.5)' : 'none',
           }}

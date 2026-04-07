@@ -29,7 +29,7 @@ export default function Circuits() {
       </PageHeader>
 
       {filtered.length === 0 ? <EmptyState message="No circuits found." /> : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 cv-auto">
           {filtered.map(circuit => (
             <Link key={circuit.id} to={`/circuit/${circuit.id}`}>
               <div className="apple-card overflow-hidden group">

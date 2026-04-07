@@ -104,7 +104,7 @@ export default function Teams() {
 
       {sorted.length === 0 ? <EmptyState message="No teams found." /> : (
         view === 'grid' ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 cv-auto">
             {sorted.map((t, i) => <TeamCard key={t.id} team={t} index={i} />)}
           </div>
         ) : (
