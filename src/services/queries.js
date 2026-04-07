@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { searchAll } from './search'
+import { withTimeout } from '../lib/withTimeout'
 
 function throwIfError(result) {
   if (result?.error) throw result.error
@@ -11,7 +12,11 @@ export function useDriversQuery() {
   return useQuery({
     queryKey: ['drivers'],
     queryFn: async () => {
-      const res = await supabase.from('drivers').select('*').order('name')
+      const res = await withTimeout(
+        supabase.from('drivers').select('*').order('name'),
+        20_000,
+        'Drivers request timed out',
+      )
       return throwIfError(res)
     },
   })
@@ -21,7 +26,11 @@ export function useTeamsQuery() {
   return useQuery({
     queryKey: ['teams'],
     queryFn: async () => {
-      const res = await supabase.from('teams').select('*').order('name')
+      const res = await withTimeout(
+        supabase.from('teams').select('*').order('name'),
+        20_000,
+        'Teams request timed out',
+      )
       return throwIfError(res)
     },
   })
@@ -31,7 +40,11 @@ export function useCircuitsQuery() {
   return useQuery({
     queryKey: ['circuits'],
     queryFn: async () => {
-      const res = await supabase.from('circuits').select('*').order('name')
+      const res = await withTimeout(
+        supabase.from('circuits').select('*').order('name'),
+        20_000,
+        'Circuits request timed out',
+      )
       return throwIfError(res)
     },
   })

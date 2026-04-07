@@ -1,9 +1,12 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { withTimeout } from '../lib/withTimeout'
+
+const db = (promise) => withTimeout(promise, 20_000, 'Database request timed out')
 
 const fetchTable = async (table, query = null) => {
   let q = supabase.from(table).select(query || '*')
-  const { data, error } = await q
+  const { data, error } = await db(q)
   if (error) throw error
   return data || []
 }
@@ -44,7 +47,7 @@ export const useDataStore = create((set, get) => ({
   fetchRaces: async (seasonId = null) => {
     let q = supabase.from('races').select('*, circuits(*), seasons(*)')
     if (seasonId) q = q.eq('season_id', seasonId)
-    const { data, error } = await q.order('date', { ascending: false })
+    const { data, error } = await db(q.order('date', { ascending: false }))
     if (error) throw error
     set({ races: data })
     return data
@@ -53,11 +56,13 @@ export const useDataStore = create((set, get) => ({
   fetchRace: async (id) => {
     const cached = get().cache[`race_${id}`]
     if (cached) return cached
-    const { data, error } = await supabase
-      .from('races')
-      .select('*, circuits(*), seasons(*)')
-      .eq('id', id)
-      .single()
+    const { data, error } = await db(
+      supabase
+        .from('races')
+        .select('*, circuits(*), seasons(*)')
+        .eq('id', id)
+        .single(),
+    )
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [`race_${id}`]: data } }))
     return data
@@ -66,11 +71,13 @@ export const useDataStore = create((set, get) => ({
   fetchRaceResults: async (raceId) => {
     const key = `results_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('results')
-      .select('*, drivers(*), teams(*)')
-      .eq('race_id', raceId)
-      .order('position')
+    const { data, error } = await db(
+      supabase
+        .from('results')
+        .select('*, drivers(*), teams(*)')
+        .eq('race_id', raceId)
+        .order('position'),
+    )
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -79,11 +86,13 @@ export const useDataStore = create((set, get) => ({
   fetchLaps: async (raceId) => {
     const key = `laps_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('laps')
-      .select('*, drivers(name, code)')
-      .eq('race_id', raceId)
-      .order('lap_number')
+    const { data, error } = await db(
+      supabase
+        .from('laps')
+        .select('*, drivers(name, code)')
+        .eq('race_id', raceId)
+        .order('lap_number'),
+    )
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -92,11 +101,13 @@ export const useDataStore = create((set, get) => ({
   fetchLapPositions: async (raceId) => {
     const key = `lappos_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('laps')
-      .select('race_id, driver_id, lap_number, position')
-      .eq('race_id', raceId)
-      .order('lap_number')
+    const { data, error } = await db(
+      supabase
+        .from('laps')
+        .select('race_id, driver_id, lap_number, position')
+        .eq('race_id', raceId)
+        .order('lap_number'),
+    )
     if (error) {
       if (error.code === '42P01') return []
       throw error
@@ -108,11 +119,13 @@ export const useDataStore = create((set, get) => ({
   fetchLapTimes: async (raceId) => {
     const key = `laptimes_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('laps')
-      .select('race_id, driver_id, lap_number, lap_time')
-      .eq('race_id', raceId)
-      .order('lap_number')
+    const { data, error } = await db(
+      supabase
+        .from('laps')
+        .select('race_id, driver_id, lap_number, lap_time')
+        .eq('race_id', raceId)
+        .order('lap_number'),
+    )
     if (error) {
       if (error.code === '42P01') return []
       throw error
@@ -124,10 +137,12 @@ export const useDataStore = create((set, get) => ({
   fetchPitStops: async (raceId) => {
     const key = `pits_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('pit_stops')
-      .select('*, drivers(name, code)')
-      .eq('race_id', raceId)
+    const { data, error } = await db(
+      supabase
+        .from('pit_stops')
+        .select('*, drivers(name, code)')
+        .eq('race_id', raceId),
+    )
     if (error) {
       if (error.code === '42P01') return []
       throw error
@@ -139,11 +154,13 @@ export const useDataStore = create((set, get) => ({
   fetchRaceEvents: async (raceId) => {
     const key = `events_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('race_events')
-      .select('*')
-      .eq('race_id', raceId)
-      .order('lap')
+    const { data, error } = await db(
+      supabase
+        .from('race_events')
+        .select('*')
+        .eq('race_id', raceId)
+        .order('lap'),
+    )
     if (error) {
       if (error.code === '42P01') return []
       throw error
@@ -155,11 +172,13 @@ export const useDataStore = create((set, get) => ({
   fetchQualifying: async (raceId) => {
     const key = `qualifying_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('qualifying_results')
-      .select('*, drivers(*), teams(*)')
-      .eq('race_id', raceId)
-      .order('position')
+    const { data, error } = await db(
+      supabase
+        .from('qualifying_results')
+        .select('*, drivers(*), teams(*)')
+        .eq('race_id', raceId)
+        .order('position'),
+    )
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -168,11 +187,13 @@ export const useDataStore = create((set, get) => ({
   fetchSprintResults: async (raceId) => {
     const key = `sprint_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('sprint_results')
-      .select('*, drivers(*), teams(*)')
-      .eq('race_id', raceId)
-      .order('position')
+    const { data, error } = await db(
+      supabase
+        .from('sprint_results')
+        .select('*, drivers(*), teams(*)')
+        .eq('race_id', raceId)
+        .order('position'),
+    )
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -181,12 +202,14 @@ export const useDataStore = create((set, get) => ({
   fetchPracticeResults: async (raceId) => {
     const key = `practice_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('practice_results')
-      .select('*, drivers(*), teams(*)')
-      .eq('race_id', raceId)
-      .order('session')
-      .order('position')
+    const { data, error } = await db(
+      supabase
+        .from('practice_results')
+        .select('*, drivers(*), teams(*)')
+        .eq('race_id', raceId)
+        .order('session')
+        .order('position'),
+    )
     if (error) {
       // If the table isn't deployed yet, don't break the race page.
       if (error.code === '42P01') return []
@@ -199,11 +222,13 @@ export const useDataStore = create((set, get) => ({
   fetchHighlights: async (raceId) => {
     const key = `highlights_${raceId}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase
-      .from('race_highlights')
-      .select('*')
-      .eq('race_id', raceId)
-      .order('created_at')
+    const { data, error } = await db(
+      supabase
+        .from('race_highlights')
+        .select('*')
+        .eq('race_id', raceId)
+        .order('created_at'),
+    )
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -212,18 +237,20 @@ export const useDataStore = create((set, get) => ({
   fetchDriver: async (id, force = false) => {
     const key = `driver_${id}`
     if (!force && get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase.from('drivers').select('*').eq('id', id).single()
+    const { data, error } = await db(supabase.from('drivers').select('*').eq('id', id).single())
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
   },
 
   fetchDriverStats: async (driverId) => {
-    const { data, error } = await supabase
-      .from('results')
-      .select('id, race_id, driver_id, team_id, position, grid, points, status, laps, time, races(id, name, date, round, circuit_id, circuits(id, name), seasons(year)), teams(name, logo_url)')
-      .eq('driver_id', driverId)
-      .order('races(date)', { ascending: true })
+    const { data, error } = await db(
+      supabase
+        .from('results')
+        .select('id, race_id, driver_id, team_id, position, grid, points, status, laps, time, races(id, name, date, round, circuit_id, circuits(id, name), seasons(year)), teams(name, logo_url)')
+        .eq('driver_id', driverId)
+        .order('races(date)', { ascending: true }),
+    )
     if (error) throw error
     return data
   },
@@ -231,7 +258,7 @@ export const useDataStore = create((set, get) => ({
   fetchTeam: async (id) => {
     const key = `team_${id}`
     if (get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase.from('teams').select('*').eq('id', id).single()
+    const { data, error } = await db(supabase.from('teams').select('*').eq('id', id).single())
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -240,7 +267,7 @@ export const useDataStore = create((set, get) => ({
   fetchCircuit: async (id, force = false) => {
     const key = `circuit_${id}`
     if (!force && get().cache[key]) return get().cache[key]
-    const { data, error } = await supabase.from('circuits').select('*').eq('id', id).single()
+    const { data, error } = await db(supabase.from('circuits').select('*').eq('id', id).single())
     if (error) throw error
     set(s => ({ cache: { ...s.cache, [key]: data } }))
     return data
@@ -250,10 +277,12 @@ export const useDataStore = create((set, get) => ({
     const key = `standings_${seasonId}`
     if (get().cache[key]) return get().cache[key]
 
-    const { data: raceResults, error } = await supabase
-      .from('results')
-      .select('driver_id, team_id, points, position, drivers(id, name, code, image_url, nationality), teams(id, name, logo_url), races!inner(season_id)')
-      .eq('races.season_id', seasonId)
+    const { data: raceResults, error } = await db(
+      supabase
+        .from('results')
+        .select('driver_id, team_id, points, position, drivers(id, name, code, image_url, nationality), teams(id, name, logo_url), races!inner(season_id)')
+        .eq('races.season_id', seasonId),
+    )
     if (error) throw error
 
     // Driver standings
@@ -287,10 +316,14 @@ export const useDataStore = create((set, get) => ({
     if (get().cache[key]) return get().cache[key]
 
     // Use imported standings tables — Ergast totals already include sprint points
-    const [{ data: dStandings }, { data: cStandings }] = await Promise.all([
-      supabase.from('driver_standings').select('driver_id, points, season_id, seasons!inner(year)'),
-      supabase.from('constructor_standings').select('team_id, points, season_id, seasons!inner(year)'),
+    const [dRes, cRes] = await Promise.all([
+      db(supabase.from('driver_standings').select('driver_id, points, season_id, seasons!inner(year)')),
+      db(supabase.from('constructor_standings').select('team_id, points, season_id, seasons!inner(year)')),
     ])
+    if (dRes.error) throw dRes.error
+    if (cRes.error) throw cRes.error
+    const dStandings = dRes.data
+    const cStandings = cRes.data
 
     const driverChamps = {}
     const teamChamps = {}
@@ -311,9 +344,12 @@ export const useDataStore = create((set, get) => ({
       })
     } else {
       // Fallback: compute from results if standings not imported
-      const { data: raceResults } = await supabase
-        .from('results')
-        .select('driver_id, team_id, points, races!inner(season_id, seasons(year))')
+      const { data: raceResults, error } = await db(
+        supabase
+          .from('results')
+          .select('driver_id, team_id, points, races!inner(season_id, seasons(year))'),
+      )
+      if (error) throw error
       if (raceResults) {
         const bySeasonDriver = {}
         const bySeasonTeam = {}

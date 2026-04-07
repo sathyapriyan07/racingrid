@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from './store/authStore'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -106,32 +107,42 @@ function AnimatedRoutes() {
 
 export default function App() {
   const { init } = useAuthStore()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
-    // Initial load
-    init()
-
-    // Re-run when tab comes back
-    const handleFocus = () => {
-      console.log("Refocus → restoring app state")
+    const wake = () => {
       init()
+      queryClient.invalidateQueries({ refetchType: 'active' }).catch(() => {})
     }
 
-    window.addEventListener("focus", handleFocus)
+    const sleep = () => {
+      queryClient.cancelQueries({ type: 'active' }).catch(() => {})
+    }
+
+    // Initial load
+    wake()
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        handleFocus()
-      }
+      if (document.visibilityState === 'visible') wake()
+      else sleep()
     }
 
-    document.addEventListener("visibilitychange", handleVisibility)
+    // focus/visibility are not always fired on BFCache restore (notably Safari),
+    // but pageshow reliably is.
+    window.addEventListener('focus', wake)
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('pageshow', wake)
+    window.addEventListener('online', wake)
+    window.addEventListener('pagehide', sleep)
 
     return () => {
-      window.removeEventListener("focus", handleFocus)
-      document.removeEventListener("visibilitychange", handleVisibility)
+      window.removeEventListener('focus', wake)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('pageshow', wake)
+      window.removeEventListener('online', wake)
+      window.removeEventListener('pagehide', sleep)
     }
-  }, [init])
+  }, [init, queryClient])
 
   return (
     <ErrorBoundary>
