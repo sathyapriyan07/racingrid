@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useDataStore } from '../store/dataStore'
@@ -16,6 +16,68 @@ const fadeUp = (delay = 0) => ({
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94], delay },
 })
+
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+function useHomeMosaicTiles() {
+  const { cache, setCacheItem } = useDataStore()
+  const cached = cache?.home_mosaic
+
+  const tiles = useMemo(() => cached?.data || [], [cached?.data])
+
+  useEffect(() => {
+    let cancelled = false
+    const TTL = 60 * 60_000
+    const fresh = cached?.ts && (Date.now() - cached.ts) < TTL && Array.isArray(cached?.data) && cached.data.length
+    if (fresh) return
+
+    const load = async () => {
+      try {
+        const [dRes, tRes] = await Promise.all([
+          withTimeout(
+            supabase
+              .from('drivers')
+              .select('id, name, hero_image_url')
+              .not('hero_image_url', 'is', null)
+              .limit(18),
+            20_000,
+            'Home driver hero fetch timed out',
+          ),
+          withTimeout(
+            supabase
+              .from('teams')
+              .select('id, name, hero_image_url')
+              .not('hero_image_url', 'is', null)
+              .limit(18),
+            20_000,
+            'Home team hero fetch timed out',
+          ),
+        ])
+
+        const drivers = (dRes?.data || []).map(d => ({ src: d.hero_image_url, alt: d.name || 'Driver' }))
+        const teams = (tRes?.data || []).map(t => ({ src: t.hero_image_url, alt: t.name || 'Team' }))
+        const combined = shuffle([...drivers, ...teams]).filter(t => !!t.src).slice(0, 12)
+
+        if (cancelled) return
+        setCacheItem('home_mosaic', { ts: Date.now(), data: combined })
+      } catch (e) {
+        console.warn('Home mosaic fetch failed:', e)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return tiles
+}
 
 /* ── Next Race Countdown ── */
 function NextRaceBar({ races }) {
@@ -270,6 +332,8 @@ export default function Home() {
     drivers, seasons, races: storeRaces, cache, setCacheItem,
   } = useDataStore()
 
+  const mosaicTiles = useHomeMosaicTiles()
+
   const [races, setRaces] = useState(() => storeRaces || [])
   const [upcomingRaces, setUpcomingRaces] = useState(() => cache?.home_upcoming?.data || [])
   const [highlights, setHighlights] = useState(() => cache?.home_highlights?.data || [])
@@ -373,94 +437,181 @@ export default function Home() {
 
       {/* ══ CINEMATIC HERO ══ */}
       {loading ? <HeroSkeleton /> : (
-        <motion.div
-          ref={heroRef}
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="hero-cinematic noise-overlay"
-          style={{ minHeight: 480 }}
-        >
-          {/* Background image */}
-          <div className="absolute inset-0">
-            <img
-              src="/assets/hero.png"
-              alt="F1 Hero"
-              className="w-full h-full object-cover object-center"
-              onError={e => { e.target.style.display = 'none' }}
-            />
-          </div>
-
-          {/* Layered gradients */}
-          <div className="absolute inset-0" style={{
-            background: 'linear-gradient(135deg, rgba(225,6,0,0.18) 0%, transparent 40%)',
-          }} />
-          <div className="absolute inset-0" style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
-          }} />
-          <div className="absolute inset-0" style={{
-            background: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 60%)',
-          }} />
-
-          {/* Grid overlay */}
-          <div className="absolute inset-0 opacity-20" style={{
-            backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
-            backgroundSize: '80px 80px',
-          }} />
-
-          {/* Content */}
-          <div className="relative z-10 h-full flex flex-col justify-end p-8 md:p-14" style={{ minHeight: 480 }}>
-            {/* Season badge */}
-            <motion.div {...fadeUp(0.1)} className="flex items-center gap-2 mb-5">
-              <div className="live-dot" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
-                {seasons[0]?.year || 'Formula 1'} Season
-              </span>
-            </motion.div>
-
-            {/* Title */}
-            <motion.h1 {...fadeUp(0.2)}
-              className="text-6xl md:text-8xl font-black leading-none mb-4"
-              style={{ letterSpacing: '-0.05em' }}
-            >
-              <span className="text-white">Racin</span>
-              <span className="text-gradient-red">Grid</span>
-            </motion.h1>
-
-            <motion.p {...fadeUp(0.3)} className="text-base md:text-lg mb-8 max-w-lg font-medium text-secondary leading-relaxed">
-              The ultimate Formula 1 archive — races, drivers, teams, lap-by-lap replays and deep analytics.
-            </motion.p>
-
-            {/* CTAs */}
-            <motion.div {...fadeUp(0.4)} className="flex gap-3 flex-wrap">
-              {heroRace && (
-                <Link to={`/race/${heroRace.id}`}
-                  className="btn-primary text-sm px-6 py-3 flex items-center gap-2">
-                  <Flag size={14} /> View Latest Race
-                </Link>
-              )}
-              <Link to="/drivers" className="btn-ghost text-sm px-6 py-3 flex items-center gap-2">
-                <Star size={14} /> Explore Drivers
-              </Link>
-              <Link to="/standings" className="btn-ghost text-sm px-6 py-3 flex items-center gap-2">
-                <Trophy size={14} /> Standings
-              </Link>
-            </motion.div>
-
-            {/* Hero race info pill */}
-            {heroRace && (
-              <motion.div {...fadeUp(0.5)} className="mt-6 inline-flex items-center gap-3 self-start">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 backdrop-blur-sm"
-                  style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  <Flag size={11} className="text-accent" />
-                  <span className="text-xs font-semibold text-white/80">
-                    {heroRace.name?.replace(' Grand Prix', ' GP')} · {heroRace.seasons?.year}
-                  </span>
+        <>
+          {/* Mobile hero (mosaic like login/signup) */}
+          <motion.div
+            ref={heroRef}
+            initial={{ opacity: 0, scale: 0.985 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="md:hidden relative overflow-hidden rounded-3xl"
+            style={{ minHeight: 560 }}
+          >
+            <div className="absolute inset-x-0 top-0 h-[64%] pointer-events-none">
+              <div className="absolute inset-0 px-4 pt-4">
+                <div className="grid grid-cols-3 gap-3">
+                  {(mosaicTiles.length ? mosaicTiles : Array.from({ length: 12 }).map((_, i) => ({ src: null, alt: `Tile ${i + 1}` }))).map((t, i) => (
+                    <div
+                      key={i}
+                      className="rounded-3xl overflow-hidden bg-muted/30"
+                      style={{ aspectRatio: '3 / 4', boxShadow: '0 18px 50px rgba(0,0,0,0.55)' }}
+                    >
+                      {t.src ? (
+                        <img
+                          src={t.src}
+                          alt={t.alt}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          fetchPriority="low"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted/40" />
+                      )}
+                    </div>
+                  ))}
                 </div>
+              </div>
+
+              <div className="absolute inset-0" style={{
+                background:
+                  'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.35) 42%, rgba(0,0,0,0.92) 72%, rgba(0,0,0,1) 100%)',
+              }} />
+              <div className="absolute inset-0" style={{
+                background:
+                  'radial-gradient(ellipse 60% 60% at 50% 35%, transparent 0%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.92) 100%)',
+              }} />
+            </div>
+
+            <div className="relative z-10 min-h-[560px] flex flex-col justify-end">
+              <div
+                className="px-6 pb-7 pt-10"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.96) 18%, rgba(0,0,0,1) 100%)',
+                }}
+              >
+                <motion.div {...fadeUp(0.05)} className="flex items-center gap-2 mb-4">
+                  <div className="live-dot" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
+                    {seasons[0]?.year || 'Formula 1'} Season
+                  </span>
+                </motion.div>
+
+                <motion.h1 {...fadeUp(0.1)} className="text-5xl font-black leading-none mb-3" style={{ letterSpacing: '-0.05em' }}>
+                  <span className="text-white">Racin</span><span className="text-gradient-red">Grid</span>
+                </motion.h1>
+
+                <motion.p {...fadeUp(0.15)} className="text-sm mb-6 font-medium text-secondary leading-relaxed">
+                  The ultimate Formula 1 archive — races, drivers, teams and lap-by-lap replays.
+                </motion.p>
+
+                <motion.div {...fadeUp(0.2)} className="space-y-3">
+                  {heroRace && (
+                    <Link to={`/race/${heroRace.id}`} className="btn-primary w-full justify-center text-sm px-6 py-3 flex items-center gap-2">
+                      <Flag size={14} /> View Latest Race
+                    </Link>
+                  )}
+                  <Link to="/drivers" className="btn-ghost w-full justify-center text-sm px-6 py-3 flex items-center gap-2">
+                    <Star size={14} /> Explore Drivers
+                  </Link>
+                  <Link to="/standings" className="btn-ghost w-full justify-center text-sm px-6 py-3 flex items-center gap-2">
+                    <Trophy size={14} /> Standings
+                  </Link>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Desktop hero (existing cinematic) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="hidden md:block hero-cinematic noise-overlay"
+            style={{ minHeight: 480 }}
+          >
+            {/* Background image */}
+            <div className="absolute inset-0">
+              <img
+                src="/assets/hero.png"
+                alt="F1 Hero"
+                className="w-full h-full object-cover object-center"
+                onError={e => { e.target.style.display = 'none' }}
+              />
+            </div>
+
+            {/* Layered gradients */}
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(135deg, rgba(225,6,0,0.18) 0%, transparent 40%)',
+            }} />
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)',
+            }} />
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 60%)',
+            }} />
+
+            {/* Grid overlay */}
+            <div className="absolute inset-0 opacity-20" style={{
+              backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
+              backgroundSize: '80px 80px',
+            }} />
+
+            {/* Content */}
+            <div className="relative z-10 h-full flex flex-col justify-end p-8 md:p-14" style={{ minHeight: 480 }}>
+              {/* Season badge */}
+              <motion.div {...fadeUp(0.1)} className="flex items-center gap-2 mb-5">
+                <div className="live-dot" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
+                  {seasons[0]?.year || 'Formula 1'} Season
+                </span>
               </motion.div>
-            )}
-          </div>
-        </motion.div>
+
+              {/* Title */}
+              <motion.h1 {...fadeUp(0.2)}
+                className="text-6xl md:text-8xl font-black leading-none mb-4"
+                style={{ letterSpacing: '-0.05em' }}
+              >
+                <span className="text-white">Racin</span>
+                <span className="text-gradient-red">Grid</span>
+              </motion.h1>
+
+              <motion.p {...fadeUp(0.3)} className="text-base md:text-lg mb-8 max-w-lg font-medium text-secondary leading-relaxed">
+                The ultimate Formula 1 archive — races, drivers, teams, lap-by-lap replays and deep analytics.
+              </motion.p>
+
+              {/* CTAs */}
+              <motion.div {...fadeUp(0.4)} className="flex gap-3 flex-wrap">
+                {heroRace && (
+                  <Link to={`/race/${heroRace.id}`}
+                    className="btn-primary text-sm px-6 py-3 flex items-center gap-2">
+                    <Flag size={14} /> View Latest Race
+                  </Link>
+                )}
+                <Link to="/drivers" className="btn-ghost text-sm px-6 py-3 flex items-center gap-2">
+                  <Star size={14} /> Explore Drivers
+                </Link>
+                <Link to="/standings" className="btn-ghost text-sm px-6 py-3 flex items-center gap-2">
+                  <Trophy size={14} /> Standings
+                </Link>
+              </motion.div>
+
+              {/* Hero race info pill */}
+              {heroRace && (
+                <motion.div {...fadeUp(0.5)} className="mt-6 inline-flex items-center gap-3 self-start">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 backdrop-blur-sm"
+                    style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <Flag size={11} className="text-accent" />
+                    <span className="text-xs font-semibold text-white/80">
+                      {heroRace.name?.replace(' Grand Prix', ' GP')} · {heroRace.seasons?.year}
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        </>
       )}
 
       {/* ══ NEXT RACE BAR ══ */}
