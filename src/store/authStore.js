@@ -82,6 +82,16 @@ export const useAuthStore = create((set, get) => ({
     return data
   },
 
+  signUp: async (email, password) => {
+    const { data, error } = await withTimeout(
+      supabase.auth.signUp({ email, password }),
+      20_000,
+      'Sign up timed out',
+    )
+    if (error) throw error
+    return data
+  },
+
   signOut: async () => {
     await supabase.auth.signOut()
     set({ user: null, role: null })

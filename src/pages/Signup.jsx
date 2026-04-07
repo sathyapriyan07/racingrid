@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabase'
@@ -70,15 +70,13 @@ function MobileAuthShell({ title, subtitle, children }) {
 
   return (
     <div className="md:hidden min-h-screen relative overflow-hidden" style={{ background: 'var(--bg-base)' }}>
+      {/* Mosaic */}
       <div className="absolute inset-x-0 top-0 h-[64vh] pointer-events-none">
         <div className="absolute inset-0 px-4 pt-4">
           <div className="grid grid-cols-3 gap-3">
             {grid.map((t, i) => (
-              <div
-                key={i}
-                className="rounded-3xl overflow-hidden bg-muted/30"
-                style={{ aspectRatio: '3 / 4', boxShadow: '0 18px 50px rgba(0,0,0,0.55)' }}
-              >
+              <div key={i} className="rounded-3xl overflow-hidden bg-muted/30"
+                style={{ aspectRatio: '3 / 4', boxShadow: '0 18px 50px rgba(0,0,0,0.55)' }}>
                 {t.src ? (
                   <img
                     src={t.src}
@@ -95,16 +93,15 @@ function MobileAuthShell({ title, subtitle, children }) {
             ))}
           </div>
         </div>
-
-        <div
-          className="absolute inset-0"
+        {/* Fade to black */}
+        <div className="absolute inset-0"
           style={{
             background:
               'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.92) 72%, rgba(0,0,0,1) 100%)',
           }}
         />
-        <div
-          className="absolute inset-0"
+        {/* Side vignette */}
+        <div className="absolute inset-0"
           style={{
             background:
               'radial-gradient(ellipse 60% 60% at 50% 35%, transparent 0%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.92) 100%)',
@@ -112,6 +109,7 @@ function MobileAuthShell({ title, subtitle, children }) {
         />
       </div>
 
+      {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col justify-end px-5 pb-10">
         <Link to="/" className="absolute top-5 left-5 flex items-center gap-0.5">
           <span className="font-black text-lg tracking-tight text-white">Racin</span>
@@ -123,19 +121,20 @@ function MobileAuthShell({ title, subtitle, children }) {
           <p className="text-sm" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
         </div>
 
-        <div className="mt-7">{children}</div>
+        <div className="mt-7">
+          {children}
+        </div>
       </div>
     </div>
   )
 }
 
-function DesktopShell({ children }) {
+function DesktopShell({ title, subtitle, children }) {
   return (
     <div className="hidden md:flex min-h-screen items-center justify-center px-4 relative" style={{ background: 'var(--bg-base)' }}>
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(225,6,0,0.08) 0%, transparent 70%)' }}
-      />
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'radial-gradient(ellipse 60% 50% at 50% 40%, rgba(225,6,0,0.08) 0%, transparent 70%)',
+      }} />
 
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.97 }}
@@ -143,28 +142,45 @@ function DesktopShell({ children }) {
         transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
         className="apple-card p-8 w-full max-w-sm relative z-10"
       >
+        <Link to="/" className="flex items-center gap-0.5 mb-8">
+          <span className="font-black text-2xl tracking-tight text-white">Racin</span>
+          <span className="font-black text-2xl tracking-tight text-accent">Grid</span>
+        </Link>
+
+        <h1 className="text-2xl font-black mb-1" style={{ letterSpacing: '-0.04em' }}>{title}</h1>
+        <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>
         {children}
       </motion.div>
     </div>
   )
 }
 
-export default function Login() {
+export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn } = useAuthStore()
+  const { signUp } = useAuthStore()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+    if (password !== confirm) {
+      toast.error('Passwords do not match')
+      return
+    }
+
     setLoading(true)
     try {
-      await signIn(email, password)
-      toast.success('Signed in')
+      await signUp(email, password)
+      toast.success('Account created')
       navigate('/')
     } catch (err) {
-      toast.error(err.message || 'Sign in failed')
+      toast.error(err.message || 'Sign up failed')
     } finally {
       setLoading(false)
     }
@@ -174,37 +190,35 @@ export default function Login() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="text-xs font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Email</label>
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="you@example.com" required />
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+          className="input" placeholder="you@example.com" required />
       </div>
       <div>
         <label className="text-xs font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Password</label>
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="input" placeholder="••••••••" required />
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+          className="input" placeholder="••••••••" required />
       </div>
-
+      <div>
+        <label className="text-xs font-semibold uppercase tracking-widest mb-1.5 block" style={{ color: 'var(--text-muted)' }}>Confirm Password</label>
+        <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+          className="input" placeholder="••••••••" required />
+      </div>
       <button type="submit" disabled={loading} className="btn-primary w-full justify-center mt-2" style={{ borderRadius: '0.875rem' }}>
-        {loading ? 'Signing in...' : 'Sign In'}
+        {loading ? 'Creating...' : 'Create Account'}
       </button>
 
       <div className="text-center text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
-        Don&apos;t have an account? <Link to="/signup" className="text-accent font-semibold">Create one</Link>
+        Already have an account? <Link to="/login" className="text-accent font-semibold">Sign in</Link>
       </div>
     </form>
   )
 
   return (
     <>
-      <MobileAuthShell title="Welcome back" subtitle="Sign in to continue to RacinGrid.">
+      <MobileAuthShell title="Create account" subtitle="Join RacinGrid to access admin tools and more.">
         {form}
       </MobileAuthShell>
-
-      <DesktopShell>
-        <Link to="/" className="flex items-center gap-0.5 mb-8">
-          <span className="font-black text-2xl tracking-tight text-white">Racin</span>
-          <span className="font-black text-2xl tracking-tight text-accent">Grid</span>
-        </Link>
-
-        <h1 className="text-2xl font-black mb-1" style={{ letterSpacing: '-0.04em' }}>Sign In</h1>
-        <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Access your RacinGrid account</p>
+      <DesktopShell title="Create Account" subtitle="Create your RacinGrid account">
         {form}
       </DesktopShell>
     </>

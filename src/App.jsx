@@ -9,6 +9,7 @@ import Home from './pages/Home'
 
 // Lazy-loaded public pages
 const Login          = lazy(() => import('./pages/Login'))
+const Signup         = lazy(() => import('./pages/Signup'))
 const Drivers        = lazy(() => import('./pages/Drivers'))
 const DriverPage     = lazy(() => import('./pages/DriverPage'))
 const Teams          = lazy(() => import('./pages/Teams'))
@@ -72,6 +73,7 @@ function AnimatedRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Suspense fallback={<PageLoader />}><Login /></Suspense>} />
+      <Route path="/signup" element={<Suspense fallback={<PageLoader />}><Signup /></Suspense>} />
 
       {/* Public */}
       <Route path="/" element={<Layout><Suspense fallback={<PageLoader />}><Home /></Suspense></Layout>} />
