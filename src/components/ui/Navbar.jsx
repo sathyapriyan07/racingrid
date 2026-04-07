@@ -115,7 +115,7 @@ export default function Navbar() {
         className="hidden md:block fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-3rem)] max-w-5xl"
       >
         <div
-          className="rounded-2xl border px-4 h-12 flex items-center gap-2 transition-all duration-300"
+          className="rounded-2xl border px-4 h-12 grid grid-cols-[1fr_auto_1fr] items-center gap-2 transition-all duration-300"
           style={{
             background: scrolled ? 'rgba(0,0,0,0.88)' : 'rgba(10,10,10,0.7)',
             backdropFilter: 'blur(24px)',
@@ -125,13 +125,15 @@ export default function Navbar() {
           }}
         >
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-0.5 shrink-0 mr-2">
-            <span className="font-black text-lg tracking-tight text-white">Racin</span>
-            <span className="font-black text-lg tracking-tight text-accent">Grid</span>
-          </Link>
+          <div className="flex items-center justify-start min-w-0">
+            <Link to="/" className="flex items-center gap-0.5 shrink-0">
+              <span className="font-black text-lg tracking-tight text-white">Racin</span>
+              <span className="font-black text-lg tracking-tight text-accent">Grid</span>
+            </Link>
+          </div>
 
           {/* Nav links */}
-          <div className="flex items-center gap-0.5 flex-1">
+          <div className="flex items-center justify-center gap-0.5 min-w-0">
             {NAV_LINKS.map(item => {
               const active = isActive(item)
               return (
@@ -155,7 +157,7 @@ export default function Navbar() {
           </div>
 
           {/* Right actions */}
-          <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          <div className="flex items-center justify-end gap-1.5 min-w-0">
             {/* Search with shortcut hint */}
             <button onClick={openSearch}
               className="flex items-center gap-2 px-3 h-8 rounded-xl border border-border text-secondary hover:text-primary hover:bg-white/5 transition-all duration-200 text-xs"
